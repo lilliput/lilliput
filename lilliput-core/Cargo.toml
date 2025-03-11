@@ -10,8 +10,17 @@ num-traits = { version = "0.2.19", default-features = false }
 ordermap = { version = "0.5.5", optional = true }
 thiserror = "2.0.12"
 
+[dev-dependencies]
+proptest = "1.6.0"
+proptest-derive = "0.5.1"
+
 [features]
 preserve_order = [
     "ordermap"
 ]
 
+[profile.test.package.proptest]
+opt-level = 3
+
+[profile.test.package.rand_chacha]
+opt-level = 3
