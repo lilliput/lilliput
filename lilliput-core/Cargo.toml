@@ -8,3 +8,8 @@ edition = "2024"
 ordermap = { version = "0.5.5", optional = true }
 thiserror = "2.0.12"
 
+[features]
+preserve_order = [
+    "ordermap"
+]
+
