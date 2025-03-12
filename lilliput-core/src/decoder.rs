@@ -3,7 +3,7 @@ use num_traits::{FromBytes, float::FloatCore};
 use crate::{
     Profile,
     num::{FromFloat, IntoFloat},
-    value::{BoolValue, BytesValue, FloatValue, NullValue, Value, ValueType},
+    value::{BoolValue, BytesValue, FloatValue, Map, MapValue, NullValue, Value, ValueType},
 };
 
 #[derive(Eq, PartialEq, Debug, thiserror::Error)]
@@ -85,12 +85,92 @@ impl<'a> Decoder<'a> {
 impl<'a> Decoder<'a> {
     pub fn decode_any(&mut self) -> Result<Value, Error> {
         match ValueType::detect(self.peek_byte()?) {
+            ValueType::Map => self.decode_map_value().map(From::from),
             ValueType::Float => self.decode_float_value().map(From::from),
             ValueType::Bytes => self.decode_bytes_value().map(From::from),
             ValueType::Bool => self.decode_bool_value().map(From::from),
             ValueType::Null => self.decode_null_value().map(From::from),
             ValueType::Reserved => unimplemented!(),
         }
+    }
+
+    pub fn decode_map(&mut self) -> Result<Map, Error> {
+        let len = self.decode_map_start()?;
+
+        #[cfg(feature = "preserve_order")]
+        pub(crate) type Map = ordermap::OrderMap<Value, Value>;
+
+        #[cfg(not(feature = "preserve_order"))]
+        pub(crate) type Map = std::collections::BTreeMap<Value, Value>;
+
+        let mut map = Map::default();
+
+        for _ in 0..len {
+            let key = self.decode_any()?;
+            let value = self.decode_any()?;
+            map.insert(key, value);
+        }
+
+        let () = self.decode_map_end()?;
+
+        Ok(map)
+    }
+
+    pub(crate) fn decode_map_value(&mut self) -> Result<MapValue, Error> {
+        self.decode_map().map(From::from)
+    }
+
+    pub fn decode_map_start(&mut self) -> Result<usize, Error> {
+        let byte = self.pull_byte_expecting_type(ValueType::Map)?;
+
+        let is_long = byte & MapValue::VARIANT_BIT != 0b0;
+
+        if is_long {
+            let len_width_exponent = (byte & MapValue::LONG_LEN_WIDTH_BITS) as u32;
+            let len_width = 1_usize << len_width_exponent;
+
+            let mut bytes: [u8; 8] = [0b0; 8];
+
+            let range = {
+                let start = 8 - len_width;
+                let end = start + len_width;
+                start..end
+            };
+
+            bytes[range].copy_from_slice(self.pull_bytes(len_width)?);
+
+            let len = u64::from_be_bytes(bytes) as usize;
+
+            if self.remaining_len() < len {
+                return Err(Error::Eof);
+            }
+
+            self.state.push(DecoderState::map(len));
+
+            Ok(len)
+        } else {
+            Err(Error::IncompatibleProfile)
+        }
+    }
+
+    pub fn decode_map_end(&mut self) -> Result<(), Error> {
+        let Some(state) = self.state.last() else {
+            return Err(Error::Map);
+        };
+
+        let DecoderState::Map { pos, len } = state else {
+            return Err(Error::Map);
+        };
+
+        if pos != len {
+            return Err(Error::Map);
+        }
+
+        let _ = self.state.pop();
+
+        self.on_decode_value()?;
+
+        Ok(())
     }
 
     pub fn decode_f32(&mut self) -> Result<f32, Error> {
