@@ -1,13 +1,21 @@
 mod bool;
 mod bytes;
 mod float;
+mod map;
 mod null;
 
-pub use self::{bool::BoolValue, bytes::BytesValue, float::FloatValue, null::NullValue};
+pub use self::{
+    bool::BoolValue,
+    bytes::BytesValue,
+    float::FloatValue,
+    map::{Map, MapValue},
+    null::NullValue,
+};
 
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub enum ValueType {
+    Map = 0b00010000,
     Float = 0b00001000,
     Bytes = 0b00000100,
     Bool = 0b00000010,
@@ -18,6 +26,7 @@ pub enum ValueType {
 impl ValueType {
     pub fn of(value: &Value) -> Self {
         match value {
+            Value::Map(_) => ValueType::Map,
             Value::Float(_) => ValueType::Float,
             Value::Bytes(_) => ValueType::Bytes,
             Value::Bool(_) => ValueType::Bool,
@@ -27,6 +36,8 @@ impl ValueType {
 
     pub fn detect(byte: u8) -> Self {
         match byte.leading_zeros() {
+            // 0b00010000
+            3 => Self::Map,
             // 0b00001000
             4 => Self::Float,
             // 0b00000100
@@ -41,9 +52,15 @@ impl ValueType {
     }
 }
 
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum Value {
+    /// Represents a map of key-value pairs.
+    ///
+    /// By default the map is backed by a `BTreeMap`. Enable the `preserve_order`
+    /// feature of serde_lilliput to use `OrderMap` instead, which preserves
+    /// entries in the order they are inserted into the map.
+    Map(MapValue),
+
     /// Represents a floating-point number.
     Float(FloatValue),
 
@@ -60,6 +77,12 @@ pub enum Value {
 impl Default for Value {
     fn default() -> Self {
         Self::Null(NullValue::default())
+    }
+}
+
+impl From<MapValue> for Value {
+    fn from(value: MapValue) -> Self {
+        Self::Map(value)
     }
 }
 
@@ -91,6 +114,7 @@ impl std::fmt::Debug for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if f.alternate() {
             match self {
+                Self::Map(value) => f.debug_tuple("Map").field(value).finish(),
                 Self::Float(value) => f.debug_tuple("Float").field(value).finish(),
                 Self::Bytes(value) => f.debug_tuple("Bytes").field(value).finish(),
                 Self::Bool(value) => f.debug_tuple("Bool").field(value).finish(),
@@ -98,6 +122,7 @@ impl std::fmt::Debug for Value {
             }
         } else {
             match self {
+                Self::Map(value) => std::fmt::Debug::fmt(value, f),
                 Self::Float(value) => std::fmt::Debug::fmt(value, f),
                 Self::Bytes(value) => std::fmt::Debug::fmt(value, f),
                 Self::Bool(value) => std::fmt::Debug::fmt(value, f),
@@ -113,12 +138,71 @@ impl Value {
     }
 }
 
+#[doc(hidden)]
+#[cfg(test)]
+pub struct ValueArbitraryParameters {
+    pub depth: u32,
+    pub desired_size: u32,
+    pub expected_branch_size: u32,
+}
+
+#[cfg(test)]
+impl Default for ValueArbitraryParameters {
+    fn default() -> Self {
+        Self {
+            // 4 levels deep
+            depth: 4,
+            // Shoot for maximum size of 128 nodes
+            desired_size: 128,
+            // We put up to 5 items per collection
+            expected_branch_size: 5,
+        }
+    }
+}
+
+#[cfg(test)]
+impl proptest::arbitrary::Arbitrary for Value {
+    type Parameters = ValueArbitraryParameters;
+    type Strategy = proptest::prelude::BoxedStrategy<Value>;
+
+    fn arbitrary_with(args: Self::Parameters) -> Self::Strategy {
+        use proptest::prelude::*;
+
+        let ValueArbitraryParameters {
+            depth,
+            desired_size,
+            expected_branch_size,
+        } = args;
+
+        let leaf = prop_oneof![
+            FloatValue::arbitrary().prop_map(Value::Float),
+            BytesValue::arbitrary().prop_map(Value::Bytes),
+            BoolValue::arbitrary().prop_map(Value::Bool),
+            NullValue::arbitrary().prop_map(Value::Null),
+        ];
+        leaf.prop_recursive(depth, desired_size, expected_branch_size, |inner| {
+            prop_oneof![
+                prop::collection::hash_map(inner.clone(), inner, 0..10)
+                    .prop_map(|hash_map| { Value::Map(MapValue::from(Map::from_iter(hash_map))) }),
+            ]
+        })
+        .boxed()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn debug() {
+        // Map
+        assert_eq!(format!("{:?}", Value::Map(MapValue::default())), "{}");
+        assert_eq!(
+            format!("{:#?}", Value::Map(MapValue::default())),
+            "Map(\n    {},\n)"
+        );
+
         // Float
         assert_eq!(format!("{:?}", Value::Float(FloatValue::default())), "0.0");
         assert_eq!(

@@ -2,7 +2,7 @@ use num_traits::{ToBytes, float::FloatCore};
 
 use crate::{
     Profile,
-    value::{BoolValue, BytesValue, FloatValue, NullValue, Value, ValueType},
+    value::{BoolValue, BytesValue, FloatValue, Map, MapValue, NullValue, Value, ValueType},
 };
 
 #[derive(Eq, PartialEq, Debug, thiserror::Error)]
@@ -84,11 +84,65 @@ impl Encoder {
 
     pub fn encode_any(&mut self, value: &Value) -> Result<(), Error> {
         match value {
+            Value::Map(value) => self.encode_map_value(value),
             Value::Float(value) => self.encode_float_value(value),
             Value::Bytes(value) => self.encode_bytes_value(value),
             Value::Bool(value) => self.encode_bool_value(value),
             Value::Null(value) => self.encode_null_value(value),
         }
+    }
+
+    pub fn encode_map(&mut self, value: &Map) -> Result<(), Error> {
+        let value: &Map = value.into();
+
+        self.encode_map_start(value.len())?;
+
+        for (key, value) in value {
+            self.encode_any(key)?;
+            self.encode_any(value)?;
+        }
+
+        self.encode_map_end()
+    }
+
+    pub(crate) fn encode_map_value(&mut self, value: &MapValue) -> Result<(), Error> {
+        self.encode_map(&value.0)
+    }
+
+    pub fn encode_map_start(&mut self, len: usize) -> Result<(), Error> {
+        // Push the value's metadata:
+        let mut head_byte = MapValue::PREFIX_BIT;
+        head_byte |= MapValue::VARIANT_BIT;
+        head_byte |= 3; // width exponent of usize (2 ^ 3 = 8)
+        self.push_byte(head_byte)?;
+
+        // Push the value's length:
+        let neck_bytes = len.to_be_bytes();
+        self.push_bytes(&neck_bytes)?;
+
+        self.state.push(EncoderState::map(len));
+
+        Ok(())
+    }
+
+    pub fn encode_map_end(&mut self) -> Result<(), Error> {
+        let Some(state) = self.state.last() else {
+            return Err(Error::Map);
+        };
+
+        let EncoderState::Map { pos, len } = state else {
+            return Err(Error::Map);
+        };
+
+        if pos != len {
+            return Err(Error::Map);
+        }
+
+        let _ = self.state.pop();
+
+        self.on_encode_value()?;
+
+        Ok(())
     }
 
     pub fn encode_f32(&mut self, value: f32) -> Result<(), Error> {
