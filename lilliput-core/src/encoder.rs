@@ -1,10 +1,10 @@
-use num_traits::{ToBytes, float::FloatCore};
+use num_traits::{float::FloatCore, PrimInt, Signed, ToBytes, Unsigned};
 
 use crate::{
-    Profile,
+    num::ToZigZag,
     value::{
-        BoolValue, BytesValue, FloatValue, Map, MapValue, NullValue, SeqValue, StringValue, Value,
-        ValueType,
+        BoolValue, BytesValue, FloatValue, IntValue, Map, MapValue, NullValue, SeqValue,
+        SignedIntValue, StringValue, UnsignedIntValue, Value,
     },
     Profile,
 };
@@ -91,6 +91,7 @@ impl Encoder {
 
     pub fn encode_any(&mut self, value: &Value) -> Result<(), Error> {
         match value {
+            Value::Int(value) => self.encode_int_value(value),
             Value::String(value) => self.encode_string_value(value),
             Value::Seq(value) => self.encode_seq_value(value),
             Value::Map(value) => self.encode_map_value(value),
@@ -98,6 +99,97 @@ impl Encoder {
             Value::Bytes(value) => self.encode_bytes_value(value),
             Value::Bool(value) => self.encode_bool_value(value),
             Value::Null(value) => self.encode_null_value(value),
+        }
+    }
+
+    pub fn encode_i8(&mut self, value: i8) -> Result<(), Error> {
+        self.encode_signed(value)
+    }
+
+    pub fn encode_i16(&mut self, value: i16) -> Result<(), Error> {
+        self.encode_signed(value)
+    }
+
+    pub fn encode_i32(&mut self, value: i32) -> Result<(), Error> {
+        self.encode_signed(value)
+    }
+
+    pub fn encode_i64(&mut self, value: i64) -> Result<(), Error> {
+        self.encode_signed(value)
+    }
+
+    pub fn encode_u8(&mut self, value: u8) -> Result<(), Error> {
+        self.encode_unsigned(value)
+    }
+
+    pub fn encode_u16(&mut self, value: u16) -> Result<(), Error> {
+        self.encode_unsigned(value)
+    }
+
+    pub fn encode_u32(&mut self, value: u32) -> Result<(), Error> {
+        self.encode_unsigned(value)
+    }
+
+    pub fn encode_u64(&mut self, value: u64) -> Result<(), Error> {
+        self.encode_unsigned(value)
+    }
+
+    fn encode_signed<S, U, const N: usize>(&mut self, value: S) -> Result<(), Error>
+    where
+        S: Signed + ToZigZag<ZigZag = U>,
+        U: ToBytes<Bytes = [u8; N]>,
+    {
+        // Push the value's metadata:
+        let mut head_byte = IntValue::PREFIX_BIT;
+        head_byte |= IntValue::VARIANT_BIT;
+        head_byte |= IntValue::SIGNEDNESS_BIT;
+
+        let unsigned = value.to_zig_zag();
+        let bytes = unsigned.to_be_bytes();
+
+        // Push the value's actual bytes:
+        head_byte |= (N as u8) - 1; // width of T in bytes, minus 1
+        self.push_byte(head_byte)?;
+
+        self.push_bytes(&bytes)?;
+
+        self.on_encode_value()
+    }
+
+    fn encode_unsigned<T, const N: usize>(&mut self, value: T) -> Result<(), Error>
+    where
+        T: Unsigned + PrimInt + ToBytes<Bytes = [u8; N]>,
+    {
+        // Push the value's metadata:
+        let mut head_byte = IntValue::PREFIX_BIT;
+        head_byte |= IntValue::VARIANT_BIT;
+
+        let unsigned = value;
+        let bytes = unsigned.to_be_bytes();
+
+        // Push the value's actual bytes:
+        head_byte |= (N as u8) - 1; // width of T in bytes, minus 1
+        self.push_byte(head_byte)?;
+
+        self.push_bytes(&bytes)?;
+
+        self.on_encode_value()
+    }
+
+    pub fn encode_int_value(&mut self, value: &IntValue) -> Result<(), Error> {
+        match value {
+            IntValue::Signed(value) => match *value {
+                SignedIntValue::I8(value) => self.encode_i8(value),
+                SignedIntValue::I16(value) => self.encode_i16(value),
+                SignedIntValue::I32(value) => self.encode_i32(value),
+                SignedIntValue::I64(value) => self.encode_i64(value),
+            },
+            IntValue::Unsigned(value) => match *value {
+                UnsignedIntValue::U8(value) => self.encode_u8(value),
+                UnsignedIntValue::U16(value) => self.encode_u16(value),
+                UnsignedIntValue::U32(value) => self.encode_u32(value),
+                UnsignedIntValue::U64(value) => self.encode_u64(value),
+            },
         }
     }
 

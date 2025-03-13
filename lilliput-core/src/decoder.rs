@@ -1,9 +1,10 @@
+use num_traits::{FromBytes, PrimInt, Signed, Unsigned};
+
 use crate::{
-    Profile,
-    num::{FromFloat, IntoFloat},
+    num::{FromFloat, FromZigZag, IntoFloat},
     value::{
-        BoolValue, BytesValue, FloatValue, Map, MapValue, NullValue, SeqValue, StringValue, Value,
-        ValueType,
+        BoolValue, BytesValue, FloatValue, IntValue, Map, MapValue, NullValue, SeqValue,
+        StringValue, Value, ValueType,
     },
     Profile,
 };
@@ -21,10 +22,14 @@ pub enum Error {
     },
     #[error("incompatible profile")]
     IncompatibleProfile,
+    #[error("invalid int")]
+    Int,
     #[error("invalid seq")]
     Seq,
     #[error("invalid map")]
     Map,
+    #[error("other")]
+    Other,
 }
 
 #[derive(Eq, PartialEq, Debug)]
@@ -90,6 +95,7 @@ impl<'a> Decoder<'a> {
 impl<'a> Decoder<'a> {
     pub fn decode_any(&mut self) -> Result<Value, Error> {
         match ValueType::detect(self.peek_byte()?) {
+            ValueType::Int => self.decode_int_value().map(From::from),
             ValueType::String => self.decode_string_value().map(From::from),
             ValueType::Seq => self.decode_seq_value().map(From::from),
             ValueType::Map => self.decode_map_value().map(From::from),
@@ -98,6 +104,209 @@ impl<'a> Decoder<'a> {
             ValueType::Bool => self.decode_bool_value().map(From::from),
             ValueType::Null => self.decode_null_value().map(From::from),
             ValueType::Reserved => unimplemented!(),
+        }
+    }
+
+    pub fn decode_u8(&mut self) -> Result<u8, Error> {
+        match self.peek_int_size()? {
+            1 => self.decode_unsigned::<u8, 1>(),
+            2 => Err(Error::Int),
+            4 => Err(Error::Int),
+            8 => Err(Error::Int),
+            _ => unimplemented!(),
+        }
+    }
+
+    pub fn decode_u16(&mut self) -> Result<u16, Error> {
+        match self.peek_int_size()? {
+            1 => Ok(self.decode_unsigned::<u8, 1>()?.into()),
+            2 => self.decode_unsigned::<u16, 2>(),
+            4 => Err(Error::Int),
+            8 => Err(Error::Int),
+            _ => unimplemented!(),
+        }
+    }
+
+    pub fn decode_u32(&mut self) -> Result<u32, Error> {
+        match self.peek_int_size()? {
+            1 => Ok(self.decode_unsigned::<u8, 1>()?.into()),
+            2 => Ok(self.decode_unsigned::<u16, 2>()?.into()),
+            4 => self.decode_unsigned::<u32, 4>(),
+            8 => Err(Error::Int),
+            _ => unimplemented!(),
+        }
+    }
+
+    pub fn decode_u64(&mut self) -> Result<u64, Error> {
+        match self.peek_int_size()? {
+            1 => Ok(self.decode_unsigned::<u8, 1>()?.into()),
+            2 => Ok(self.decode_unsigned::<u16, 2>()?.into()),
+            4 => Ok(self.decode_unsigned::<u32, 4>()?.into()),
+            8 => self.decode_unsigned::<u64, 8>(),
+            _ => unimplemented!(),
+        }
+    }
+
+    pub fn decode_i8(&mut self) -> Result<i8, Error> {
+        match self.peek_int_size()? {
+            1 => self.decode_signed::<i8, u8, 1>(),
+            2 => Err(Error::Int),
+            4 => Err(Error::Int),
+            8 => Err(Error::Int),
+            _ => unimplemented!(),
+        }
+    }
+
+    pub fn decode_i16(&mut self) -> Result<i16, Error> {
+        match self.peek_int_size()? {
+            1 => Ok(self.decode_signed::<i8, u8, 1>()?.into()),
+            2 => self.decode_signed::<i16, u16, 2>(),
+            4 => Err(Error::Int),
+            8 => Err(Error::Int),
+            _ => unimplemented!(),
+        }
+    }
+
+    pub fn decode_i32(&mut self) -> Result<i32, Error> {
+        match self.peek_int_size()? {
+            1 => Ok(self.decode_signed::<i8, u8, 1>()?.into()),
+            2 => Ok(self.decode_signed::<i16, u16, 2>()?.into()),
+            4 => self.decode_signed::<i32, u32, 4>(),
+            8 => Err(Error::Int),
+            _ => unimplemented!(),
+        }
+    }
+
+    pub fn decode_i64(&mut self) -> Result<i64, Error> {
+        match self.peek_int_size()? {
+            1 => Ok(self.decode_signed::<i8, u8, 1>()?.into()),
+            2 => Ok(self.decode_signed::<i16, u16, 2>()?.into()),
+            4 => Ok(self.decode_signed::<i32, u32, 4>()?.into()),
+            8 => self.decode_signed::<i64, u64, 8>(),
+            _ => unimplemented!(),
+        }
+    }
+
+    fn decode_signed<S, U, const N: usize>(&mut self) -> Result<S, Error>
+    where
+        S: Signed + PrimInt + FromZigZag<ZigZag = U>,
+        U: FromBytes<Bytes = [u8; N]>,
+    {
+        let byte = self.pull_byte_expecting_type(ValueType::Int)?;
+        let is_long = byte & IntValue::VARIANT_BIT != 0b0;
+        let is_signed = byte & IntValue::SIGNEDNESS_BIT != 0b0;
+
+        if !is_signed {
+            return Err(Error::Other);
+        }
+
+        if is_long {
+            let is_valid = byte & IntValue::LONG_RESERVED_BITS == 0b0;
+            assert!(is_valid, "padding bits should be zero");
+
+            let size_len = (byte & IntValue::LONG_WIDTH_BITS) as usize + 1;
+
+            if size_len > N {
+                return Err(Error::Int);
+            }
+
+            let pulled_bytes = self.pull_bytes(size_len)?;
+
+            let mut bytes: [u8; N] = [0b0; N];
+            bytes.copy_from_slice(pulled_bytes);
+
+            let unsigned = U::from_be_bytes(&bytes);
+            let signed = S::from_zig_zag(unsigned);
+
+            self.on_decode_value()?;
+
+            Ok(signed)
+        } else {
+            Err(Error::IncompatibleProfile)
+        }
+    }
+
+    fn decode_unsigned<T, const N: usize>(&mut self) -> Result<T, Error>
+    where
+        T: Unsigned + PrimInt + FromBytes<Bytes = [u8; N]>,
+    {
+        let byte = self.pull_byte_expecting_type(ValueType::Int)?;
+        let is_long = byte & IntValue::VARIANT_BIT != 0b0;
+        let is_signed = byte & IntValue::SIGNEDNESS_BIT != 0b0;
+
+        if is_signed {
+            return Err(Error::Other);
+        }
+
+        if is_long {
+            let is_valid = byte & IntValue::LONG_RESERVED_BITS == 0b0;
+            assert!(is_valid, "padding bits should be zero");
+
+            let size_len = (byte & IntValue::LONG_WIDTH_BITS) as usize + 1;
+
+            if size_len > N {
+                return Err(Error::Int);
+            }
+
+            let pulled_bytes = self.pull_bytes(size_len)?;
+
+            let mut bytes: [u8; N] = [0b0; N];
+            bytes.copy_from_slice(pulled_bytes);
+
+            let unsigned = T::from_be_bytes(&bytes);
+
+            self.on_decode_value()?;
+
+            Ok(unsigned)
+        } else {
+            Err(Error::IncompatibleProfile)
+        }
+    }
+
+    pub fn decode_int_value(&mut self) -> Result<IntValue, Error> {
+        let byte = self.peek_byte_expecting_type(ValueType::Int)?;
+        let is_long = byte & IntValue::VARIANT_BIT != 0b0;
+        let is_signed = byte & IntValue::SIGNEDNESS_BIT != 0b0;
+
+        if is_long {
+            let size_len = (byte & IntValue::LONG_WIDTH_BITS) as usize + 1;
+
+            if is_signed {
+                match size_len {
+                    1 => Ok(IntValue::Signed(self.decode_signed::<i8, u8, 1>()?.into())),
+                    2 => Ok(IntValue::Signed(
+                        self.decode_signed::<i16, u16, 2>()?.into(),
+                    )),
+                    4 => Ok(IntValue::Signed(
+                        self.decode_signed::<i32, u32, 4>()?.into(),
+                    )),
+                    8 => Ok(IntValue::Signed(
+                        self.decode_signed::<i64, u64, 8>()?.into(),
+                    )),
+                    _ => Err(Error::IncompatibleProfile),
+                }
+            } else {
+                match size_len {
+                    1 => Ok(IntValue::Unsigned(self.decode_unsigned::<u8, 1>()?.into())),
+                    2 => Ok(IntValue::Unsigned(self.decode_unsigned::<u16, 2>()?.into())),
+                    4 => Ok(IntValue::Unsigned(self.decode_unsigned::<u32, 4>()?.into())),
+                    8 => Ok(IntValue::Unsigned(self.decode_unsigned::<u64, 8>()?.into())),
+                    _ => Err(Error::IncompatibleProfile),
+                }
+            }
+        } else {
+            Err(Error::IncompatibleProfile)
+        }
+    }
+
+    fn peek_int_size(&self) -> Result<usize, Error> {
+        let byte = self.peek_byte_expecting_type(ValueType::Int)?;
+        let is_long = byte & IntValue::VARIANT_BIT != 0b0;
+
+        if is_long {
+            Ok((byte & IntValue::LONG_WIDTH_BITS) as usize + 1)
+        } else {
+            Ok(1)
         }
     }
 
