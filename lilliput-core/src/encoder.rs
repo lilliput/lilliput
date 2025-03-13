@@ -1,6 +1,6 @@
 use crate::{
     Profile,
-    value::{NullValue, Value, ValueType},
+    value::{BoolValue, NullValue, Value, ValueType},
 };
 
 #[derive(Eq, PartialEq, Debug, thiserror::Error)]
@@ -83,8 +83,25 @@ impl Encoder {
 
     pub fn encode_any(&mut self, value: &Value) -> Result<(), Error> {
         match value {
+            Value::Bool(value) => self.encode_bool_value(value),
             Value::Null(value) => self.encode_null_value(value),
         }
+    }
+
+    pub fn encode_bool(&mut self, value: bool) -> Result<(), Error> {
+        let mut head_byte = BoolValue::PREFIX_BIT;
+
+        if value {
+            head_byte |= BoolValue::VALUE_BIT;
+        }
+
+        self.push_byte(head_byte)?;
+
+        self.on_encode_value()
+    }
+
+    pub fn encode_bool_value(&mut self, value: &BoolValue) -> Result<(), Error> {
+        self.encode_bool(value.0)
     }
 
     pub fn encode_null(&mut self) -> Result<(), Error> {

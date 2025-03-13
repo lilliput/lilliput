@@ -1,10 +1,12 @@
+mod bool;
 mod null;
 
-pub use self::null::NullValue;
+pub use self::{bool::BoolValue, null::NullValue};
 
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub enum ValueType {
+    Bool = 0b00000010,
     Null = 0b00000001,
     Reserved = 0b00000000,
 }
@@ -12,12 +14,15 @@ pub enum ValueType {
 impl ValueType {
     pub fn of(value: &Value) -> Self {
         match value {
+            Value::Bool(_) => ValueType::Bool,
             Value::Null(_) => ValueType::Null,
         }
     }
 
     pub fn detect(byte: u8) -> Self {
         match byte.leading_zeros() {
+            // 0b00000010
+            6 => Self::Bool,
             // 0b00000001
             7 => Self::Null,
             // 0b00000000
@@ -29,6 +34,9 @@ impl ValueType {
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum Value {
+    /// Represents a boolean.
+    Bool(BoolValue),
+
     /// Represents a null value.
     Null(NullValue),
 }
@@ -36,6 +44,12 @@ pub enum Value {
 impl Default for Value {
     fn default() -> Self {
         Self::Null(NullValue)
+    }
+}
+
+impl From<BoolValue> for Value {
+    fn from(value: BoolValue) -> Self {
+        Self::Bool(value)
     }
 }
 
@@ -49,10 +63,12 @@ impl std::fmt::Debug for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if f.alternate() {
             match self {
+                Self::Bool(value) => f.debug_tuple("Bool").field(value).finish(),
                 Self::Null(value) => f.debug_tuple("Null").field(value).finish(),
             }
         } else {
             match self {
+                Self::Bool(value) => std::fmt::Debug::fmt(value, f),
                 Self::Null(value) => std::fmt::Debug::fmt(value, f),
             }
         }
@@ -71,6 +87,13 @@ mod tests {
 
     #[test]
     fn debug() {
+        // Bool
+        assert_eq!(format!("{:?}", Value::Bool(BoolValue::default())), "false");
+        assert_eq!(
+            format!("{:#?}", Value::Bool(BoolValue::default())),
+            "Bool(\n    false,\n)"
+        );
+
         // Null
         assert_eq!(format!("{:?}", Value::Null(NullValue)), "null");
         assert_eq!(
