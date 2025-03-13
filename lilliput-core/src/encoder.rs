@@ -1,6 +1,6 @@
 use crate::{
     Profile,
-    value::{Value, ValueType},
+    value::{NullValue, Value, ValueType},
 };
 
 #[derive(Eq, PartialEq, Debug, thiserror::Error)]
@@ -82,8 +82,21 @@ impl Encoder {
 
     pub fn encode_any(&mut self, value: &Value) -> Result<(), Error> {
         match value {
-            _ => unreachable!(),
+            Value::Null(value) => self.encode_null_value(value),
         }
+    }
+
+    pub fn encode_null(&mut self) -> Result<(), Error> {
+        let head_byte = NullValue::BIT_REPR;
+
+        self.push_byte(head_byte)?;
+
+        self.on_encode_value()
+    }
+
+    fn encode_null_value(&mut self, value: &NullValue) -> Result<(), Error> {
+        let NullValue = value;
+        self.encode_null()
     }
 }
 

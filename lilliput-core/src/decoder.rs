@@ -2,7 +2,7 @@ use std::hint::unreachable_unchecked;
 
 use crate::{
     Profile,
-    value::{Value, ValueType},
+    value::{NullValue, Value, ValueType},
 };
 
 #[derive(Eq, PartialEq, Debug, thiserror::Error)]
@@ -83,8 +83,23 @@ impl<'a> Decoder<'a> {
 impl<'a> Decoder<'a> {
     pub fn decode_any(&mut self) -> Result<Value, Error> {
         match ValueType::detect(self.peek_byte()?) {
+            ValueType::Null => self.decode_null_value().map(From::from),
             ValueType::Reserved => unimplemented!(),
         }
+    }
+
+    pub fn decode_null(&mut self) -> Result<(), Error> {
+        let _byte = self.pull_byte_expecting_type(ValueType::Null)?;
+
+        self.on_decode_value()?;
+
+        Ok(())
+    }
+
+    fn decode_null_value(&mut self) -> Result<NullValue, Error> {
+        self.decode_null()?;
+
+        Ok(NullValue)
     }
 }
 
