@@ -92,7 +92,9 @@ impl<'a> Decoder<'a> {
     }
 }
 
-impl<'a> Decoder<'a> {
+impl Decoder<'_> {
+    // MARK: - Any Values
+
     pub fn decode_any(&mut self) -> Result<Value, Error> {
         match ValueType::detect(self.peek_byte()?) {
             ValueType::Int => self.decode_int_value().map(From::from),
@@ -106,6 +108,8 @@ impl<'a> Decoder<'a> {
             ValueType::Reserved => unimplemented!(),
         }
     }
+
+    // MARK: - Int Values
 
     pub fn decode_u8(&mut self) -> Result<u8, Error> {
         match self.peek_int_size()? {
@@ -310,6 +314,8 @@ impl<'a> Decoder<'a> {
         }
     }
 
+    // MARK: - String Values
+
     pub fn decode_string(&mut self) -> Result<String, Error> {
         let byte = self.pull_byte_expecting_type(ValueType::String)?;
 
@@ -349,6 +355,8 @@ impl<'a> Decoder<'a> {
     pub(crate) fn decode_string_value(&mut self) -> Result<StringValue, Error> {
         self.decode_string().map(From::from)
     }
+
+    // MARK: - Seq Values
 
     pub fn decode_seq(&mut self) -> Result<Vec<Value>, Error> {
         let len = self.decode_seq_start()?;
@@ -422,6 +430,8 @@ impl<'a> Decoder<'a> {
 
         Ok(())
     }
+
+    // MARK: - Map Values
 
     pub fn decode_map(&mut self) -> Result<Map, Error> {
         let len = self.decode_map_start()?;
@@ -502,6 +512,8 @@ impl<'a> Decoder<'a> {
         Ok(())
     }
 
+    // MARK: - Float Values
+
     pub fn decode_f32(&mut self) -> Result<f32, Error> {
         self.decode_float()
     }
@@ -551,6 +563,8 @@ impl<'a> Decoder<'a> {
         }
     }
 
+    // MARK: - Bytes Values
+
     pub fn decode_bytes(&mut self) -> Result<Vec<u8>, Error> {
         let byte = self.pull_byte_expecting_type(ValueType::Bytes)?;
 
@@ -582,6 +596,8 @@ impl<'a> Decoder<'a> {
         self.decode_bytes().map(From::from)
     }
 
+    // MARK: - Bool Values
+
     pub fn decode_bool(&mut self) -> Result<bool, Error> {
         let byte = self.pull_byte_expecting_type(ValueType::Bool)?;
 
@@ -595,6 +611,8 @@ impl<'a> Decoder<'a> {
     fn decode_bool_value(&mut self) -> Result<BoolValue, Error> {
         self.decode_bool().map(From::from)
     }
+
+    // MARK: - Null Values
 
     pub fn decode_null(&mut self) -> Result<(), Error> {
         let _byte = self.pull_byte_expecting_type(ValueType::Null)?;
@@ -611,7 +629,9 @@ impl<'a> Decoder<'a> {
     }
 }
 
-impl<'a> Decoder<'a> {
+// MARK: - Auxiliary Methods
+
+impl Decoder<'_> {
     fn peek_byte(&self) -> Result<u8, Error> {
         if self.eof() {
             return Err(Error::Eof);
@@ -673,6 +693,8 @@ impl<'a> Decoder<'a> {
         }
     }
 }
+
+// MARK: - Tests
 
 #[cfg(test)]
 mod test {
