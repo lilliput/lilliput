@@ -1,9 +1,10 @@
-use num_traits::{FromBytes, float::FloatCore};
-
 use crate::{
     Profile,
     num::{FromFloat, IntoFloat},
-    value::{BoolValue, BytesValue, FloatValue, Map, MapValue, NullValue, Value, ValueType},
+    value::{
+        BoolValue, BytesValue, FloatValue, Map, MapValue, NullValue, SeqValue, Value, ValueType,
+    },
+    Profile,
 };
 
 #[derive(Eq, PartialEq, Debug, thiserror::Error)]
@@ -63,6 +64,7 @@ impl DecoderState {
     }
 }
 
+#[derive(Debug)]
 pub struct Decoder<'a> {
     buf: &'a [u8],
     pos: usize,
@@ -85,6 +87,7 @@ impl<'a> Decoder<'a> {
 impl<'a> Decoder<'a> {
     pub fn decode_any(&mut self) -> Result<Value, Error> {
         match ValueType::detect(self.peek_byte()?) {
+            ValueType::Seq => self.decode_seq_value().map(From::from),
             ValueType::Map => self.decode_map_value().map(From::from),
             ValueType::Float => self.decode_float_value().map(From::from),
             ValueType::Bytes => self.decode_bytes_value().map(From::from),
@@ -92,6 +95,80 @@ impl<'a> Decoder<'a> {
             ValueType::Null => self.decode_null_value().map(From::from),
             ValueType::Reserved => unimplemented!(),
         }
+    }
+
+    pub fn decode_seq(&mut self) -> Result<Vec<Value>, Error> {
+        let len = self.decode_seq_start()?;
+
+        let mut vec = Vec::with_capacity(len);
+
+        for _ in 0..len {
+            let value = self.decode_any()?;
+            vec.push(value);
+        }
+
+        self.decode_seq_end()?;
+
+        Ok(vec)
+    }
+
+    pub(crate) fn decode_seq_value(&mut self) -> Result<SeqValue, Error> {
+        self.decode_seq().map(From::from)
+    }
+
+    pub fn decode_seq_start(&mut self) -> Result<usize, Error> {
+        let byte = self.pull_byte_expecting_type(ValueType::Seq)?;
+
+        let is_long = byte & SeqValue::VARIANT_BIT != 0b0;
+
+        if is_long {
+            let is_valid = byte & SeqValue::LONG_RESERVED_BIT == 0b0;
+            let len_width = (byte & SeqValue::LONG_LEN_WIDTH_BITS) as usize + 1;
+
+            assert!(is_valid, "padding bits should be zero");
+
+            let mut bytes: [u8; 8] = [0b0; 8];
+
+            let range = {
+                let start = 8 - len_width;
+                let end = start + len_width;
+                start..end
+            };
+
+            bytes[range].copy_from_slice(self.pull_bytes(len_width)?);
+
+            let len = u64::from_be_bytes(bytes) as usize;
+
+            if self.remaining_len() < len {
+                return Err(Error::Eof);
+            }
+
+            self.state.push(DecoderState::seq(len));
+
+            Ok(len)
+        } else {
+            Err(Error::IncompatibleProfile)
+        }
+    }
+
+    pub fn decode_seq_end(&mut self) -> Result<(), Error> {
+        let Some(state) = self.state.last() else {
+            return Err(Error::Seq);
+        };
+
+        let DecoderState::Seq { pos, len } = state else {
+            return Err(Error::Seq);
+        };
+
+        if pos != len {
+            return Err(Error::Seq);
+        }
+
+        let _ = self.state.pop();
+
+        self.on_decode_value()?;
+
+        Ok(())
     }
 
     pub fn decode_map(&mut self) -> Result<Map, Error> {
