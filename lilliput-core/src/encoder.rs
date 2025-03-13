@@ -88,6 +88,8 @@ impl Encoder {
         }
     }
 
+    // MARK: - Any Values
+
     pub fn encode_any(&mut self, value: &Value) -> Result<(), Error> {
         match value {
             Value::Int(value) => self.encode_int_value(value),
@@ -100,6 +102,8 @@ impl Encoder {
             Value::Null(value) => self.encode_null_value(value),
         }
     }
+
+    // MARK: - Int Values
 
     pub fn encode_i8(&mut self, value: i8) -> Result<(), Error> {
         self.encode_signed(value)
@@ -192,6 +196,8 @@ impl Encoder {
         }
     }
 
+    // MARK: - String Values
+
     pub fn encode_string(&mut self, value: &str) -> Result<(), Error> {
         let value: &str = value.into();
 
@@ -216,6 +222,8 @@ impl Encoder {
     pub(crate) fn encode_string_value(&mut self, value: &StringValue) -> Result<(), Error> {
         self.encode_string(&value.0)
     }
+
+    // MARK: - Seq Values
 
     pub fn encode_seq(&mut self, value: &[Value]) -> Result<(), Error> {
         self.encode_seq_start(value.len())?;
@@ -266,6 +274,8 @@ impl Encoder {
 
         Ok(())
     }
+
+    // MARK: - Map Values
 
     pub fn encode_map(&mut self, value: &Map) -> Result<(), Error> {
         self.encode_map_start(value.len())?;
@@ -318,6 +328,8 @@ impl Encoder {
         Ok(())
     }
 
+    // MARK: - Float Values
+
     pub fn encode_f32(&mut self, value: f32) -> Result<(), Error> {
         self.encode_float(value)
     }
@@ -350,6 +362,8 @@ impl Encoder {
         }
     }
 
+    // MARK: - Bytes Values
+
     pub fn encode_bytes(&mut self, value: &[u8]) -> Result<(), Error> {
         // Push the value's metadata:
         let mut head_byte = BytesValue::PREFIX_BIT;
@@ -371,6 +385,8 @@ impl Encoder {
         self.encode_bytes(&value.0)
     }
 
+    // MARK: - Bool Values
+
     pub fn encode_bool(&mut self, value: bool) -> Result<(), Error> {
         let mut head_byte = BoolValue::PREFIX_BIT;
 
@@ -387,6 +403,8 @@ impl Encoder {
         self.encode_bool(value.0)
     }
 
+    // MARK: - Null Values
+
     pub fn encode_null(&mut self) -> Result<(), Error> {
         let head_byte = NullValue::BIT_REPR;
 
@@ -400,6 +418,8 @@ impl Encoder {
         self.encode_null()
     }
 }
+
+// MARK: - Auxiliary Methods
 
 impl Encoder {
     fn push_byte(&mut self, byte: u8) -> Result<(), Error> {
@@ -429,6 +449,8 @@ impl Encoder {
         }
     }
 }
+
+// MARK: - Tests
 
 #[cfg(test)]
 mod test {
