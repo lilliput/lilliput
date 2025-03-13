@@ -8,3 +8,9 @@ resolver = "2"
 license = "MPL-2.0"
 edition = "2021"
 rust-version = "1.70.0"
+
+[profile.test.package.proptest]
+opt-level = 3
+
+[profile.test.package.rand_chacha]
+opt-level = 3
