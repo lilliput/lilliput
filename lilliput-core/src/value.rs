@@ -4,6 +4,7 @@ mod float;
 mod map;
 mod null;
 mod seq;
+mod string;
 
 pub use self::{
     bool::BoolValue,
@@ -12,11 +13,13 @@ pub use self::{
     map::{Map, MapValue},
     null::NullValue,
     seq::SeqValue,
+    string::StringValue,
 };
 
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub enum ValueType {
+    String = 0b01000000,
     Seq = 0b00100000,
     Map = 0b00010000,
     Float = 0b00001000,
@@ -29,6 +32,7 @@ pub enum ValueType {
 impl ValueType {
     pub fn of(value: &Value) -> Self {
         match value {
+            Value::String(_) => ValueType::String,
             Value::Seq(_) => ValueType::Seq,
             Value::Map(_) => ValueType::Map,
             Value::Float(_) => ValueType::Float,
@@ -40,6 +44,8 @@ impl ValueType {
 
     pub fn detect(byte: u8) -> Self {
         match byte.leading_zeros() {
+            // 0b01000000
+            1 => Self::String,
             // 0b00100000
             2 => Self::Seq,
             // 0b00010000
@@ -60,6 +66,9 @@ impl ValueType {
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum Value {
+    /// Represents a string.
+    String(StringValue),
+
     /// Represents a sequence of values.
     Seq(SeqValue),
 
@@ -86,6 +95,12 @@ pub enum Value {
 impl Default for Value {
     fn default() -> Self {
         Self::Null(NullValue)
+    }
+}
+
+impl From<StringValue> for Value {
+    fn from(value: StringValue) -> Self {
+        Self::String(value)
     }
 }
 
@@ -129,6 +144,7 @@ impl std::fmt::Debug for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if f.alternate() {
             match self {
+                Self::String(value) => f.debug_tuple("String").field(value).finish(),
                 Self::Seq(value) => f.debug_tuple("Seq").field(value).finish(),
                 Self::Map(value) => f.debug_tuple("Map").field(value).finish(),
                 Self::Float(value) => f.debug_tuple("Float").field(value).finish(),
@@ -138,6 +154,7 @@ impl std::fmt::Debug for Value {
             }
         } else {
             match self {
+                Self::String(value) => std::fmt::Debug::fmt(value, f),
                 Self::Seq(value) => std::fmt::Debug::fmt(value, f),
                 Self::Map(value) => std::fmt::Debug::fmt(value, f),
                 Self::Float(value) => std::fmt::Debug::fmt(value, f),
@@ -215,6 +232,16 @@ mod tests {
 
     #[test]
     fn debug() {
+        // String
+        assert_eq!(
+            format!("{:?}", Value::String(StringValue::default())),
+            "\"\""
+        );
+        assert_eq!(
+            format!("{:#?}", Value::String(StringValue::default())),
+            "String(\n    \"\",\n)"
+        );
+
         // Seq
         assert_eq!(format!("{:?}", Value::Seq(SeqValue::default())), "[]");
         assert_eq!(
