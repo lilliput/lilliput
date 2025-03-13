@@ -3,7 +3,8 @@ use num_traits::{ToBytes, float::FloatCore};
 use crate::{
     Profile,
     value::{
-        BoolValue, BytesValue, FloatValue, Map, MapValue, NullValue, SeqValue, Value, ValueType,
+        BoolValue, BytesValue, FloatValue, Map, MapValue, NullValue, SeqValue, StringValue, Value,
+        ValueType,
     },
 };
 
@@ -88,6 +89,7 @@ impl Encoder {
 
     pub fn encode_any(&mut self, value: &Value) -> Result<(), Error> {
         match value {
+            Value::String(value) => self.encode_string_value(value),
             Value::Seq(value) => self.encode_seq_value(value),
             Value::Map(value) => self.encode_map_value(value),
             Value::Float(value) => self.encode_float_value(value),
@@ -95,6 +97,31 @@ impl Encoder {
             Value::Bool(value) => self.encode_bool_value(value),
             Value::Null(value) => self.encode_null_value(value),
         }
+    }
+
+    pub fn encode_string(&mut self, value: &str) -> Result<(), Error> {
+        let value: &str = value.into();
+
+        // Push the value's metadata:
+        let mut head_byte = StringValue::PREFIX_BIT;
+        head_byte |= StringValue::VARIANT_BIT;
+
+        head_byte |= 8 - 1; // width, minus 1
+        self.push_byte(head_byte)?;
+
+        // Push the value's length:
+        let neck_bytes = value.len().to_be_bytes();
+        self.push_bytes(&neck_bytes)?;
+
+        // Push the value's actual bytes:
+        let tail_bytes = value.as_bytes();
+        self.push_bytes(&tail_bytes)?;
+
+        self.on_encode_value()
+    }
+
+    pub(crate) fn encode_string_value(&mut self, value: &StringValue) -> Result<(), Error> {
+        self.encode_string(&value.0)
     }
 
     pub fn encode_seq(&mut self, value: &[Value]) -> Result<(), Error> {

@@ -8,3 +8,4 @@ mod float;
 mod map;
 mod null;
 mod seq;
+mod string;

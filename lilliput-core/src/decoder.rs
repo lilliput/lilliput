@@ -2,12 +2,15 @@ use crate::{
     Profile,
     num::{FromFloat, IntoFloat},
     value::{
-        BoolValue, BytesValue, FloatValue, Map, MapValue, NullValue, SeqValue, Value, ValueType,
+        BoolValue, BytesValue, FloatValue, Map, MapValue, NullValue, SeqValue, StringValue, Value,
+        ValueType,
     },
 };
 
 #[derive(Eq, PartialEq, Debug, thiserror::Error)]
 pub enum Error {
+    #[error("not a valid UTF-8 string")]
+    Utf8(#[from] std::string::FromUtf8Error),
     #[error("unexpected end of file")]
     Eof,
     #[error("expected type {expected:?}, found {actual:?}")]
@@ -85,6 +88,7 @@ impl<'a> Decoder<'a> {
 impl<'a> Decoder<'a> {
     pub fn decode_any(&mut self) -> Result<Value, Error> {
         match ValueType::detect(self.peek_byte()?) {
+            ValueType::String => self.decode_string_value().map(From::from),
             ValueType::Seq => self.decode_seq_value().map(From::from),
             ValueType::Map => self.decode_map_value().map(From::from),
             ValueType::Float => self.decode_float_value().map(From::from),
@@ -95,9 +99,48 @@ impl<'a> Decoder<'a> {
         }
     }
 
+    pub fn decode_string(&mut self) -> Result<String, Error> {
+        let byte = self.pull_byte_expecting_type(ValueType::String)?;
+
+        let is_long = byte & StringValue::VARIANT_BIT != 0b0;
+
+        if is_long {
+            let is_valid = byte & StringValue::LONG_RESERVED_BITS == 0b0;
+            let len_width = (byte & StringValue::LONG_LEN_WIDTH_BITS) as usize + 1;
+
+            assert!(is_valid, "padding bits should be zero");
+
+            let mut bytes: [u8; 8] = [0b0; 8];
+
+            let range = {
+                let start = 8 - len_width;
+                let end = start + len_width;
+                start..end
+            };
+
+            bytes[range].copy_from_slice(self.pull_bytes(len_width)?);
+
+            let len = u64::from_be_bytes(bytes) as usize;
+
+            let mut bytes = Vec::with_capacity(len.min(self.remaining_len()));
+            bytes.extend_from_slice(self.pull_bytes(len)?);
+
+            let value = String::from_utf8(bytes)?;
+
+            self.on_decode_value()?;
+
+            Ok(value)
+        } else {
+            Err(Error::IncompatibleProfile)
+        }
+    }
+
+    pub(crate) fn decode_string_value(&mut self) -> Result<StringValue, Error> {
+        self.decode_string().map(From::from)
+    }
+
     pub fn decode_seq(&mut self) -> Result<Vec<Value>, Error> {
         let len = self.decode_seq_start()?;
-
         let mut vec = Vec::with_capacity(len);
 
         for _ in 0..len {
