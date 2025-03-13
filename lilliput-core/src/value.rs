@@ -1,6 +1,7 @@
 mod bool;
 mod bytes;
 mod float;
+mod int;
 mod map;
 mod null;
 mod seq;
@@ -10,15 +11,19 @@ pub use self::{
     bool::BoolValue,
     bytes::BytesValue,
     float::FloatValue,
+    int::IntValue,
     map::{Map, MapValue},
     null::NullValue,
     seq::SeqValue,
     string::StringValue,
 };
 
+pub(crate) use self::int::{SignedIntValue, UnsignedIntValue};
+
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub enum ValueType {
+    Int = 0b10000000,
     String = 0b01000000,
     Seq = 0b00100000,
     Map = 0b00010000,
@@ -32,6 +37,7 @@ pub enum ValueType {
 impl ValueType {
     pub fn of(value: &Value) -> Self {
         match value {
+            Value::Int(_) => ValueType::Int,
             Value::String(_) => ValueType::String,
             Value::Seq(_) => ValueType::Seq,
             Value::Map(_) => ValueType::Map,
@@ -44,6 +50,8 @@ impl ValueType {
 
     pub fn detect(byte: u8) -> Self {
         match byte.leading_zeros() {
+            // 0b10000000
+            0 => Self::Int,
             // 0b01000000
             1 => Self::String,
             // 0b00100000
@@ -66,6 +74,9 @@ impl ValueType {
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum Value {
+    /// Represents a integer number.
+    Int(IntValue),
+
     /// Represents a string.
     String(StringValue),
 
@@ -95,6 +106,12 @@ pub enum Value {
 impl Default for Value {
     fn default() -> Self {
         Self::Null(NullValue::default())
+    }
+}
+
+impl From<IntValue> for Value {
+    fn from(value: IntValue) -> Self {
+        Self::Int(value)
     }
 }
 
@@ -144,6 +161,7 @@ impl std::fmt::Debug for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if f.alternate() {
             match self {
+                Self::Int(value) => f.debug_tuple("Int").field(value).finish(),
                 Self::String(value) => f.debug_tuple("String").field(value).finish(),
                 Self::Seq(value) => f.debug_tuple("Seq").field(value).finish(),
                 Self::Map(value) => f.debug_tuple("Map").field(value).finish(),
@@ -154,6 +172,7 @@ impl std::fmt::Debug for Value {
             }
         } else {
             match self {
+                Self::Int(value) => std::fmt::Debug::fmt(value, f),
                 Self::String(value) => std::fmt::Debug::fmt(value, f),
                 Self::Seq(value) => std::fmt::Debug::fmt(value, f),
                 Self::Map(value) => std::fmt::Debug::fmt(value, f),
@@ -232,6 +251,13 @@ mod tests {
 
     #[test]
     fn debug() {
+        // Int
+        assert_eq!(format!("{:?}", Value::Int(IntValue::default())), "0");
+        assert_eq!(
+            format!("{:#?}", Value::Int(IntValue::default())),
+            "Int(\n    0_u8,\n)"
+        );
+
         // String
         assert_eq!(
             format!("{:?}", Value::String(StringValue::default())),
