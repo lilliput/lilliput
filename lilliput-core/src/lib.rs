@@ -3,6 +3,7 @@ pub mod encoder;
 pub mod value;
 
 mod fmt;
+mod num;
 
 #[cfg(test)]
 mod tests;
