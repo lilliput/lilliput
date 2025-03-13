@@ -7,3 +7,4 @@ mod bytes;
 mod float;
 mod map;
 mod null;
+mod seq;

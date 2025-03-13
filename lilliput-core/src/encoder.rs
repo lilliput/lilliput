@@ -2,7 +2,9 @@ use num_traits::{ToBytes, float::FloatCore};
 
 use crate::{
     Profile,
-    value::{BoolValue, BytesValue, FloatValue, Map, MapValue, NullValue, Value, ValueType},
+    value::{
+        BoolValue, BytesValue, FloatValue, Map, MapValue, NullValue, SeqValue, Value, ValueType,
+    },
 };
 
 #[derive(Eq, PartialEq, Debug, thiserror::Error)]
@@ -13,6 +15,7 @@ pub enum Error {
     Map,
 }
 
+#[derive(Debug)]
 enum EncoderState {
     Seq { pos: usize, len: usize },
     Map { pos: usize, len: usize },
@@ -52,6 +55,7 @@ impl EncoderState {
     }
 }
 
+#[derive(Debug)]
 pub struct Encoder {
     buf: Vec<u8>,
     pos: usize,
@@ -84,6 +88,7 @@ impl Encoder {
 
     pub fn encode_any(&mut self, value: &Value) -> Result<(), Error> {
         match value {
+            Value::Seq(value) => self.encode_seq_value(value),
             Value::Map(value) => self.encode_map_value(value),
             Value::Float(value) => self.encode_float_value(value),
             Value::Bytes(value) => self.encode_bytes_value(value),
@@ -92,9 +97,57 @@ impl Encoder {
         }
     }
 
-    pub fn encode_map(&mut self, value: &Map) -> Result<(), Error> {
-        let value: &Map = value.into();
+    pub fn encode_seq(&mut self, value: &[Value]) -> Result<(), Error> {
+        self.encode_seq_start(value.len())?;
 
+        for value in value {
+            self.encode_any(value)?;
+        }
+
+        self.encode_seq_end()
+    }
+
+    pub(crate) fn encode_seq_value(&mut self, value: &SeqValue) -> Result<(), Error> {
+        self.encode_seq(&value.0)
+    }
+
+    pub fn encode_seq_start(&mut self, len: usize) -> Result<(), Error> {
+        // Push the value's metadata:
+        let mut head_byte = SeqValue::PREFIX_BIT;
+        head_byte |= SeqValue::VARIANT_BIT;
+        head_byte |= 8 - 1; // width, minus 1
+        self.push_byte(head_byte)?;
+
+        // Push the value's length:
+        let neck_bytes = len.to_be_bytes();
+        self.push_bytes(&neck_bytes)?;
+
+        self.state.push(EncoderState::seq(len));
+
+        Ok(())
+    }
+
+    pub fn encode_seq_end(&mut self) -> Result<(), Error> {
+        let Some(state) = self.state.last() else {
+            return Err(Error::Seq);
+        };
+
+        let EncoderState::Seq { pos, len } = state else {
+            return Err(Error::Seq);
+        };
+
+        if pos != len {
+            return Err(Error::Seq);
+        }
+
+        let _ = self.state.pop();
+
+        self.on_encode_value()?;
+
+        Ok(())
+    }
+
+    pub fn encode_map(&mut self, value: &Map) -> Result<(), Error> {
         self.encode_map_start(value.len())?;
 
         for (key, value) in value {
