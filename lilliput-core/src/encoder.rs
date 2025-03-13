@@ -1,6 +1,7 @@
 use crate::{
     Profile,
-    value::{BoolValue, NullValue, Value, ValueType},
+    fmt::BytesSlice,
+    value::{BoolValue, BytesValue, NullValue, Value, ValueType},
 };
 
 #[derive(Eq, PartialEq, Debug, thiserror::Error)]
@@ -83,9 +84,31 @@ impl Encoder {
 
     pub fn encode_any(&mut self, value: &Value) -> Result<(), Error> {
         match value {
+            Value::Bytes(value) => self.encode_bytes_value(value),
             Value::Bool(value) => self.encode_bool_value(value),
             Value::Null(value) => self.encode_null_value(value),
         }
+    }
+
+    pub fn encode_bytes(&mut self, value: &[u8]) -> Result<(), Error> {
+        // Push the value's metadata:
+        let mut head_byte = BytesValue::PREFIX_BIT;
+        head_byte |= 3; // width exponent of usize (2 ^ 3 = 8)
+        self.push_byte(head_byte)?;
+
+        // Push the value's length:
+        let neck_bytes = value.len().to_be_bytes();
+        self.push_bytes(&neck_bytes)?;
+
+        // Push the value's actual bytes:
+        let tail_bytes = value;
+        self.push_bytes(tail_bytes)?;
+
+        self.on_encode_value()
+    }
+
+    fn encode_bytes_value(&mut self, value: &BytesValue) -> Result<(), Error> {
+        self.encode_bytes(&value.0)
     }
 
     pub fn encode_bool(&mut self, value: bool) -> Result<(), Error> {
