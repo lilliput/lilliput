@@ -1,9 +1,9 @@
-use std::hint::unreachable_unchecked;
+use num_traits::{FromBytes, float::FloatCore};
 
 use crate::{
     Profile,
-    fmt::BytesSlice,
-    value::{BoolValue, BytesValue, NullValue, Value, ValueType},
+    num::{FromFloat, IntoFloat},
+    value::{BoolValue, BytesValue, FloatValue, NullValue, Value, ValueType},
 };
 
 #[derive(Eq, PartialEq, Debug, thiserror::Error)]
@@ -85,10 +85,60 @@ impl<'a> Decoder<'a> {
 impl<'a> Decoder<'a> {
     pub fn decode_any(&mut self) -> Result<Value, Error> {
         match ValueType::detect(self.peek_byte()?) {
+            ValueType::Float => self.decode_float_value().map(From::from),
             ValueType::Bytes => self.decode_bytes_value().map(From::from),
             ValueType::Bool => self.decode_bool_value().map(From::from),
             ValueType::Null => self.decode_null_value().map(From::from),
             ValueType::Reserved => unimplemented!(),
+        }
+    }
+
+    pub fn decode_f32(&mut self) -> Result<f32, Error> {
+        self.decode_float()
+    }
+
+    pub fn decode_f64(&mut self) -> Result<f64, Error> {
+        self.decode_float()
+    }
+
+    fn decode_float<T>(&mut self) -> Result<T, Error>
+    where
+        T: FromFloat<f32> + FromFloat<f64>,
+    {
+        let byte = self.pull_byte_expecting_type(ValueType::Float)?;
+
+        let width = (byte & FloatValue::WIDTH_BITS) as usize + 1;
+
+        match width {
+            4 => {
+                let mut bytes: [u8; 4] = [0b0; 4];
+                bytes.copy_from_slice(self.pull_bytes(width)?);
+
+                self.on_decode_value()?;
+
+                Ok(f32::from_be_bytes(bytes).into_float())
+            }
+            8 => {
+                let mut bytes: [u8; 8] = [0b0; 8];
+                bytes.copy_from_slice(self.pull_bytes(width)?);
+
+                self.on_decode_value()?;
+
+                Ok(f64::from_be_bytes(bytes).into_float())
+            }
+            _ => Err(Error::IncompatibleProfile),
+        }
+    }
+
+    pub(crate) fn decode_float_value(&mut self) -> Result<FloatValue, Error> {
+        let byte = self.peek_byte_expecting_type(ValueType::Float)?;
+
+        let width = (byte & FloatValue::WIDTH_BITS) as usize + 1;
+
+        match width {
+            4 => self.decode_f32().map(FloatValue::F32),
+            8 => self.decode_f64().map(FloatValue::F64),
+            _ => Err(Error::IncompatibleProfile),
         }
     }
 
@@ -163,6 +213,7 @@ impl<'a> Decoder<'a> {
 
     fn peek_byte_expecting_type(&self, expected: ValueType) -> Result<u8, Error> {
         let byte = self.peek_byte()?;
+
         let actual = ValueType::detect(byte);
 
         if actual == expected {
