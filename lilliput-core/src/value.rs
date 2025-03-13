@@ -1,11 +1,13 @@
 mod bool;
+mod bytes;
 mod null;
 
-pub use self::{bool::BoolValue, null::NullValue};
+pub use self::{bool::BoolValue, bytes::BytesValue, null::NullValue};
 
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub enum ValueType {
+    Bytes = 0b00000100,
     Bool = 0b00000010,
     Null = 0b00000001,
     Reserved = 0b00000000,
@@ -14,6 +16,7 @@ pub enum ValueType {
 impl ValueType {
     pub fn of(value: &Value) -> Self {
         match value {
+            Value::Bytes(_) => ValueType::Bytes,
             Value::Bool(_) => ValueType::Bool,
             Value::Null(_) => ValueType::Null,
         }
@@ -21,6 +24,8 @@ impl ValueType {
 
     pub fn detect(byte: u8) -> Self {
         match byte.leading_zeros() {
+            // 0b00000100
+            5 => Self::Bytes,
             // 0b00000010
             6 => Self::Bool,
             // 0b00000001
@@ -34,6 +39,9 @@ impl ValueType {
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum Value {
+    /// Represents a byte array.
+    Bytes(BytesValue),
+
     /// Represents a boolean.
     Bool(BoolValue),
 
@@ -44,6 +52,12 @@ pub enum Value {
 impl Default for Value {
     fn default() -> Self {
         Self::Null(NullValue::default())
+    }
+}
+
+impl From<BytesValue> for Value {
+    fn from(value: BytesValue) -> Self {
+        Self::Bytes(value)
     }
 }
 
@@ -63,11 +77,13 @@ impl std::fmt::Debug for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if f.alternate() {
             match self {
+                Self::Bytes(value) => f.debug_tuple("Bytes").field(value).finish(),
                 Self::Bool(value) => f.debug_tuple("Bool").field(value).finish(),
                 Self::Null(value) => f.debug_tuple("Null").field(value).finish(),
             }
         } else {
             match self {
+                Self::Bytes(value) => std::fmt::Debug::fmt(value, f),
                 Self::Bool(value) => std::fmt::Debug::fmt(value, f),
                 Self::Null(value) => std::fmt::Debug::fmt(value, f),
             }
@@ -87,6 +103,13 @@ mod tests {
 
     #[test]
     fn debug() {
+        // Bytes
+        assert_eq!(format!("{:?}", Value::Bytes(BytesValue::default())), "[]");
+        assert_eq!(
+            format!("{:#?}", Value::Bytes(BytesValue::default())),
+            "Bytes(\n    [],\n)"
+        );
+
         // Bool
         assert_eq!(format!("{:?}", Value::Bool(BoolValue::default())), "false");
         assert_eq!(

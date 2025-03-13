@@ -2,7 +2,8 @@ use std::hint::unreachable_unchecked;
 
 use crate::{
     Profile,
-    value::{BoolValue, NullValue, Value, ValueType},
+    fmt::BytesSlice,
+    value::{BoolValue, BytesValue, NullValue, Value, ValueType},
 };
 
 #[derive(Eq, PartialEq, Debug, thiserror::Error)]
@@ -83,10 +84,42 @@ impl<'a> Decoder<'a> {
 impl<'a> Decoder<'a> {
     pub fn decode_any(&mut self) -> Result<Value, Error> {
         match ValueType::detect(self.peek_byte()?) {
+            ValueType::Bytes => self.decode_bytes_value().map(From::from),
             ValueType::Bool => self.decode_bool_value().map(From::from),
             ValueType::Null => self.decode_null_value().map(From::from),
             ValueType::Reserved => unimplemented!(),
         }
+    }
+
+    pub fn decode_bytes(&mut self) -> Result<Vec<u8>, Error> {
+        let byte = self.pull_byte_expecting_type(ValueType::Bytes)?;
+
+        let len_width_exponent = (byte & BytesValue::LONG_WIDTH_BITS) as u32;
+        let len_width = 1_usize << len_width_exponent;
+
+        let len = {
+            let range = {
+                let start = 8 - len_width;
+                let end = start + len_width;
+                start..end
+            };
+
+            let mut len_bytes: [u8; 8] = [0b0; 8];
+            len_bytes[range].copy_from_slice(self.pull_bytes(len_width)?);
+
+            u64::from_be_bytes(len_bytes) as usize
+        };
+
+        let mut bytes = Vec::with_capacity(len.min(self.remaining_len()));
+        bytes.extend_from_slice(self.pull_bytes(len)?);
+
+        self.on_decode_value()?;
+
+        Ok(bytes)
+    }
+
+    fn decode_bytes_value(&mut self) -> Result<BytesValue, Error> {
+        self.decode_bytes().map(From::from)
     }
 
     pub fn decode_bool(&mut self) -> Result<bool, Error> {
