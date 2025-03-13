@@ -2,3 +2,6 @@
 members = [
     "lilliput-core",
 ]
+
+[workspace.package]
+license = "MPL-2.0"
