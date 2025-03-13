@@ -1,7 +1,8 @@
+use num_traits::{ToBytes, float::FloatCore};
+
 use crate::{
     Profile,
-    fmt::BytesSlice,
-    value::{BoolValue, BytesValue, NullValue, Value, ValueType},
+    value::{BoolValue, BytesValue, FloatValue, NullValue, Value, ValueType},
 };
 
 #[derive(Eq, PartialEq, Debug, thiserror::Error)]
@@ -83,9 +84,42 @@ impl Encoder {
 
     pub fn encode_any(&mut self, value: &Value) -> Result<(), Error> {
         match value {
+            Value::Float(value) => self.encode_float_value(value),
             Value::Bytes(value) => self.encode_bytes_value(value),
             Value::Bool(value) => self.encode_bool_value(value),
             Value::Null(value) => self.encode_null_value(value),
+        }
+    }
+
+    pub fn encode_f32(&mut self, value: f32) -> Result<(), Error> {
+        self.encode_float(value)
+    }
+
+    pub fn encode_f64(&mut self, value: f64) -> Result<(), Error> {
+        self.encode_float(value)
+    }
+
+    fn encode_float<T, const N: usize>(&mut self, value: T) -> Result<(), Error>
+    where
+        T: FloatCore + ToBytes<Bytes = [u8; N]>,
+    {
+        // Push the value's metadata:
+        let mut head_byte = FloatValue::PREFIX_BIT;
+
+        head_byte |= (N as u8) - 1; // width of T, minus 1
+        self.push_byte(head_byte)?;
+
+        // Push the value's actual bytes:
+        let tail_bytes = value.to_be_bytes();
+        self.push_bytes(&tail_bytes)?;
+
+        self.on_encode_value()
+    }
+
+    pub(crate) fn encode_float_value(&mut self, value: &FloatValue) -> Result<(), Error> {
+        match *value {
+            FloatValue::F32(value) => self.encode_f32(value),
+            FloatValue::F64(value) => self.encode_f64(value),
         }
     }
 
