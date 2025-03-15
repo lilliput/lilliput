@@ -14,8 +14,9 @@ mod bytes;
 mod float;
 mod map;
 mod null;
+mod seq;
 
-use self::{bool::*, bytes::*, float::*, map::*, null::*};
+use self::{bool::*, bytes::*, float::*, map::*, null::*, seq::*};
 
 #[derive(Eq, PartialEq, Debug, thiserror::Error)]
 pub enum DecoderError {
@@ -367,60 +368,31 @@ impl Decoder<'_> {
     // MARK: - Seq Values
 
     pub fn decode_seq(&mut self) -> Result<Vec<Value>, DecoderError> {
-        let len = self.decode_seq_start()?;
-        let mut vec = Vec::with_capacity(len);
+        let value = SeqDecoder::with(self).decode_seq()?;
 
-        for _ in 0..len {
-            let value = self.decode_any()?;
-            vec.push(value);
-        }
+        self.on_decode_value()?;
 
-        self.decode_seq_end()?;
-
-        Ok(vec)
+        Ok(value)
     }
 
     pub(crate) fn decode_seq_value(&mut self) -> Result<SeqValue, DecoderError> {
-        self.decode_seq().map(From::from)
+        let value = SeqDecoder::with(self).decode_seq_value()?;
+
+        self.on_decode_value()?;
+
+        Ok(value)
     }
 
     pub fn decode_seq_start(&mut self) -> Result<usize, DecoderError> {
-        let byte = self.pull_byte_expecting_type(ValueType::Seq)?;
+        let len = SeqDecoder::with(self).decode_seq_start()?;
 
-        let is_long = byte & SeqValue::VARIANT_BIT != 0b0;
+        self.state.push(DecoderState::seq(len));
 
-        if is_long {
-            let is_valid = byte & SeqValue::LONG_RESERVED_BIT == 0b0;
-            let len_width = (byte & SeqValue::LONG_LEN_WIDTH_BITS) as usize + 1;
-
-            assert!(is_valid, "padding bits should be zero");
-
-            let mut bytes: [u8; 8] = [0b0; 8];
-
-            let range = {
-                let start = 8 - len_width;
-                let end = start + len_width;
-                start..end
-            };
-
-            bytes[range].copy_from_slice(self.pull_bytes(len_width)?);
-
-            let len = u64::from_be_bytes(bytes) as usize;
-
-            if self.remaining_len() < len {
-                return Err(DecoderError::Eof);
-            }
-
-            self.state.push(DecoderState::seq(len));
-
-            Ok(len)
-        } else {
-            Err(DecoderError::IncompatibleProfile)
-        }
+        Ok(len)
     }
 
     pub fn decode_seq_end(&mut self) -> Result<(), DecoderError> {
-        let Some(state) = self.state.last() else {
+        let Some(state) = self.state.pop() else {
             return Err(DecoderError::Seq);
         };
 
@@ -432,7 +404,7 @@ impl Decoder<'_> {
             return Err(DecoderError::Seq);
         }
 
-        let _ = self.state.pop();
+        SeqDecoder::with(self).decode_seq_end()?;
 
         self.on_decode_value()?;
 
