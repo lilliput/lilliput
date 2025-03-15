@@ -1,6 +1,6 @@
 use super::byte::Byte;
 
-pub struct BytesSliceIter<'a>(&'a [u8]);
+pub(crate) struct BytesSliceIter<'a>(&'a [u8]);
 
 impl Iterator for BytesSliceIter<'_> {
     type Item = Byte;
@@ -14,7 +14,8 @@ impl Iterator for BytesSliceIter<'_> {
     }
 }
 
-pub struct BytesSlice<'a>(pub &'a [u8]);
+#[derive(Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub(crate) struct BytesSlice<'a>(pub &'a [u8]);
 
 impl<'a> BytesSlice<'a> {
     pub fn iter(&self) -> BytesSliceIter<'a> {
