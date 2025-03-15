@@ -15,8 +15,9 @@ mod float;
 mod map;
 mod null;
 mod seq;
+mod string;
 
-use self::{bool::*, bytes::*, float::*, map::*, null::*, seq::*};
+use self::{bool::*, bytes::*, float::*, map::*, null::*, seq::*, string::*};
 
 #[derive(Eq, PartialEq, Debug, thiserror::Error)]
 pub enum EncoderError {
@@ -209,28 +210,19 @@ impl Encoder {
     // MARK: - String Values
 
     pub fn encode_string(&mut self, value: &str) -> Result<(), EncoderError> {
-        let value: &str = value;
+        StringEncoder::with(self).encode_string(value)?;
 
-        // Push the value's metadata:
-        let mut head_byte = StringValue::PREFIX_BIT;
-        head_byte |= StringValue::VARIANT_BIT;
+        self.on_encode_value()?;
 
-        head_byte |= 8 - 1; // width, minus 1
-        self.push_byte(head_byte)?;
-
-        // Push the value's length:
-        let neck_bytes = value.len().to_be_bytes();
-        self.push_bytes(&neck_bytes)?;
-
-        // Push the value's actual bytes:
-        let tail_bytes = value.as_bytes();
-        self.push_bytes(tail_bytes)?;
-
-        self.on_encode_value()
+        Ok(())
     }
 
     pub(crate) fn encode_string_value(&mut self, value: &StringValue) -> Result<(), EncoderError> {
-        self.encode_string(&value.0)
+        StringEncoder::with(self).encode_string_value(value)?;
+
+        self.on_encode_value()?;
+
+        Ok(())
     }
 
     // MARK: - Seq Values
