@@ -10,7 +10,7 @@ use crate::{
 };
 
 #[derive(Eq, PartialEq, Debug, thiserror::Error)]
-pub enum Error {
+pub enum DecoderError {
     #[error("not a valid UTF-8 string")]
     Utf8(#[from] std::string::FromUtf8Error),
     #[error("unexpected end of file")]
@@ -50,14 +50,14 @@ impl DecoderState {
         }
     }
 
-    fn on_decode_value(&mut self) -> Result<(), Error> {
+    fn on_decode_value(&mut self) -> Result<(), DecoderError> {
         match self {
             DecoderState::Seq { pos, len } => {
                 if pos < len {
                     *pos += 1;
                     Ok(())
                 } else {
-                    Err(Error::Seq)
+                    Err(DecoderError::Seq)
                 }
             }
             DecoderState::Map { pos, len } => {
@@ -65,7 +65,7 @@ impl DecoderState {
                     *pos += 1;
                     Ok(())
                 } else {
-                    Err(Error::Map)
+                    Err(DecoderError::Map)
                 }
             }
         }
@@ -95,7 +95,7 @@ impl<'a> Decoder<'a> {
 impl Decoder<'_> {
     // MARK: - Any Values
 
-    pub fn decode_any(&mut self) -> Result<Value, Error> {
+    pub fn decode_any(&mut self) -> Result<Value, DecoderError> {
         match ValueType::detect(self.peek_byte()?) {
             ValueType::Int => self.decode_int_value().map(From::from),
             ValueType::String => self.decode_string_value().map(From::from),
@@ -111,37 +111,37 @@ impl Decoder<'_> {
 
     // MARK: - Int Values
 
-    pub fn decode_u8(&mut self) -> Result<u8, Error> {
+    pub fn decode_u8(&mut self) -> Result<u8, DecoderError> {
         match self.peek_int_size()? {
             1 => self.decode_unsigned::<u8, 1>(),
-            2 => Err(Error::Int),
-            4 => Err(Error::Int),
-            8 => Err(Error::Int),
+            2 => Err(DecoderError::Int),
+            4 => Err(DecoderError::Int),
+            8 => Err(DecoderError::Int),
             _ => unimplemented!(),
         }
     }
 
-    pub fn decode_u16(&mut self) -> Result<u16, Error> {
+    pub fn decode_u16(&mut self) -> Result<u16, DecoderError> {
         match self.peek_int_size()? {
             1 => Ok(self.decode_unsigned::<u8, 1>()?.into()),
             2 => self.decode_unsigned::<u16, 2>(),
-            4 => Err(Error::Int),
-            8 => Err(Error::Int),
+            4 => Err(DecoderError::Int),
+            8 => Err(DecoderError::Int),
             _ => unimplemented!(),
         }
     }
 
-    pub fn decode_u32(&mut self) -> Result<u32, Error> {
+    pub fn decode_u32(&mut self) -> Result<u32, DecoderError> {
         match self.peek_int_size()? {
             1 => Ok(self.decode_unsigned::<u8, 1>()?.into()),
             2 => Ok(self.decode_unsigned::<u16, 2>()?.into()),
             4 => self.decode_unsigned::<u32, 4>(),
-            8 => Err(Error::Int),
+            8 => Err(DecoderError::Int),
             _ => unimplemented!(),
         }
     }
 
-    pub fn decode_u64(&mut self) -> Result<u64, Error> {
+    pub fn decode_u64(&mut self) -> Result<u64, DecoderError> {
         match self.peek_int_size()? {
             1 => Ok(self.decode_unsigned::<u8, 1>()?.into()),
             2 => Ok(self.decode_unsigned::<u16, 2>()?.into()),
@@ -151,37 +151,37 @@ impl Decoder<'_> {
         }
     }
 
-    pub fn decode_i8(&mut self) -> Result<i8, Error> {
+    pub fn decode_i8(&mut self) -> Result<i8, DecoderError> {
         match self.peek_int_size()? {
             1 => self.decode_signed::<i8, u8, 1>(),
-            2 => Err(Error::Int),
-            4 => Err(Error::Int),
-            8 => Err(Error::Int),
+            2 => Err(DecoderError::Int),
+            4 => Err(DecoderError::Int),
+            8 => Err(DecoderError::Int),
             _ => unimplemented!(),
         }
     }
 
-    pub fn decode_i16(&mut self) -> Result<i16, Error> {
+    pub fn decode_i16(&mut self) -> Result<i16, DecoderError> {
         match self.peek_int_size()? {
             1 => Ok(self.decode_signed::<i8, u8, 1>()?.into()),
             2 => self.decode_signed::<i16, u16, 2>(),
-            4 => Err(Error::Int),
-            8 => Err(Error::Int),
+            4 => Err(DecoderError::Int),
+            8 => Err(DecoderError::Int),
             _ => unimplemented!(),
         }
     }
 
-    pub fn decode_i32(&mut self) -> Result<i32, Error> {
+    pub fn decode_i32(&mut self) -> Result<i32, DecoderError> {
         match self.peek_int_size()? {
             1 => Ok(self.decode_signed::<i8, u8, 1>()?.into()),
             2 => Ok(self.decode_signed::<i16, u16, 2>()?.into()),
             4 => self.decode_signed::<i32, u32, 4>(),
-            8 => Err(Error::Int),
+            8 => Err(DecoderError::Int),
             _ => unimplemented!(),
         }
     }
 
-    pub fn decode_i64(&mut self) -> Result<i64, Error> {
+    pub fn decode_i64(&mut self) -> Result<i64, DecoderError> {
         match self.peek_int_size()? {
             1 => Ok(self.decode_signed::<i8, u8, 1>()?.into()),
             2 => Ok(self.decode_signed::<i16, u16, 2>()?.into()),
@@ -191,7 +191,7 @@ impl Decoder<'_> {
         }
     }
 
-    fn decode_signed<S, U, const N: usize>(&mut self) -> Result<S, Error>
+    fn decode_signed<S, U, const N: usize>(&mut self) -> Result<S, DecoderError>
     where
         S: Signed + PrimInt + FromZigZag<ZigZag = U>,
         U: FromBytes<Bytes = [u8; N]>,
@@ -201,7 +201,7 @@ impl Decoder<'_> {
         let is_signed = byte & IntValue::SIGNEDNESS_BIT != 0b0;
 
         if !is_signed {
-            return Err(Error::Other);
+            return Err(DecoderError::Other);
         }
 
         if is_long {
@@ -211,7 +211,7 @@ impl Decoder<'_> {
             let size_len = (byte & IntValue::LONG_WIDTH_BITS) as usize + 1;
 
             if size_len > N {
-                return Err(Error::Int);
+                return Err(DecoderError::Int);
             }
 
             let pulled_bytes = self.pull_bytes(size_len)?;
@@ -226,11 +226,11 @@ impl Decoder<'_> {
 
             Ok(signed)
         } else {
-            Err(Error::IncompatibleProfile)
+            Err(DecoderError::IncompatibleProfile)
         }
     }
 
-    fn decode_unsigned<T, const N: usize>(&mut self) -> Result<T, Error>
+    fn decode_unsigned<T, const N: usize>(&mut self) -> Result<T, DecoderError>
     where
         T: Unsigned + PrimInt + FromBytes<Bytes = [u8; N]>,
     {
@@ -239,7 +239,7 @@ impl Decoder<'_> {
         let is_signed = byte & IntValue::SIGNEDNESS_BIT != 0b0;
 
         if is_signed {
-            return Err(Error::Other);
+            return Err(DecoderError::Other);
         }
 
         if is_long {
@@ -249,7 +249,7 @@ impl Decoder<'_> {
             let size_len = (byte & IntValue::LONG_WIDTH_BITS) as usize + 1;
 
             if size_len > N {
-                return Err(Error::Int);
+                return Err(DecoderError::Int);
             }
 
             let pulled_bytes = self.pull_bytes(size_len)?;
@@ -263,11 +263,11 @@ impl Decoder<'_> {
 
             Ok(unsigned)
         } else {
-            Err(Error::IncompatibleProfile)
+            Err(DecoderError::IncompatibleProfile)
         }
     }
 
-    pub fn decode_int_value(&mut self) -> Result<IntValue, Error> {
+    pub fn decode_int_value(&mut self) -> Result<IntValue, DecoderError> {
         let byte = self.peek_byte_expecting_type(ValueType::Int)?;
         let is_long = byte & IntValue::VARIANT_BIT != 0b0;
         let is_signed = byte & IntValue::SIGNEDNESS_BIT != 0b0;
@@ -287,7 +287,7 @@ impl Decoder<'_> {
                     8 => Ok(IntValue::Signed(
                         self.decode_signed::<i64, u64, 8>()?.into(),
                     )),
-                    _ => Err(Error::IncompatibleProfile),
+                    _ => Err(DecoderError::IncompatibleProfile),
                 }
             } else {
                 match size_len {
@@ -295,15 +295,15 @@ impl Decoder<'_> {
                     2 => Ok(IntValue::Unsigned(self.decode_unsigned::<u16, 2>()?.into())),
                     4 => Ok(IntValue::Unsigned(self.decode_unsigned::<u32, 4>()?.into())),
                     8 => Ok(IntValue::Unsigned(self.decode_unsigned::<u64, 8>()?.into())),
-                    _ => Err(Error::IncompatibleProfile),
+                    _ => Err(DecoderError::IncompatibleProfile),
                 }
             }
         } else {
-            Err(Error::IncompatibleProfile)
+            Err(DecoderError::IncompatibleProfile)
         }
     }
 
-    fn peek_int_size(&self) -> Result<usize, Error> {
+    fn peek_int_size(&self) -> Result<usize, DecoderError> {
         let byte = self.peek_byte_expecting_type(ValueType::Int)?;
         let is_long = byte & IntValue::VARIANT_BIT != 0b0;
 
@@ -316,7 +316,7 @@ impl Decoder<'_> {
 
     // MARK: - String Values
 
-    pub fn decode_string(&mut self) -> Result<String, Error> {
+    pub fn decode_string(&mut self) -> Result<String, DecoderError> {
         let byte = self.pull_byte_expecting_type(ValueType::String)?;
 
         let is_long = byte & StringValue::VARIANT_BIT != 0b0;
@@ -348,17 +348,17 @@ impl Decoder<'_> {
 
             Ok(value)
         } else {
-            Err(Error::IncompatibleProfile)
+            Err(DecoderError::IncompatibleProfile)
         }
     }
 
-    pub(crate) fn decode_string_value(&mut self) -> Result<StringValue, Error> {
+    pub(crate) fn decode_string_value(&mut self) -> Result<StringValue, DecoderError> {
         self.decode_string().map(From::from)
     }
 
     // MARK: - Seq Values
 
-    pub fn decode_seq(&mut self) -> Result<Vec<Value>, Error> {
+    pub fn decode_seq(&mut self) -> Result<Vec<Value>, DecoderError> {
         let len = self.decode_seq_start()?;
         let mut vec = Vec::with_capacity(len);
 
@@ -372,11 +372,11 @@ impl Decoder<'_> {
         Ok(vec)
     }
 
-    pub(crate) fn decode_seq_value(&mut self) -> Result<SeqValue, Error> {
+    pub(crate) fn decode_seq_value(&mut self) -> Result<SeqValue, DecoderError> {
         self.decode_seq().map(From::from)
     }
 
-    pub fn decode_seq_start(&mut self) -> Result<usize, Error> {
+    pub fn decode_seq_start(&mut self) -> Result<usize, DecoderError> {
         let byte = self.pull_byte_expecting_type(ValueType::Seq)?;
 
         let is_long = byte & SeqValue::VARIANT_BIT != 0b0;
@@ -400,28 +400,28 @@ impl Decoder<'_> {
             let len = u64::from_be_bytes(bytes) as usize;
 
             if self.remaining_len() < len {
-                return Err(Error::Eof);
+                return Err(DecoderError::Eof);
             }
 
             self.state.push(DecoderState::seq(len));
 
             Ok(len)
         } else {
-            Err(Error::IncompatibleProfile)
+            Err(DecoderError::IncompatibleProfile)
         }
     }
 
-    pub fn decode_seq_end(&mut self) -> Result<(), Error> {
+    pub fn decode_seq_end(&mut self) -> Result<(), DecoderError> {
         let Some(state) = self.state.last() else {
-            return Err(Error::Seq);
+            return Err(DecoderError::Seq);
         };
 
         let DecoderState::Seq { pos, len } = state else {
-            return Err(Error::Seq);
+            return Err(DecoderError::Seq);
         };
 
         if pos != len {
-            return Err(Error::Seq);
+            return Err(DecoderError::Seq);
         }
 
         let _ = self.state.pop();
@@ -433,7 +433,7 @@ impl Decoder<'_> {
 
     // MARK: - Map Values
 
-    pub fn decode_map(&mut self) -> Result<Map, Error> {
+    pub fn decode_map(&mut self) -> Result<Map, DecoderError> {
         let len = self.decode_map_start()?;
 
         #[cfg(feature = "preserve_order")]
@@ -455,11 +455,11 @@ impl Decoder<'_> {
         Ok(map)
     }
 
-    pub(crate) fn decode_map_value(&mut self) -> Result<MapValue, Error> {
+    pub(crate) fn decode_map_value(&mut self) -> Result<MapValue, DecoderError> {
         self.decode_map().map(From::from)
     }
 
-    pub fn decode_map_start(&mut self) -> Result<usize, Error> {
+    pub fn decode_map_start(&mut self) -> Result<usize, DecoderError> {
         let byte = self.pull_byte_expecting_type(ValueType::Map)?;
 
         let is_long = byte & MapValue::VARIANT_BIT != 0b0;
@@ -481,28 +481,28 @@ impl Decoder<'_> {
             let len = u64::from_be_bytes(bytes) as usize;
 
             if self.remaining_len() < len {
-                return Err(Error::Eof);
+                return Err(DecoderError::Eof);
             }
 
             self.state.push(DecoderState::map(len));
 
             Ok(len)
         } else {
-            Err(Error::IncompatibleProfile)
+            Err(DecoderError::IncompatibleProfile)
         }
     }
 
-    pub fn decode_map_end(&mut self) -> Result<(), Error> {
+    pub fn decode_map_end(&mut self) -> Result<(), DecoderError> {
         let Some(state) = self.state.last() else {
-            return Err(Error::Map);
+            return Err(DecoderError::Map);
         };
 
         let DecoderState::Map { pos, len } = state else {
-            return Err(Error::Map);
+            return Err(DecoderError::Map);
         };
 
         if pos != len {
-            return Err(Error::Map);
+            return Err(DecoderError::Map);
         }
 
         let _ = self.state.pop();
@@ -514,15 +514,15 @@ impl Decoder<'_> {
 
     // MARK: - Float Values
 
-    pub fn decode_f32(&mut self) -> Result<f32, Error> {
+    pub fn decode_f32(&mut self) -> Result<f32, DecoderError> {
         self.decode_float()
     }
 
-    pub fn decode_f64(&mut self) -> Result<f64, Error> {
+    pub fn decode_f64(&mut self) -> Result<f64, DecoderError> {
         self.decode_float()
     }
 
-    fn decode_float<T>(&mut self) -> Result<T, Error>
+    fn decode_float<T>(&mut self) -> Result<T, DecoderError>
     where
         T: FromFloat<f32> + FromFloat<f64>,
     {
@@ -547,11 +547,11 @@ impl Decoder<'_> {
 
                 Ok(f64::from_be_bytes(bytes).into_float())
             }
-            _ => Err(Error::IncompatibleProfile),
+            _ => Err(DecoderError::IncompatibleProfile),
         }
     }
 
-    pub(crate) fn decode_float_value(&mut self) -> Result<FloatValue, Error> {
+    pub(crate) fn decode_float_value(&mut self) -> Result<FloatValue, DecoderError> {
         let byte = self.peek_byte_expecting_type(ValueType::Float)?;
 
         let width = (byte & FloatValue::WIDTH_BITS) as usize + 1;
@@ -559,13 +559,13 @@ impl Decoder<'_> {
         match width {
             4 => self.decode_f32().map(FloatValue::F32),
             8 => self.decode_f64().map(FloatValue::F64),
-            _ => Err(Error::IncompatibleProfile),
+            _ => Err(DecoderError::IncompatibleProfile),
         }
     }
 
     // MARK: - Bytes Values
 
-    pub fn decode_bytes(&mut self) -> Result<Vec<u8>, Error> {
+    pub fn decode_bytes(&mut self) -> Result<Vec<u8>, DecoderError> {
         let byte = self.pull_byte_expecting_type(ValueType::Bytes)?;
 
         let len_width_exponent = (byte & BytesValue::LONG_WIDTH_BITS) as u32;
@@ -592,13 +592,13 @@ impl Decoder<'_> {
         Ok(bytes)
     }
 
-    fn decode_bytes_value(&mut self) -> Result<BytesValue, Error> {
+    fn decode_bytes_value(&mut self) -> Result<BytesValue, DecoderError> {
         self.decode_bytes().map(From::from)
     }
 
     // MARK: - Bool Values
 
-    pub fn decode_bool(&mut self) -> Result<bool, Error> {
+    pub fn decode_bool(&mut self) -> Result<bool, DecoderError> {
         let byte = self.pull_byte_expecting_type(ValueType::Bool)?;
 
         let value = byte & BoolValue::VALUE_BIT != 0b0;
@@ -608,13 +608,13 @@ impl Decoder<'_> {
         Ok(value)
     }
 
-    fn decode_bool_value(&mut self) -> Result<BoolValue, Error> {
+    fn decode_bool_value(&mut self) -> Result<BoolValue, DecoderError> {
         self.decode_bool().map(From::from)
     }
 
     // MARK: - Null Values
 
-    pub fn decode_null(&mut self) -> Result<(), Error> {
+    pub fn decode_null(&mut self) -> Result<(), DecoderError> {
         let _byte = self.pull_byte_expecting_type(ValueType::Null)?;
 
         self.on_decode_value()?;
@@ -622,7 +622,7 @@ impl Decoder<'_> {
         Ok(())
     }
 
-    fn decode_null_value(&mut self) -> Result<NullValue, Error> {
+    fn decode_null_value(&mut self) -> Result<NullValue, DecoderError> {
         self.decode_null()?;
 
         Ok(NullValue)
@@ -632,15 +632,15 @@ impl Decoder<'_> {
 // MARK: - Auxiliary Methods
 
 impl Decoder<'_> {
-    fn peek_byte(&self) -> Result<u8, Error> {
+    fn peek_byte(&self) -> Result<u8, DecoderError> {
         if self.eof() {
-            return Err(Error::Eof);
+            return Err(DecoderError::Eof);
         }
 
         Ok(self.buf[self.pos])
     }
 
-    fn peek_byte_expecting_type(&self, expected: ValueType) -> Result<u8, Error> {
+    fn peek_byte_expecting_type(&self, expected: ValueType) -> Result<u8, DecoderError> {
         let byte = self.peek_byte()?;
 
         let actual = ValueType::detect(byte);
@@ -648,11 +648,11 @@ impl Decoder<'_> {
         if actual == expected {
             Ok(byte)
         } else {
-            Err(Error::Type { expected, actual })
+            Err(DecoderError::Type { expected, actual })
         }
     }
 
-    fn pull_byte_expecting_type(&mut self, expected: ValueType) -> Result<u8, Error> {
+    fn pull_byte_expecting_type(&mut self, expected: ValueType) -> Result<u8, DecoderError> {
         let byte = self.peek_byte_expecting_type(expected)?;
 
         self.pos += 1;
@@ -660,9 +660,9 @@ impl Decoder<'_> {
         Ok(byte)
     }
 
-    fn pull_bytes(&mut self, len: usize) -> Result<&[u8], Error> {
+    fn pull_bytes(&mut self, len: usize) -> Result<&[u8], DecoderError> {
         if self.pos + len > self.buf.len() {
-            return Err(Error::Eof);
+            return Err(DecoderError::Eof);
         }
 
         let range = self.pos..(self.pos + len);
@@ -685,7 +685,7 @@ impl Decoder<'_> {
         self.pos >= self.buf.len()
     }
 
-    fn on_decode_value(&mut self) -> Result<(), Error> {
+    fn on_decode_value(&mut self) -> Result<(), DecoderError> {
         if let Some(state) = self.state.last_mut() {
             state.on_decode_value()
         } else {
@@ -733,7 +733,7 @@ mod test {
         assert_eq!(decoder.pos, 3);
         assert_eq!(decoder.remaining_len(), 0);
 
-        assert_eq!(decoder.pull_bytes(3).unwrap_err(), Error::Eof);
+        assert_eq!(decoder.pull_bytes(3).unwrap_err(), DecoderError::Eof);
         assert_eq!(decoder.remaining(), &[]);
         assert_eq!(decoder.pos, 3);
         assert_eq!(decoder.remaining_len(), 0);
