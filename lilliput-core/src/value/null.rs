@@ -5,7 +5,7 @@
 /// ```plain
 /// 0b00000001
 ///   ├──────┘
-///   └─ Null Type
+///   └─ Null type
 /// ```
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 #[derive(Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]

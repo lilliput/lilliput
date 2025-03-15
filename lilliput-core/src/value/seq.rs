@@ -12,30 +12,30 @@ use super::Value;
 ///   ├─┘│├──┘ ├───────┘  ├───────┘
 ///   │  ││    └─ Length? └─ Values
 ///   │  │└─ <depends on variant>
-///   │  └─ Short variant / Long variant
+///   │  └─ Compactness
 ///   └─ Seq type
 /// ```
 ///
-/// ## Short variant
+/// ## Compact variant
 ///
 /// ```plain
-/// 0b0010XXXX [VALUE,*]
+/// 0b0011XXXX [VALUE,*]
 ///   ├─┘│├──┘ ├───────┘
 ///   │  ││    └─ Values
 ///   │  │└─ Number of elements
-///   │  └─ Short variant
+///   │  └─ Compact variant
 ///   └─ Seq type
 /// ```
 ///
-/// ## Long variant
+/// ## Standard variant
 ///
 /// ```plain
-/// 0b00110XXX <INTEGER> [VALUE,*]
+/// 0b00100XXX <INTEGER> [VALUE,*]
 ///   ├─┘││├─┘ ├───────┘ ├───────┘
 ///   │  │││   └─ Length └─ Values
 ///   │  ││└─ Width of length in bytes
 ///   │  │└─ Reserved bit
-///   │  └─ Long variant
+///   │  └─ Standard variant
 ///   └─ Seq type
 /// ```
 #[derive(Default, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -43,7 +43,7 @@ pub struct SeqValue(pub Vec<Value>);
 
 impl SeqValue {
     pub(crate) const PREFIX_BIT: u8 = 0b00100000;
-    pub(crate) const VARIANT_BIT: u8 = 0b00010000;
+    pub(crate) const COMPACTNESS_BIT: u8 = 0b00010000;
 
     pub(crate) const LONG_RESERVED_BIT: u8 = 0b00001000;
     pub(crate) const LONG_LEN_WIDTH_BITS: u8 = 0b00000111;

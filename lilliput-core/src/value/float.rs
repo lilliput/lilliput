@@ -10,7 +10,7 @@ use decorum::{constraint::IsFloat, proxy::Constrained};
 /// 0b00001XXX <FLOAT>
 ///   ├───┘├─┘  └─ Value
 ///   │    └─ Width in bytes, minus 1
-///   └─ Float Type
+///   └─ Float type
 /// ```
 #[derive(Copy, Clone)]
 pub enum FloatValue {

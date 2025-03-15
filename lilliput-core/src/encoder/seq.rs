@@ -29,7 +29,6 @@ impl<'en> SeqEncoder<'en> {
     pub(super) fn encode_seq_start(&mut self, len: usize) -> Result<(), EncoderError> {
         // Push the value's metadata:
         let mut head_byte = SeqValue::PREFIX_BIT;
-        head_byte |= SeqValue::VARIANT_BIT;
         head_byte |= 8 - 1; // width, minus 1
         self.inner.push_byte(head_byte)?;
 

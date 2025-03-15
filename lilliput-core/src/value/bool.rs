@@ -5,7 +5,7 @@
 /// ```plain
 /// 0b0000001X
 ///   ├─────┘└─ Value (0 = false, 1 = true)
-///   └─ Data Type
+///   └─ Data type
 /// ```
 #[derive(Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct BoolValue(pub bool);
