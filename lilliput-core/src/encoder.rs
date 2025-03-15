@@ -12,9 +12,10 @@ use crate::{
 mod bool;
 mod bytes;
 mod float;
+mod map;
 mod null;
 
-use self::{bool::*, bytes::*, float::*, null::*};
+use self::{bool::*, bytes::*, float::*, map::*, null::*};
 
 #[derive(Eq, PartialEq, Debug, thiserror::Error)]
 pub enum EncoderError {
@@ -286,30 +287,23 @@ impl Encoder {
     // MARK: - Map Values
 
     pub fn encode_map(&mut self, value: &Map) -> Result<(), EncoderError> {
-        self.encode_map_start(value.len())?;
+        MapEncoder::with(self).encode_map(value)?;
 
-        for (key, value) in value {
-            self.encode_any(key)?;
-            self.encode_any(value)?;
-        }
+        self.on_encode_value()?;
 
-        self.encode_map_end()
+        Ok(())
     }
 
     pub(crate) fn encode_map_value(&mut self, value: &MapValue) -> Result<(), EncoderError> {
-        self.encode_map(&value.0)
+        MapEncoder::with(self).encode_map_value(value)?;
+
+        self.on_encode_value()?;
+
+        Ok(())
     }
 
     pub fn encode_map_start(&mut self, len: usize) -> Result<(), EncoderError> {
-        // Push the value's metadata:
-        let mut head_byte = MapValue::PREFIX_BIT;
-        head_byte |= MapValue::VARIANT_BIT;
-        head_byte |= 3; // width exponent of usize (2 ^ 3 = 8)
-        self.push_byte(head_byte)?;
-
-        // Push the value's length:
-        let neck_bytes = len.to_be_bytes();
-        self.push_bytes(&neck_bytes)?;
+        MapEncoder::with(self).encode_map_start(len)?;
 
         self.state.push(EncoderState::map(len));
 
@@ -330,6 +324,8 @@ impl Encoder {
         }
 
         let _ = self.state.pop();
+
+        MapEncoder::with(self).encode_map_end()?;
 
         self.on_encode_value()?;
 
