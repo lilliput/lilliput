@@ -9,9 +9,10 @@ use crate::{
     Profile,
 };
 
+mod bool;
 mod null;
 
-use self::null::*;
+use self::{bool::*, null::*};
 
 #[derive(Eq, PartialEq, Debug, thiserror::Error)]
 pub enum DecoderError {
@@ -603,17 +604,19 @@ impl Decoder<'_> {
     // MARK: - Bool Values
 
     pub fn decode_bool(&mut self) -> Result<bool, DecoderError> {
-        let byte = self.pull_byte_expecting_type(ValueType::Bool)?;
-
-        let value = byte & BoolValue::VALUE_BIT != 0b0;
+        let value = BoolDecoder::with(self).decode_bool()?;
 
         self.on_decode_value()?;
 
         Ok(value)
     }
 
-    fn decode_bool_value(&mut self) -> Result<BoolValue, DecoderError> {
-        self.decode_bool().map(From::from)
+    pub fn decode_bool_value(&mut self) -> Result<BoolValue, DecoderError> {
+        let value = BoolDecoder::with(self).decode_bool_value()?;
+
+        self.on_decode_value()?;
+
+        Ok(value)
     }
 
     // MARK: - Null Values
