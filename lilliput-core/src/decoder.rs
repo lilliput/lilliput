@@ -10,9 +10,10 @@ use crate::{
 };
 
 mod bool;
+mod bytes;
 mod null;
 
-use self::{bool::*, null::*};
+use self::{bool::*, bytes::*, null::*};
 
 #[derive(Eq, PartialEq, Debug, thiserror::Error)]
 pub enum DecoderError {
@@ -571,34 +572,19 @@ impl Decoder<'_> {
     // MARK: - Bytes Values
 
     pub fn decode_bytes(&mut self) -> Result<Vec<u8>, DecoderError> {
-        let byte = self.pull_byte_expecting_type(ValueType::Bytes)?;
-
-        let len_width_exponent = (byte & BytesValue::LONG_WIDTH_BITS) as u32;
-        let len_width = 1_usize << len_width_exponent;
-
-        let len = {
-            let range = {
-                let start = 8 - len_width;
-                let end = start + len_width;
-                start..end
-            };
-
-            let mut len_bytes: [u8; 8] = [0b0; 8];
-            len_bytes[range].copy_from_slice(self.pull_bytes(len_width)?);
-
-            u64::from_be_bytes(len_bytes) as usize
-        };
-
-        let mut bytes = Vec::with_capacity(len.min(self.remaining_len()));
-        bytes.extend_from_slice(self.pull_bytes(len)?);
+        let value = BytesDecoder::with(self).decode_bytes()?;
 
         self.on_decode_value()?;
 
-        Ok(bytes)
+        Ok(value)
     }
 
-    fn decode_bytes_value(&mut self) -> Result<BytesValue, DecoderError> {
-        self.decode_bytes().map(From::from)
+    pub fn decode_bytes_value(&mut self) -> Result<BytesValue, DecoderError> {
+        let value = BytesDecoder::with(self).decode_bytes_value()?;
+
+        self.on_decode_value()?;
+
+        Ok(value)
     }
 
     // MARK: - Bool Values
