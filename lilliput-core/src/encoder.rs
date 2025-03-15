@@ -14,8 +14,9 @@ mod bytes;
 mod float;
 mod map;
 mod null;
+mod seq;
 
-use self::{bool::*, bytes::*, float::*, map::*, null::*};
+use self::{bool::*, bytes::*, float::*, map::*, null::*, seq::*};
 
 #[derive(Eq, PartialEq, Debug, thiserror::Error)]
 pub enum EncoderError {
@@ -235,29 +236,23 @@ impl Encoder {
     // MARK: - Seq Values
 
     pub fn encode_seq(&mut self, value: &[Value]) -> Result<(), EncoderError> {
-        self.encode_seq_start(value.len())?;
+        SeqEncoder::with(self).encode_seq(value)?;
 
-        for value in value {
-            self.encode_any(value)?;
-        }
+        self.on_encode_value()?;
 
-        self.encode_seq_end()
+        Ok(())
     }
 
     pub(crate) fn encode_seq_value(&mut self, value: &SeqValue) -> Result<(), EncoderError> {
-        self.encode_seq(&value.0)
+        SeqEncoder::with(self).encode_seq_value(value)?;
+
+        self.on_encode_value()?;
+
+        Ok(())
     }
 
     pub fn encode_seq_start(&mut self, len: usize) -> Result<(), EncoderError> {
-        // Push the value's metadata:
-        let mut head_byte = SeqValue::PREFIX_BIT;
-        head_byte |= SeqValue::VARIANT_BIT;
-        head_byte |= 8 - 1; // width, minus 1
-        self.push_byte(head_byte)?;
-
-        // Push the value's length:
-        let neck_bytes = len.to_be_bytes();
-        self.push_bytes(&neck_bytes)?;
+        SeqEncoder::with(self).encode_seq_start(len)?;
 
         self.state.push(EncoderState::seq(len));
 
@@ -278,6 +273,8 @@ impl Encoder {
         }
 
         let _ = self.state.pop();
+
+        SeqEncoder::with(self).encode_seq_end()?;
 
         self.on_encode_value()?;
 
