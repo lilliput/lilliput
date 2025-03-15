@@ -1,10 +1,7 @@
-use num_traits::{PrimInt, Signed, ToBytes, Unsigned};
-
 use crate::{
-    num::ToZigZag,
     value::{
         BoolValue, BytesValue, FloatValue, IntValue, Map, MapValue, NullValue, SeqValue,
-        SignedIntValue, StringValue, UnsignedIntValue, Value,
+        StringValue, Value,
     },
     Profile,
 };
@@ -12,12 +9,13 @@ use crate::{
 mod bool;
 mod bytes;
 mod float;
+mod int;
 mod map;
 mod null;
 mod seq;
 mod string;
 
-use self::{bool::*, bytes::*, float::*, map::*, null::*, seq::*, string::*};
+use self::{bool::*, bytes::*, float::*, int::*, map::*, null::*, seq::*, string::*};
 
 #[derive(Eq, PartialEq, Debug, thiserror::Error)]
 pub enum EncoderError {
@@ -117,94 +115,75 @@ impl Encoder {
     // MARK: - Int Values
 
     pub fn encode_i8(&mut self, value: i8) -> Result<(), EncoderError> {
-        self.encode_signed(value)
+        IntEncoder::with(self).encode_signed(value)?;
+
+        self.on_encode_value()?;
+
+        Ok(())
     }
 
     pub fn encode_i16(&mut self, value: i16) -> Result<(), EncoderError> {
-        self.encode_signed(value)
+        IntEncoder::with(self).encode_signed(value)?;
+
+        self.on_encode_value()?;
+
+        Ok(())
     }
 
     pub fn encode_i32(&mut self, value: i32) -> Result<(), EncoderError> {
-        self.encode_signed(value)
+        IntEncoder::with(self).encode_signed(value)?;
+
+        self.on_encode_value()?;
+
+        Ok(())
     }
 
     pub fn encode_i64(&mut self, value: i64) -> Result<(), EncoderError> {
-        self.encode_signed(value)
+        IntEncoder::with(self).encode_signed(value)?;
+
+        self.on_encode_value()?;
+
+        Ok(())
     }
 
     pub fn encode_u8(&mut self, value: u8) -> Result<(), EncoderError> {
-        self.encode_unsigned(value)
+        IntEncoder::with(self).encode_unsigned(value)?;
+
+        self.on_encode_value()?;
+
+        Ok(())
     }
 
     pub fn encode_u16(&mut self, value: u16) -> Result<(), EncoderError> {
-        self.encode_unsigned(value)
+        IntEncoder::with(self).encode_unsigned(value)?;
+
+        self.on_encode_value()?;
+
+        Ok(())
     }
 
     pub fn encode_u32(&mut self, value: u32) -> Result<(), EncoderError> {
-        self.encode_unsigned(value)
+        IntEncoder::with(self).encode_unsigned(value)?;
+
+        self.on_encode_value()?;
+
+        Ok(())
     }
 
     pub fn encode_u64(&mut self, value: u64) -> Result<(), EncoderError> {
-        self.encode_unsigned(value)
-    }
+        IntEncoder::with(self).encode_unsigned(value)?;
 
-    fn encode_signed<S, U, const N: usize>(&mut self, value: S) -> Result<(), EncoderError>
-    where
-        S: Signed + ToZigZag<ZigZag = U>,
-        U: ToBytes<Bytes = [u8; N]>,
-    {
-        // Push the value's metadata:
-        let mut head_byte = IntValue::PREFIX_BIT;
-        head_byte |= IntValue::VARIANT_BIT;
-        head_byte |= IntValue::SIGNEDNESS_BIT;
+        self.on_encode_value()?;
 
-        let unsigned = value.to_zig_zag();
-        let bytes = unsigned.to_be_bytes();
-
-        // Push the value's actual bytes:
-        head_byte |= (N as u8) - 1; // width of T in bytes, minus 1
-        self.push_byte(head_byte)?;
-
-        self.push_bytes(&bytes)?;
-
-        self.on_encode_value()
-    }
-
-    fn encode_unsigned<T, const N: usize>(&mut self, value: T) -> Result<(), EncoderError>
-    where
-        T: Unsigned + PrimInt + ToBytes<Bytes = [u8; N]>,
-    {
-        // Push the value's metadata:
-        let mut head_byte = IntValue::PREFIX_BIT;
-        head_byte |= IntValue::VARIANT_BIT;
-
-        let unsigned = value;
-        let bytes = unsigned.to_be_bytes();
-
-        // Push the value's actual bytes:
-        head_byte |= (N as u8) - 1; // width of T in bytes, minus 1
-        self.push_byte(head_byte)?;
-
-        self.push_bytes(&bytes)?;
-
-        self.on_encode_value()
+        Ok(())
     }
 
     pub fn encode_int_value(&mut self, value: &IntValue) -> Result<(), EncoderError> {
-        match value {
-            IntValue::Signed(value) => match *value {
-                SignedIntValue::I8(value) => self.encode_i8(value),
-                SignedIntValue::I16(value) => self.encode_i16(value),
-                SignedIntValue::I32(value) => self.encode_i32(value),
-                SignedIntValue::I64(value) => self.encode_i64(value),
-            },
-            IntValue::Unsigned(value) => match *value {
-                UnsignedIntValue::U8(value) => self.encode_u8(value),
-                UnsignedIntValue::U16(value) => self.encode_u16(value),
-                UnsignedIntValue::U32(value) => self.encode_u32(value),
-                UnsignedIntValue::U64(value) => self.encode_u64(value),
-            },
-        }
+        IntEncoder::with(self).encode_int_value(value)?;
+
+        self.on_encode_value()?;
+
+        Ok(())
     }
 
     // MARK: - String Values

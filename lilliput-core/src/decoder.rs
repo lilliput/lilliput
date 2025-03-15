@@ -1,7 +1,4 @@
-use num_traits::{FromBytes, PrimInt, Signed, Unsigned};
-
 use crate::{
-    num::FromZigZag,
     value::{
         BoolValue, BytesValue, FloatValue, IntValue, Map, MapValue, NullValue, SeqValue,
         StringValue, Value, ValueType,
@@ -12,12 +9,13 @@ use crate::{
 mod bool;
 mod bytes;
 mod float;
+mod int;
 mod map;
 mod null;
 mod seq;
 mod string;
 
-use self::{bool::*, bytes::*, float::*, map::*, null::*, seq::*, string::*};
+use self::{bool::*, bytes::*, float::*, int::*, map::*, null::*, seq::*, string::*};
 
 #[derive(Eq, PartialEq, Debug, thiserror::Error)]
 pub enum DecoderError {
@@ -33,7 +31,7 @@ pub enum DecoderError {
     #[error("incompatible profile")]
     IncompatibleProfile,
     #[error("invalid int")]
-    Int,
+    Int(#[from] IntDecoderError),
     #[error("invalid seq")]
     Seq,
     #[error("invalid map")]
@@ -122,206 +120,75 @@ impl Decoder<'_> {
     // MARK: - Int Values
 
     pub fn decode_u8(&mut self) -> Result<u8, DecoderError> {
-        match self.peek_int_size()? {
-            1 => self.decode_unsigned::<u8, 1>(),
-            2 => Err(DecoderError::Int),
-            4 => Err(DecoderError::Int),
-            8 => Err(DecoderError::Int),
-            _ => unimplemented!(),
-        }
+        let value = IntDecoder::with(self).decode_unsigned()?;
+
+        self.on_decode_value()?;
+
+        Ok(value)
     }
 
     pub fn decode_u16(&mut self) -> Result<u16, DecoderError> {
-        match self.peek_int_size()? {
-            1 => Ok(self.decode_unsigned::<u8, 1>()?.into()),
-            2 => self.decode_unsigned::<u16, 2>(),
-            4 => Err(DecoderError::Int),
-            8 => Err(DecoderError::Int),
-            _ => unimplemented!(),
-        }
+        let value = IntDecoder::with(self).decode_unsigned()?;
+
+        self.on_decode_value()?;
+
+        Ok(value)
     }
 
     pub fn decode_u32(&mut self) -> Result<u32, DecoderError> {
-        match self.peek_int_size()? {
-            1 => Ok(self.decode_unsigned::<u8, 1>()?.into()),
-            2 => Ok(self.decode_unsigned::<u16, 2>()?.into()),
-            4 => self.decode_unsigned::<u32, 4>(),
-            8 => Err(DecoderError::Int),
-            _ => unimplemented!(),
-        }
+        let value = IntDecoder::with(self).decode_unsigned()?;
+
+        self.on_decode_value()?;
+
+        Ok(value)
     }
 
     pub fn decode_u64(&mut self) -> Result<u64, DecoderError> {
-        match self.peek_int_size()? {
-            1 => Ok(self.decode_unsigned::<u8, 1>()?.into()),
-            2 => Ok(self.decode_unsigned::<u16, 2>()?.into()),
-            4 => Ok(self.decode_unsigned::<u32, 4>()?.into()),
-            8 => self.decode_unsigned::<u64, 8>(),
-            _ => unimplemented!(),
-        }
+        let value = IntDecoder::with(self).decode_unsigned()?;
+
+        self.on_decode_value()?;
+
+        Ok(value)
     }
 
     pub fn decode_i8(&mut self) -> Result<i8, DecoderError> {
-        match self.peek_int_size()? {
-            1 => self.decode_signed::<i8, u8, 1>(),
-            2 => Err(DecoderError::Int),
-            4 => Err(DecoderError::Int),
-            8 => Err(DecoderError::Int),
-            _ => unimplemented!(),
-        }
+        let value = IntDecoder::with(self).decode_signed()?;
+
+        self.on_decode_value()?;
+
+        Ok(value)
     }
 
     pub fn decode_i16(&mut self) -> Result<i16, DecoderError> {
-        match self.peek_int_size()? {
-            1 => Ok(self.decode_signed::<i8, u8, 1>()?.into()),
-            2 => self.decode_signed::<i16, u16, 2>(),
-            4 => Err(DecoderError::Int),
-            8 => Err(DecoderError::Int),
-            _ => unimplemented!(),
-        }
+        let value = IntDecoder::with(self).decode_signed()?;
+
+        self.on_decode_value()?;
+
+        Ok(value)
     }
 
     pub fn decode_i32(&mut self) -> Result<i32, DecoderError> {
-        match self.peek_int_size()? {
-            1 => Ok(self.decode_signed::<i8, u8, 1>()?.into()),
-            2 => Ok(self.decode_signed::<i16, u16, 2>()?.into()),
-            4 => self.decode_signed::<i32, u32, 4>(),
-            8 => Err(DecoderError::Int),
-            _ => unimplemented!(),
-        }
+        let value = IntDecoder::with(self).decode_signed()?;
+
+        self.on_decode_value()?;
+
+        Ok(value)
     }
 
     pub fn decode_i64(&mut self) -> Result<i64, DecoderError> {
-        match self.peek_int_size()? {
-            1 => Ok(self.decode_signed::<i8, u8, 1>()?.into()),
-            2 => Ok(self.decode_signed::<i16, u16, 2>()?.into()),
-            4 => Ok(self.decode_signed::<i32, u32, 4>()?.into()),
-            8 => self.decode_signed::<i64, u64, 8>(),
-            _ => unimplemented!(),
-        }
-    }
+        let value = IntDecoder::with(self).decode_signed()?;
 
-    fn decode_signed<S, U, const N: usize>(&mut self) -> Result<S, DecoderError>
-    where
-        S: Signed + PrimInt + FromZigZag<ZigZag = U>,
-        U: FromBytes<Bytes = [u8; N]>,
-    {
-        let byte = self.pull_byte_expecting_type(ValueType::Int)?;
-        let is_long = byte & IntValue::VARIANT_BIT != 0b0;
-        let is_signed = byte & IntValue::SIGNEDNESS_BIT != 0b0;
+        self.on_decode_value()?;
 
-        if !is_signed {
-            return Err(DecoderError::Other);
-        }
-
-        if is_long {
-            let is_valid = byte & IntValue::LONG_RESERVED_BITS == 0b0;
-            assert!(is_valid, "padding bits should be zero");
-
-            let size_len = (byte & IntValue::LONG_WIDTH_BITS) as usize + 1;
-
-            if size_len > N {
-                return Err(DecoderError::Int);
-            }
-
-            let pulled_bytes = self.pull_bytes(size_len)?;
-
-            let mut bytes: [u8; N] = [0b0; N];
-            bytes.copy_from_slice(pulled_bytes);
-
-            let unsigned = U::from_be_bytes(&bytes);
-            let signed = S::from_zig_zag(unsigned);
-
-            self.on_decode_value()?;
-
-            Ok(signed)
-        } else {
-            Err(DecoderError::IncompatibleProfile)
-        }
-    }
-
-    fn decode_unsigned<T, const N: usize>(&mut self) -> Result<T, DecoderError>
-    where
-        T: Unsigned + PrimInt + FromBytes<Bytes = [u8; N]>,
-    {
-        let byte = self.pull_byte_expecting_type(ValueType::Int)?;
-        let is_long = byte & IntValue::VARIANT_BIT != 0b0;
-        let is_signed = byte & IntValue::SIGNEDNESS_BIT != 0b0;
-
-        if is_signed {
-            return Err(DecoderError::Other);
-        }
-
-        if is_long {
-            let is_valid = byte & IntValue::LONG_RESERVED_BITS == 0b0;
-            assert!(is_valid, "padding bits should be zero");
-
-            let size_len = (byte & IntValue::LONG_WIDTH_BITS) as usize + 1;
-
-            if size_len > N {
-                return Err(DecoderError::Int);
-            }
-
-            let pulled_bytes = self.pull_bytes(size_len)?;
-
-            let mut bytes: [u8; N] = [0b0; N];
-            bytes.copy_from_slice(pulled_bytes);
-
-            let unsigned = T::from_be_bytes(&bytes);
-
-            self.on_decode_value()?;
-
-            Ok(unsigned)
-        } else {
-            Err(DecoderError::IncompatibleProfile)
-        }
+        Ok(value)
     }
 
     pub fn decode_int_value(&mut self) -> Result<IntValue, DecoderError> {
-        let byte = self.peek_byte_expecting_type(ValueType::Int)?;
-        let is_long = byte & IntValue::VARIANT_BIT != 0b0;
-        let is_signed = byte & IntValue::SIGNEDNESS_BIT != 0b0;
+        let value = IntDecoder::with(self).decode_int_value()?;
 
-        if is_long {
-            let size_len = (byte & IntValue::LONG_WIDTH_BITS) as usize + 1;
+        self.on_decode_value()?;
 
-            if is_signed {
-                match size_len {
-                    1 => Ok(IntValue::Signed(self.decode_signed::<i8, u8, 1>()?.into())),
-                    2 => Ok(IntValue::Signed(
-                        self.decode_signed::<i16, u16, 2>()?.into(),
-                    )),
-                    4 => Ok(IntValue::Signed(
-                        self.decode_signed::<i32, u32, 4>()?.into(),
-                    )),
-                    8 => Ok(IntValue::Signed(
-                        self.decode_signed::<i64, u64, 8>()?.into(),
-                    )),
-                    _ => Err(DecoderError::IncompatibleProfile),
-                }
-            } else {
-                match size_len {
-                    1 => Ok(IntValue::Unsigned(self.decode_unsigned::<u8, 1>()?.into())),
-                    2 => Ok(IntValue::Unsigned(self.decode_unsigned::<u16, 2>()?.into())),
-                    4 => Ok(IntValue::Unsigned(self.decode_unsigned::<u32, 4>()?.into())),
-                    8 => Ok(IntValue::Unsigned(self.decode_unsigned::<u64, 8>()?.into())),
-                    _ => Err(DecoderError::IncompatibleProfile),
-                }
-            }
-        } else {
-            Err(DecoderError::IncompatibleProfile)
-        }
-    }
-
-    fn peek_int_size(&self) -> Result<usize, DecoderError> {
-        let byte = self.peek_byte_expecting_type(ValueType::Int)?;
-        let is_long = byte & IntValue::VARIANT_BIT != 0b0;
-
-        if is_long {
-            Ok((byte & IntValue::LONG_WIDTH_BITS) as usize + 1)
-        } else {
-            Ok(1)
-        }
+        Ok(value)
     }
 
     // MARK: - String Values
