@@ -1,4 +1,4 @@
-use num_traits::{float::FloatCore, PrimInt, Signed, ToBytes, Unsigned};
+use num_traits::{PrimInt, Signed, ToBytes, Unsigned};
 
 use crate::{
     num::ToZigZag,
@@ -11,9 +11,10 @@ use crate::{
 
 mod bool;
 mod bytes;
+mod float;
 mod null;
 
-use self::{bool::*, bytes::*, null::*};
+use self::{bool::*, bytes::*, float::*, null::*};
 
 #[derive(Eq, PartialEq, Debug, thiserror::Error)]
 pub enum EncoderError {
@@ -338,35 +339,27 @@ impl Encoder {
     // MARK: - Float Values
 
     pub fn encode_f32(&mut self, value: f32) -> Result<(), EncoderError> {
-        self.encode_float(value)
+        FloatEncoder::with(self).encode_float(value)?;
+
+        self.on_encode_value()?;
+
+        Ok(())
     }
 
     pub fn encode_f64(&mut self, value: f64) -> Result<(), EncoderError> {
-        self.encode_float(value)
+        FloatEncoder::with(self).encode_float(value)?;
+
+        self.on_encode_value()?;
+
+        Ok(())
     }
 
-    fn encode_float<T, const N: usize>(&mut self, value: T) -> Result<(), EncoderError>
-    where
-        T: FloatCore + ToBytes<Bytes = [u8; N]>,
-    {
-        // Push the value's metadata:
-        let mut head_byte = FloatValue::PREFIX_BIT;
+    pub fn encode_float_value(&mut self, value: &FloatValue) -> Result<(), EncoderError> {
+        FloatEncoder::with(self).encode_float_value(value)?;
 
-        head_byte |= (N as u8) - 1; // width of T, minus 1
-        self.push_byte(head_byte)?;
+        self.on_encode_value()?;
 
-        // Push the value's actual bytes:
-        let tail_bytes = value.to_be_bytes();
-        self.push_bytes(&tail_bytes)?;
-
-        self.on_encode_value()
-    }
-
-    pub(crate) fn encode_float_value(&mut self, value: &FloatValue) -> Result<(), EncoderError> {
-        match *value {
-            FloatValue::F32(value) => self.encode_f32(value),
-            FloatValue::F64(value) => self.encode_f64(value),
-        }
+        Ok(())
     }
 
     // MARK: - Bytes Values
