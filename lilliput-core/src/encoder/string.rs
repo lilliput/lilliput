@@ -17,7 +17,6 @@ impl<'en> StringEncoder<'en> {
 
         // Push the value's metadata:
         let mut head_byte = StringValue::PREFIX_BIT;
-        head_byte |= StringValue::VARIANT_BIT;
 
         head_byte |= 8 - 1; // width, minus 1
         self.inner.push_byte(head_byte)?;

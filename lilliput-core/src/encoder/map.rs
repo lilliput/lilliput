@@ -30,7 +30,6 @@ impl<'en> MapEncoder<'en> {
     pub(super) fn encode_map_start(&mut self, len: usize) -> Result<(), EncoderError> {
         // Push the value's metadata:
         let mut head_byte = MapValue::PREFIX_BIT;
-        head_byte |= MapValue::VARIANT_BIT;
         head_byte |= 3; // width exponent of usize (2 ^ 3 = 8)
         self.inner.push_byte(head_byte)?;
 

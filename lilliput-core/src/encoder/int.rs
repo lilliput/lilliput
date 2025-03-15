@@ -27,7 +27,6 @@ impl<'en> IntEncoder<'en> {
     {
         // Push the value's metadata:
         let mut head_byte = IntValue::PREFIX_BIT;
-        head_byte |= IntValue::VARIANT_BIT;
         head_byte |= IntValue::SIGNEDNESS_BIT;
 
         let unsigned = value.to_zig_zag();
@@ -51,7 +50,6 @@ impl<'en> IntEncoder<'en> {
     {
         // Push the value's metadata:
         let mut head_byte = IntValue::PREFIX_BIT;
-        head_byte |= IntValue::VARIANT_BIT;
 
         let unsigned = value;
         let bytes = unsigned.to_be_bytes();

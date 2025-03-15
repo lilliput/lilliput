@@ -9,30 +9,30 @@ use proptest::prelude::*;
 /// 0b01XXXXXX
 ///   ├┘│├───┘
 ///   │ │└─ <depends on variant>
-///   │ └─ Short variant / Long variant
-///   └─ String Type
-/// ```
-///
-/// ## Short variant
-///
-/// ```plain
-/// 0b010XXXXX [CHAR,*]
-///   ├┘│├───┘ ├──────┘
-///   │ ││     └─ Characters
-///   │ │└─ Length
-///   │ └─ Short variant
+///   │ └─ Compactness
 ///   └─ String type
 /// ```
 ///
-/// ## Long variant
+/// ## Compact variant
 ///
 /// ```plain
-/// 0b01100XXX <INTEGER> [CHAR,*]
+/// 0b011XXXXX [CHAR,*]
+///   ├┘│├───┘ ├──────┘
+///   │ ││     └─ Characters
+///   │ │└─ Length
+///   │ └─ Compact variant
+///   └─ String type
+/// ```
+///
+/// ## Standard variant
+///
+/// ```plain
+/// 0b01000XXX <INTEGER> [CHAR,*]
 ///   ├┘│├┘├─┘ ├───────┘ ├──────┘
 ///   │ ││ │   └─ Length └─ Characters
 ///   │ ││ └─ Number of bytes in <Length> - 1
 ///   │ │└─ Empty padding bits
-///   │ └─ Long variant
+///   │ └─ Standard variant
 ///   └─ String type
 /// ```
 #[derive(Default, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -40,7 +40,7 @@ pub struct StringValue(pub String);
 
 impl StringValue {
     pub(crate) const PREFIX_BIT: u8 = 0b01000000;
-    pub(crate) const VARIANT_BIT: u8 = 0b00100000;
+    pub(crate) const COMPACTNESS_BIT: u8 = 0b00100000;
 
     pub(crate) const LONG_RESERVED_BITS: u8 = 0b00011000;
     pub(crate) const LONG_LEN_WIDTH_BITS: u8 = 0b00000111;

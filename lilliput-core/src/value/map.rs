@@ -18,37 +18,37 @@ pub type Map = std::collections::BTreeMap<Value, Value>;
 ///   ├──┘│├─┘ ├───────┘  ├───────────┘
 ///   │   ││   └─ Length? └─ Key-value pairs
 ///   │   │└─ <depends on variant>
-///   │   └─ Short variant / Long variant
+///   │   └─ Compactness
 ///   └─ Map type
 /// ```
 ///
-/// ## Short variant
+/// ## Compact variant
 ///
 /// ```plain
-/// 0b00010XXX [KEY:VALUE,*]
+/// 0b00011XXX [KEY:VALUE,*]
 ///   ├──┘│├─┘ ├───────────┘
 ///   │   ││   └─ Key-value pairs
 ///   │   │└─ Length
-///   │   └─ Short variant
+///   │   └─ Compact variant
 ///   └─ Map type
 /// ```
 ///
-/// ## Long variant
+/// ## Standard variant
 ///
 /// ```plain
-/// 0b00011XXX <INTEGER> [KEY:VALUE,*]
+/// 0b00010XXX <INTEGER> [KEY:VALUE,*]
 ///   ├──┘│├─┘ ├───────┘ ├───────────┘
 ///   │   ││   └─ Length └─ Key-value pairs
 ///   │   │└─ Number of bytes in length
-///   │   └─ Long Variant
-///   └─ Map Type
+///   │   └─ Standard variant
+///   └─ Map type
 /// ```
 #[derive(Default, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct MapValue(pub Map);
 
 impl MapValue {
     pub(crate) const PREFIX_BIT: u8 = 0b00010000;
-    pub(crate) const VARIANT_BIT: u8 = 0b00001000;
+    pub(crate) const COMPACTNESS_BIT: u8 = 0b00001000;
 
     pub(crate) const LONG_LEN_WIDTH_BITS: u8 = 0b00000111;
 }

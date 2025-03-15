@@ -62,26 +62,25 @@ impl<'a, 'de> IntDecoder<'a, 'de> {
             return Err(DecoderError::Other);
         }
 
-        let is_long = byte & IntValue::VARIANT_BIT != 0b0;
-
-        if is_long {
-            let is_valid = byte & IntValue::LONG_RESERVED_BITS == 0b0;
-            assert!(is_valid, "padding bits should be zero");
-
-            let size_len = (byte & IntValue::LONG_WIDTH_BITS) as usize + 1;
-            let bytes = self.inner.pull_bytes(size_len)?;
-
-            let signed = match Self::unsigned_from_be_bytes(bytes) {
-                UnsignedIntValue::U8(unsigned) => SignedIntValue::I8(i8::from_zig_zag(unsigned)),
-                UnsignedIntValue::U16(unsigned) => SignedIntValue::I16(i16::from_zig_zag(unsigned)),
-                UnsignedIntValue::U32(unsigned) => SignedIntValue::I32(i32::from_zig_zag(unsigned)),
-                UnsignedIntValue::U64(unsigned) => SignedIntValue::I64(i64::from_zig_zag(unsigned)),
-            };
-
-            Ok(signed)
-        } else {
-            Err(DecoderError::IncompatibleProfile)
+        if byte & IntValue::COMPACTNESS_BIT != 0b0 {
+            // Support for compact coding is not implemented yet.
+            return Err(DecoderError::IncompatibleProfile);
         }
+
+        let is_valid = byte & IntValue::LONG_RESERVED_BITS == 0b0;
+        assert!(is_valid, "padding bits should be zero");
+
+        let size_len = (byte & IntValue::LONG_WIDTH_BITS) as usize + 1;
+        let bytes = self.inner.pull_bytes(size_len)?;
+
+        let signed = match Self::unsigned_from_be_bytes(bytes) {
+            UnsignedIntValue::U8(unsigned) => SignedIntValue::I8(i8::from_zig_zag(unsigned)),
+            UnsignedIntValue::U16(unsigned) => SignedIntValue::I16(i16::from_zig_zag(unsigned)),
+            UnsignedIntValue::U32(unsigned) => SignedIntValue::I32(i32::from_zig_zag(unsigned)),
+            UnsignedIntValue::U64(unsigned) => SignedIntValue::I64(i64::from_zig_zag(unsigned)),
+        };
+
+        Ok(signed)
     }
 
     pub(super) fn decode_unsigned_value(&mut self) -> Result<UnsignedIntValue, DecoderError> {
@@ -91,21 +90,20 @@ impl<'a, 'de> IntDecoder<'a, 'de> {
             return Err(DecoderError::Other);
         }
 
-        let is_long = byte & IntValue::VARIANT_BIT != 0b0;
-
-        if is_long {
-            let is_valid = byte & IntValue::LONG_RESERVED_BITS == 0b0;
-            assert!(is_valid, "padding bits should be zero");
-
-            let size_len = (byte & IntValue::LONG_WIDTH_BITS) as usize + 1;
-            let bytes = self.inner.pull_bytes(size_len)?;
-
-            let unsigned = Self::unsigned_from_be_bytes(bytes);
-
-            Ok(unsigned)
-        } else {
-            Err(DecoderError::IncompatibleProfile)
+        if byte & IntValue::COMPACTNESS_BIT != 0b0 {
+            // Support for compact coding is not implemented yet.
+            return Err(DecoderError::IncompatibleProfile);
         }
+
+        let is_valid = byte & IntValue::LONG_RESERVED_BITS == 0b0;
+        assert!(is_valid, "padding bits should be zero");
+
+        let size_len = (byte & IntValue::LONG_WIDTH_BITS) as usize + 1;
+        let bytes = self.inner.pull_bytes(size_len)?;
+
+        let unsigned = Self::unsigned_from_be_bytes(bytes);
+
+        Ok(unsigned)
     }
 
     pub(super) fn decode_int_value(&mut self) -> Result<IntValue, DecoderError> {

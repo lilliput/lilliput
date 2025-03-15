@@ -41,32 +41,31 @@ impl<'a, 'de> MapDecoder<'a, 'de> {
     pub(super) fn decode_map_start(&mut self) -> Result<usize, DecoderError> {
         let byte = self.inner.pull_byte_expecting_type(ValueType::Map)?;
 
-        let is_long = byte & MapValue::VARIANT_BIT != 0b0;
-
-        if is_long {
-            let len_width_exponent = (byte & MapValue::LONG_LEN_WIDTH_BITS) as u32;
-            let len_width = 1_usize << len_width_exponent;
-
-            let mut bytes: [u8; 8] = [0b0; 8];
-
-            let range = {
-                let start = 8 - len_width;
-                let end = start + len_width;
-                start..end
-            };
-
-            bytes[range].copy_from_slice(self.inner.pull_bytes(len_width)?);
-
-            let len = u64::from_be_bytes(bytes) as usize;
-
-            if self.inner.remaining_len() < len {
-                return Err(DecoderError::Eof);
-            }
-
-            Ok(len)
-        } else {
-            Err(DecoderError::IncompatibleProfile)
+        if byte & MapValue::COMPACTNESS_BIT != 0b0 {
+            // Support for compact coding is not implemented yet.
+            return Err(DecoderError::IncompatibleProfile);
         }
+
+        let len_width_exponent = (byte & MapValue::LONG_LEN_WIDTH_BITS) as u32;
+        let len_width = 1_usize << len_width_exponent;
+
+        let mut bytes: [u8; 8] = [0b0; 8];
+
+        let range = {
+            let start = 8 - len_width;
+            let end = start + len_width;
+            start..end
+        };
+
+        bytes[range].copy_from_slice(self.inner.pull_bytes(len_width)?);
+
+        let len = u64::from_be_bytes(bytes) as usize;
+
+        if self.inner.remaining_len() < len {
+            return Err(DecoderError::Eof);
+        }
+
+        Ok(len)
     }
 
     pub(super) fn decode_map_end(&mut self) -> Result<(), DecoderError> {
