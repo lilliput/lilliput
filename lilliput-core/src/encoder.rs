@@ -10,9 +10,10 @@ use crate::{
 };
 
 mod bool;
+mod bytes;
 mod null;
 
-use self::{bool::*, null::*};
+use self::{bool::*, bytes::*, null::*};
 
 #[derive(Eq, PartialEq, Debug, thiserror::Error)]
 pub enum EncoderError {
@@ -371,24 +372,19 @@ impl Encoder {
     // MARK: - Bytes Values
 
     pub fn encode_bytes(&mut self, value: &[u8]) -> Result<(), EncoderError> {
-        // Push the value's metadata:
-        let mut head_byte = BytesValue::PREFIX_BIT;
-        head_byte |= 3; // width exponent of usize (2 ^ 3 = 8)
-        self.push_byte(head_byte)?;
+        BytesEncoder::with(self).encode_bytes(value)?;
 
-        // Push the value's length:
-        let neck_bytes = value.len().to_be_bytes();
-        self.push_bytes(&neck_bytes)?;
+        self.on_encode_value()?;
 
-        // Push the value's actual bytes:
-        let tail_bytes = value;
-        self.push_bytes(tail_bytes)?;
-
-        self.on_encode_value()
+        Ok(())
     }
 
-    fn encode_bytes_value(&mut self, value: &BytesValue) -> Result<(), EncoderError> {
-        self.encode_bytes(&value.0)
+    pub fn encode_bytes_value(&mut self, value: &BytesValue) -> Result<(), EncoderError> {
+        BytesEncoder::with(self).encode_bytes_value(value)?;
+
+        self.on_encode_value()?;
+
+        Ok(())
     }
 
     // MARK: - Bool Values
