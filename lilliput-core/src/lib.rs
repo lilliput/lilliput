@@ -2,7 +2,7 @@ pub mod decoder;
 pub mod encoder;
 pub mod value;
 
-mod fmt;
+mod binary;
 mod num;
 
 #[cfg(test)]

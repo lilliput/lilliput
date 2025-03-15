@@ -1,4 +1,4 @@
-use crate::fmt::BytesSlice;
+use crate::binary::BytesSlice;
 
 /// Represents a byte sequence.
 ///
