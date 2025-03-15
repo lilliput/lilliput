@@ -10,7 +10,7 @@ use crate::{
 };
 
 #[derive(Eq, PartialEq, Debug, thiserror::Error)]
-pub enum Error {
+pub enum EncoderError {
     #[error("invalid seq")]
     Seq,
     #[error("invalid map")]
@@ -35,14 +35,14 @@ impl EncoderState {
         }
     }
 
-    fn on_encode_value(&mut self) -> Result<(), Error> {
+    fn on_encode_value(&mut self) -> Result<(), EncoderError> {
         match self {
             EncoderState::Seq { pos, len } => {
                 if pos < len {
                     *pos += 1;
                     Ok(())
                 } else {
-                    Err(Error::Seq)
+                    Err(EncoderError::Seq)
                 }
             }
             EncoderState::Map { pos, len } => {
@@ -50,7 +50,7 @@ impl EncoderState {
                     *pos += 1;
                     Ok(())
                 } else {
-                    Err(Error::Map)
+                    Err(EncoderError::Map)
                 }
             }
         }
@@ -78,11 +78,11 @@ impl Encoder {
 }
 
 impl Encoder {
-    pub fn into_vec(self) -> Result<Vec<u8>, Error> {
+    pub fn into_vec(self) -> Result<Vec<u8>, EncoderError> {
         if let Some(state) = self.state.last() {
             match state {
-                EncoderState::Seq { .. } => Err(Error::Seq),
-                EncoderState::Map { .. } => Err(Error::Map),
+                EncoderState::Seq { .. } => Err(EncoderError::Seq),
+                EncoderState::Map { .. } => Err(EncoderError::Map),
             }
         } else {
             Ok(self.buf)
@@ -91,7 +91,7 @@ impl Encoder {
 
     // MARK: - Any Values
 
-    pub fn encode_any(&mut self, value: &Value) -> Result<(), Error> {
+    pub fn encode_any(&mut self, value: &Value) -> Result<(), EncoderError> {
         match value {
             Value::Int(value) => self.encode_int_value(value),
             Value::String(value) => self.encode_string_value(value),
@@ -106,39 +106,39 @@ impl Encoder {
 
     // MARK: - Int Values
 
-    pub fn encode_i8(&mut self, value: i8) -> Result<(), Error> {
+    pub fn encode_i8(&mut self, value: i8) -> Result<(), EncoderError> {
         self.encode_signed(value)
     }
 
-    pub fn encode_i16(&mut self, value: i16) -> Result<(), Error> {
+    pub fn encode_i16(&mut self, value: i16) -> Result<(), EncoderError> {
         self.encode_signed(value)
     }
 
-    pub fn encode_i32(&mut self, value: i32) -> Result<(), Error> {
+    pub fn encode_i32(&mut self, value: i32) -> Result<(), EncoderError> {
         self.encode_signed(value)
     }
 
-    pub fn encode_i64(&mut self, value: i64) -> Result<(), Error> {
+    pub fn encode_i64(&mut self, value: i64) -> Result<(), EncoderError> {
         self.encode_signed(value)
     }
 
-    pub fn encode_u8(&mut self, value: u8) -> Result<(), Error> {
+    pub fn encode_u8(&mut self, value: u8) -> Result<(), EncoderError> {
         self.encode_unsigned(value)
     }
 
-    pub fn encode_u16(&mut self, value: u16) -> Result<(), Error> {
+    pub fn encode_u16(&mut self, value: u16) -> Result<(), EncoderError> {
         self.encode_unsigned(value)
     }
 
-    pub fn encode_u32(&mut self, value: u32) -> Result<(), Error> {
+    pub fn encode_u32(&mut self, value: u32) -> Result<(), EncoderError> {
         self.encode_unsigned(value)
     }
 
-    pub fn encode_u64(&mut self, value: u64) -> Result<(), Error> {
+    pub fn encode_u64(&mut self, value: u64) -> Result<(), EncoderError> {
         self.encode_unsigned(value)
     }
 
-    fn encode_signed<S, U, const N: usize>(&mut self, value: S) -> Result<(), Error>
+    fn encode_signed<S, U, const N: usize>(&mut self, value: S) -> Result<(), EncoderError>
     where
         S: Signed + ToZigZag<ZigZag = U>,
         U: ToBytes<Bytes = [u8; N]>,
@@ -160,7 +160,7 @@ impl Encoder {
         self.on_encode_value()
     }
 
-    fn encode_unsigned<T, const N: usize>(&mut self, value: T) -> Result<(), Error>
+    fn encode_unsigned<T, const N: usize>(&mut self, value: T) -> Result<(), EncoderError>
     where
         T: Unsigned + PrimInt + ToBytes<Bytes = [u8; N]>,
     {
@@ -180,7 +180,7 @@ impl Encoder {
         self.on_encode_value()
     }
 
-    pub fn encode_int_value(&mut self, value: &IntValue) -> Result<(), Error> {
+    pub fn encode_int_value(&mut self, value: &IntValue) -> Result<(), EncoderError> {
         match value {
             IntValue::Signed(value) => match *value {
                 SignedIntValue::I8(value) => self.encode_i8(value),
@@ -199,7 +199,7 @@ impl Encoder {
 
     // MARK: - String Values
 
-    pub fn encode_string(&mut self, value: &str) -> Result<(), Error> {
+    pub fn encode_string(&mut self, value: &str) -> Result<(), EncoderError> {
         let value: &str = value;
 
         // Push the value's metadata:
@@ -220,13 +220,13 @@ impl Encoder {
         self.on_encode_value()
     }
 
-    pub(crate) fn encode_string_value(&mut self, value: &StringValue) -> Result<(), Error> {
+    pub(crate) fn encode_string_value(&mut self, value: &StringValue) -> Result<(), EncoderError> {
         self.encode_string(&value.0)
     }
 
     // MARK: - Seq Values
 
-    pub fn encode_seq(&mut self, value: &[Value]) -> Result<(), Error> {
+    pub fn encode_seq(&mut self, value: &[Value]) -> Result<(), EncoderError> {
         self.encode_seq_start(value.len())?;
 
         for value in value {
@@ -236,11 +236,11 @@ impl Encoder {
         self.encode_seq_end()
     }
 
-    pub(crate) fn encode_seq_value(&mut self, value: &SeqValue) -> Result<(), Error> {
+    pub(crate) fn encode_seq_value(&mut self, value: &SeqValue) -> Result<(), EncoderError> {
         self.encode_seq(&value.0)
     }
 
-    pub fn encode_seq_start(&mut self, len: usize) -> Result<(), Error> {
+    pub fn encode_seq_start(&mut self, len: usize) -> Result<(), EncoderError> {
         // Push the value's metadata:
         let mut head_byte = SeqValue::PREFIX_BIT;
         head_byte |= SeqValue::VARIANT_BIT;
@@ -256,17 +256,17 @@ impl Encoder {
         Ok(())
     }
 
-    pub fn encode_seq_end(&mut self) -> Result<(), Error> {
+    pub fn encode_seq_end(&mut self) -> Result<(), EncoderError> {
         let Some(state) = self.state.last() else {
-            return Err(Error::Seq);
+            return Err(EncoderError::Seq);
         };
 
         let EncoderState::Seq { pos, len } = state else {
-            return Err(Error::Seq);
+            return Err(EncoderError::Seq);
         };
 
         if pos != len {
-            return Err(Error::Seq);
+            return Err(EncoderError::Seq);
         }
 
         let _ = self.state.pop();
@@ -278,7 +278,7 @@ impl Encoder {
 
     // MARK: - Map Values
 
-    pub fn encode_map(&mut self, value: &Map) -> Result<(), Error> {
+    pub fn encode_map(&mut self, value: &Map) -> Result<(), EncoderError> {
         self.encode_map_start(value.len())?;
 
         for (key, value) in value {
@@ -289,11 +289,11 @@ impl Encoder {
         self.encode_map_end()
     }
 
-    pub(crate) fn encode_map_value(&mut self, value: &MapValue) -> Result<(), Error> {
+    pub(crate) fn encode_map_value(&mut self, value: &MapValue) -> Result<(), EncoderError> {
         self.encode_map(&value.0)
     }
 
-    pub fn encode_map_start(&mut self, len: usize) -> Result<(), Error> {
+    pub fn encode_map_start(&mut self, len: usize) -> Result<(), EncoderError> {
         // Push the value's metadata:
         let mut head_byte = MapValue::PREFIX_BIT;
         head_byte |= MapValue::VARIANT_BIT;
@@ -309,17 +309,17 @@ impl Encoder {
         Ok(())
     }
 
-    pub fn encode_map_end(&mut self) -> Result<(), Error> {
+    pub fn encode_map_end(&mut self) -> Result<(), EncoderError> {
         let Some(state) = self.state.last() else {
-            return Err(Error::Map);
+            return Err(EncoderError::Map);
         };
 
         let EncoderState::Map { pos, len } = state else {
-            return Err(Error::Map);
+            return Err(EncoderError::Map);
         };
 
         if pos != len {
-            return Err(Error::Map);
+            return Err(EncoderError::Map);
         }
 
         let _ = self.state.pop();
@@ -331,15 +331,15 @@ impl Encoder {
 
     // MARK: - Float Values
 
-    pub fn encode_f32(&mut self, value: f32) -> Result<(), Error> {
+    pub fn encode_f32(&mut self, value: f32) -> Result<(), EncoderError> {
         self.encode_float(value)
     }
 
-    pub fn encode_f64(&mut self, value: f64) -> Result<(), Error> {
+    pub fn encode_f64(&mut self, value: f64) -> Result<(), EncoderError> {
         self.encode_float(value)
     }
 
-    fn encode_float<T, const N: usize>(&mut self, value: T) -> Result<(), Error>
+    fn encode_float<T, const N: usize>(&mut self, value: T) -> Result<(), EncoderError>
     where
         T: FloatCore + ToBytes<Bytes = [u8; N]>,
     {
@@ -356,7 +356,7 @@ impl Encoder {
         self.on_encode_value()
     }
 
-    pub(crate) fn encode_float_value(&mut self, value: &FloatValue) -> Result<(), Error> {
+    pub(crate) fn encode_float_value(&mut self, value: &FloatValue) -> Result<(), EncoderError> {
         match *value {
             FloatValue::F32(value) => self.encode_f32(value),
             FloatValue::F64(value) => self.encode_f64(value),
@@ -365,7 +365,7 @@ impl Encoder {
 
     // MARK: - Bytes Values
 
-    pub fn encode_bytes(&mut self, value: &[u8]) -> Result<(), Error> {
+    pub fn encode_bytes(&mut self, value: &[u8]) -> Result<(), EncoderError> {
         // Push the value's metadata:
         let mut head_byte = BytesValue::PREFIX_BIT;
         head_byte |= 3; // width exponent of usize (2 ^ 3 = 8)
@@ -382,13 +382,13 @@ impl Encoder {
         self.on_encode_value()
     }
 
-    fn encode_bytes_value(&mut self, value: &BytesValue) -> Result<(), Error> {
+    fn encode_bytes_value(&mut self, value: &BytesValue) -> Result<(), EncoderError> {
         self.encode_bytes(&value.0)
     }
 
     // MARK: - Bool Values
 
-    pub fn encode_bool(&mut self, value: bool) -> Result<(), Error> {
+    pub fn encode_bool(&mut self, value: bool) -> Result<(), EncoderError> {
         let mut head_byte = BoolValue::PREFIX_BIT;
 
         if value {
@@ -400,13 +400,13 @@ impl Encoder {
         self.on_encode_value()
     }
 
-    pub fn encode_bool_value(&mut self, value: &BoolValue) -> Result<(), Error> {
+    pub fn encode_bool_value(&mut self, value: &BoolValue) -> Result<(), EncoderError> {
         self.encode_bool(value.0)
     }
 
     // MARK: - Null Values
 
-    pub fn encode_null(&mut self) -> Result<(), Error> {
+    pub fn encode_null(&mut self) -> Result<(), EncoderError> {
         let head_byte = NullValue::BIT_REPR;
 
         self.push_byte(head_byte)?;
@@ -414,7 +414,7 @@ impl Encoder {
         self.on_encode_value()
     }
 
-    fn encode_null_value(&mut self, value: &NullValue) -> Result<(), Error> {
+    fn encode_null_value(&mut self, value: &NullValue) -> Result<(), EncoderError> {
         let NullValue = value;
         self.encode_null()
     }
@@ -423,14 +423,14 @@ impl Encoder {
 // MARK: - Auxiliary Methods
 
 impl Encoder {
-    fn push_byte(&mut self, byte: u8) -> Result<(), Error> {
+    fn push_byte(&mut self, byte: u8) -> Result<(), EncoderError> {
         self.buf.push(byte);
         self.pos += 1;
 
         Ok(())
     }
 
-    fn push_bytes(&mut self, bytes: &[u8]) -> Result<(), Error> {
+    fn push_bytes(&mut self, bytes: &[u8]) -> Result<(), EncoderError> {
         self.pos += bytes.len();
 
         self.buf.extend_from_slice(bytes);
@@ -443,7 +443,7 @@ impl Encoder {
         self.pos
     }
 
-    fn on_encode_value(&mut self) -> Result<(), Error> {
+    fn on_encode_value(&mut self) -> Result<(), EncoderError> {
         if let Some(state) = self.state.last_mut() {
             state.on_encode_value()
         } else {
