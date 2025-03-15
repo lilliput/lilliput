@@ -9,6 +9,10 @@ use crate::{
     Profile,
 };
 
+mod null;
+
+use self::null::*;
+
 #[derive(Eq, PartialEq, Debug, thiserror::Error)]
 pub enum EncoderError {
     #[error("invalid seq")]
@@ -407,16 +411,19 @@ impl Encoder {
     // MARK: - Null Values
 
     pub fn encode_null(&mut self) -> Result<(), EncoderError> {
-        let head_byte = NullValue::BIT_REPR;
+        NullEncoder::with(self).encode_null()?;
 
-        self.push_byte(head_byte)?;
+        self.on_encode_value()?;
 
-        self.on_encode_value()
+        Ok(())
     }
 
-    fn encode_null_value(&mut self, value: &NullValue) -> Result<(), EncoderError> {
-        let NullValue = value;
-        self.encode_null()
+    pub fn encode_null_value(&mut self, value: &NullValue) -> Result<(), EncoderError> {
+        NullEncoder::with(self).encode_null_value(value)?;
+
+        self.on_encode_value()?;
+
+        Ok(())
     }
 }
 

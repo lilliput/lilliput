@@ -9,6 +9,10 @@ use crate::{
     Profile,
 };
 
+mod null;
+
+use self::null::*;
+
 #[derive(Eq, PartialEq, Debug, thiserror::Error)]
 pub enum DecoderError {
     #[error("not a valid UTF-8 string")]
@@ -615,17 +619,19 @@ impl Decoder<'_> {
     // MARK: - Null Values
 
     pub fn decode_null(&mut self) -> Result<(), DecoderError> {
-        let _byte = self.pull_byte_expecting_type(ValueType::Null)?;
+        NullDecoder::with(self).decode_null()?;
 
         self.on_decode_value()?;
 
         Ok(())
     }
 
-    fn decode_null_value(&mut self) -> Result<NullValue, DecoderError> {
-        self.decode_null()?;
+    pub fn decode_null_value(&mut self) -> Result<NullValue, DecoderError> {
+        let value = NullDecoder::with(self).decode_null_value()?;
 
-        Ok(NullValue)
+        self.on_decode_value()?;
+
+        Ok(value)
     }
 }
 
