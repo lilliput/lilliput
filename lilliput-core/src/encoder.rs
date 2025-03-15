@@ -9,9 +9,10 @@ use crate::{
     Profile,
 };
 
+mod bool;
 mod null;
 
-use self::null::*;
+use self::{bool::*, null::*};
 
 #[derive(Eq, PartialEq, Debug, thiserror::Error)]
 pub enum EncoderError {
@@ -393,19 +394,19 @@ impl Encoder {
     // MARK: - Bool Values
 
     pub fn encode_bool(&mut self, value: bool) -> Result<(), EncoderError> {
-        let mut head_byte = BoolValue::PREFIX_BIT;
+        BoolEncoder::with(self).encode_bool(value)?;
 
-        if value {
-            head_byte |= BoolValue::VALUE_BIT;
-        }
+        self.on_encode_value()?;
 
-        self.push_byte(head_byte)?;
-
-        self.on_encode_value()
+        Ok(())
     }
 
     pub fn encode_bool_value(&mut self, value: &BoolValue) -> Result<(), EncoderError> {
-        self.encode_bool(value.0)
+        BoolEncoder::with(self).encode_bool_value(value)?;
+
+        self.on_encode_value()?;
+
+        Ok(())
     }
 
     // MARK: - Null Values
