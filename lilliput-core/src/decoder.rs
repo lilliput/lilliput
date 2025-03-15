@@ -1,7 +1,7 @@
 use num_traits::{FromBytes, PrimInt, Signed, Unsigned};
 
 use crate::{
-    num::{FromFloat, FromZigZag, IntoFloat},
+    num::FromZigZag,
     value::{
         BoolValue, BytesValue, FloatValue, IntValue, Map, MapValue, NullValue, SeqValue,
         StringValue, Value, ValueType,
@@ -11,9 +11,10 @@ use crate::{
 
 mod bool;
 mod bytes;
+mod float;
 mod null;
 
-use self::{bool::*, bytes::*, null::*};
+use self::{bool::*, bytes::*, float::*, null::*};
 
 #[derive(Eq, PartialEq, Debug, thiserror::Error)]
 pub enum DecoderError {
@@ -521,52 +522,27 @@ impl Decoder<'_> {
     // MARK: - Float Values
 
     pub fn decode_f32(&mut self) -> Result<f32, DecoderError> {
-        self.decode_float()
+        let value = FloatDecoder::with(self).decode_float()?;
+
+        self.on_decode_value()?;
+
+        Ok(value)
     }
 
     pub fn decode_f64(&mut self) -> Result<f64, DecoderError> {
-        self.decode_float()
+        let value = FloatDecoder::with(self).decode_float()?;
+
+        self.on_decode_value()?;
+
+        Ok(value)
     }
 
-    fn decode_float<T>(&mut self) -> Result<T, DecoderError>
-    where
-        T: FromFloat<f32> + FromFloat<f64>,
-    {
-        let byte = self.pull_byte_expecting_type(ValueType::Float)?;
+    pub fn decode_float_value(&mut self) -> Result<FloatValue, DecoderError> {
+        let value = FloatDecoder::with(self).decode_float_value()?;
 
-        let width = (byte & FloatValue::WIDTH_BITS) as usize + 1;
+        self.on_decode_value()?;
 
-        match width {
-            4 => {
-                let mut bytes: [u8; 4] = [0b0; 4];
-                bytes.copy_from_slice(self.pull_bytes(width)?);
-
-                self.on_decode_value()?;
-
-                Ok(f32::from_be_bytes(bytes).into_float())
-            }
-            8 => {
-                let mut bytes: [u8; 8] = [0b0; 8];
-                bytes.copy_from_slice(self.pull_bytes(width)?);
-
-                self.on_decode_value()?;
-
-                Ok(f64::from_be_bytes(bytes).into_float())
-            }
-            _ => Err(DecoderError::IncompatibleProfile),
-        }
-    }
-
-    pub(crate) fn decode_float_value(&mut self) -> Result<FloatValue, DecoderError> {
-        let byte = self.peek_byte_expecting_type(ValueType::Float)?;
-
-        let width = (byte & FloatValue::WIDTH_BITS) as usize + 1;
-
-        match width {
-            4 => self.decode_f32().map(FloatValue::F32),
-            8 => self.decode_f64().map(FloatValue::F64),
-            _ => Err(DecoderError::IncompatibleProfile),
-        }
+        Ok(value)
     }
 
     // MARK: - Bytes Values
