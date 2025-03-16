@@ -1,4 +1,7 @@
-use crate::value::BoolValue;
+use crate::{
+    header::{BoolHeader, EncodeHeader as _},
+    value::BoolValue,
+};
 
 use super::{Encoder, EncoderError};
 
@@ -13,13 +16,9 @@ impl<'en> BoolEncoder<'en> {
     }
 
     pub(super) fn encode_bool(&mut self, value: bool) -> Result<(), EncoderError> {
-        let mut head_byte = BoolValue::PREFIX_BIT;
+        let header = BoolHeader::new(value);
 
-        if value {
-            head_byte |= BoolValue::VALUE_BIT;
-        }
-
-        self.inner.push_byte(head_byte)?;
+        self.inner.push_byte(header.encode())?;
 
         Ok(())
     }

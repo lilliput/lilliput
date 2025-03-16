@@ -1,4 +1,4 @@
-use crate::value::{BytesValue, ValueType};
+use crate::{header::BytesHeader, value::BytesValue};
 
 use super::{Decoder, DecoderError};
 
@@ -13,24 +13,10 @@ impl<'a, 'de> BytesDecoder<'a, 'de> {
     }
 
     pub(super) fn decode_bytes(&mut self) -> Result<Vec<u8>, DecoderError> {
-        let byte = self.inner.pull_byte_expecting_type(ValueType::Bytes)?;
+        let header: BytesHeader = self.inner.pull_header()?;
 
-        let len_width_exponent = (byte & BytesValue::LONG_WIDTH_BITS) as u32;
-        let len_width = 1_usize << len_width_exponent;
-
-        let len = {
-            let range = {
-                let start = 8 - len_width;
-                let end = start + len_width;
-                start..end
-            };
-
-            let mut len_bytes: [u8; 8] = [0b0; 8];
-            let bytes = self.inner.pull_bytes(len_width)?;
-            len_bytes[range].copy_from_slice(bytes);
-
-            u64::from_be_bytes(len_bytes) as usize
-        };
+        let len_width = header.len_width();
+        let len = self.inner.pull_len_bytes(len_width)?;
 
         let remaining_len = self.inner.remaining_len();
         debug_assert!(len <= remaining_len);

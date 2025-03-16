@@ -12,7 +12,7 @@ use super::Value;
 ///   ├─┘│├──┘ ├───────┘  ├───────┘
 ///   │  ││    └─ Length? └─ Values
 ///   │  │└─ <depends on variant>
-///   │  └─ Compactness
+///   │  └─ Variant
 ///   └─ Seq type
 /// ```
 ///
@@ -27,7 +27,7 @@ use super::Value;
 ///   └─ Seq type
 /// ```
 ///
-/// ## Standard variant
+/// ## Extended variant
 ///
 /// ```plain
 /// 0b00100XXX <INTEGER> [VALUE,*]
@@ -35,19 +35,11 @@ use super::Value;
 ///   │  │││   └─ Length └─ Values
 ///   │  ││└─ Width of length in bytes
 ///   │  │└─ Reserved bit
-///   │  └─ Standard variant
+///   │  └─ Extended variant
 ///   └─ Seq type
 /// ```
 #[derive(Default, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct SeqValue(pub Vec<Value>);
-
-impl SeqValue {
-    pub(crate) const PREFIX_BIT: u8 = 0b00100000;
-    pub(crate) const COMPACTNESS_BIT: u8 = 0b00010000;
-
-    pub(crate) const LONG_RESERVED_BIT: u8 = 0b00001000;
-    pub(crate) const LONG_LEN_WIDTH_BITS: u8 = 0b00000111;
-}
 
 impl SeqValue {
     pub fn as_slice(&self) -> &[Value] {

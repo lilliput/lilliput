@@ -160,11 +160,13 @@ impl_try_from_int!(i8, infallible: [i8], fallible: [i16, i32, i64, u8, u16, u32,
 impl_try_from_int!(i16, infallible: [i8, i16, u8], fallible: [i32, i64, u16, u32, u64]);
 impl_try_from_int!(i32, infallible: [i8, i16, i32, u8, u16], fallible: [i64, u32, u64]);
 impl_try_from_int!(i64, infallible: [i8, i16, i32, i64, u8, u16, u32], fallible: [u64]);
+impl_try_from_int!(isize, infallible: [i8, i16, u8], fallible: [i32, i64, u16, u32, u64]);
 
 impl_try_from_int!(u8, infallible: [u8], fallible: [u16, u32, u64, i8, i16, i32, i64]);
 impl_try_from_int!(u16, infallible: [u8, u16], fallible: [u32, u64, i8, i16, i32, i64]);
 impl_try_from_int!(u32, infallible: [u8, u16, u32], fallible: [u64, i8, i16, i32, i64]);
 impl_try_from_int!(u64, infallible: [u8, u16, u32, u64], fallible: [i8, i16, i32, i64]);
+impl_try_from_int!(usize, infallible: [u8, u16, usize], fallible: [u32, u64, i8, i16, i32, i64]);
 
 #[cfg(test)]
 mod tests {

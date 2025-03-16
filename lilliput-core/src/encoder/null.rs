@@ -1,4 +1,7 @@
-use crate::value::NullValue;
+use crate::{
+    header::{EncodeHeader, NullHeader},
+    value::NullValue,
+};
 
 use super::{Encoder, EncoderError};
 
@@ -13,9 +16,9 @@ impl<'en> NullEncoder<'en> {
     }
 
     pub(super) fn encode_null(&mut self) -> Result<(), EncoderError> {
-        let head_byte = NullValue::BIT_REPR;
+        let header = NullHeader;
 
-        self.inner.push_byte(head_byte)?;
+        self.inner.push_byte(header.encode())?;
 
         Ok(())
     }

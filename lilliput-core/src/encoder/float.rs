@@ -1,6 +1,10 @@
 use num_traits::{float::FloatCore, ToBytes};
 
-use crate::value::FloatValue;
+use crate::{
+    header::{EncodeHeader, FloatHeader},
+    value::FloatValue,
+    Profile,
+};
 
 use super::{Encoder, EncoderError};
 
@@ -18,17 +22,21 @@ impl<'en> FloatEncoder<'en> {
     where
         T: FloatCore + ToBytes<Bytes = [u8; N]>,
     {
-        // Push the value's metadata:
-        let mut head_byte = FloatValue::PREFIX_BIT;
+        let profile = self.inner.profile;
 
-        head_byte |= (N as u8) - 1; // width of T, minus 1
-        self.inner.push_byte(head_byte)?;
+        let width = match profile {
+            Profile::Weak | Profile::None => N,
+        };
+
+        // Push the value's header:
+        let header = FloatHeader::new(width);
+        self.inner.push_byte(header.encode())?;
 
         // Push the value's actual bytes:
-        let tail_bytes = value.to_be_bytes();
-        self.inner.push_bytes(&tail_bytes)?;
-
-        Ok(())
+        match profile {
+            Profile::Weak => self.push_value_bytes_variable(value, width),
+            Profile::None => self.push_value_bytes_fixed(value, width),
+        }
     }
 
     pub(super) fn encode_float_value(&mut self, value: &FloatValue) -> Result<(), EncoderError> {
@@ -36,5 +44,30 @@ impl<'en> FloatEncoder<'en> {
             FloatValue::F32(value) => self.encode_float(value),
             FloatValue::F64(value) => self.encode_float(value),
         }
+    }
+
+    fn push_value_bytes_variable<T, const N: usize>(
+        &mut self,
+        value: T,
+        width: usize,
+    ) -> Result<(), EncoderError>
+    where
+        T: FloatCore + ToBytes<Bytes = [u8; N]>,
+    {
+        // FIXME: replace with proper variable encoding logic!
+        self.push_value_bytes_fixed(value, width)
+    }
+
+    fn push_value_bytes_fixed<T, const N: usize>(
+        &mut self,
+        value: T,
+        width: usize,
+    ) -> Result<(), EncoderError>
+    where
+        T: FloatCore + ToBytes<Bytes = [u8; N]>,
+    {
+        let bytes = value.to_be_bytes();
+        assert_eq!(bytes.len(), width);
+        self.inner.push_bytes(&value.to_be_bytes())
     }
 }

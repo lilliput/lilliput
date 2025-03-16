@@ -1,8 +1,11 @@
 use num_traits::{PrimInt, Signed, ToBytes, Unsigned};
 
 use crate::{
+    binary::required_bytes_for_prim_int,
+    header::{EncodeHeader as _, IntHeader},
     num::ToZigZag,
     value::{IntValue, SignedIntValue, UnsignedIntValue},
+    Profile,
 };
 
 use super::{Encoder, EncoderError};
@@ -23,20 +26,29 @@ impl<'en> IntEncoder<'en> {
     ) -> Result<(), EncoderError>
     where
         S: Signed + ToZigZag<ZigZag = U>,
-        U: ToBytes<Bytes = [u8; N]>,
+        U: PrimInt + ToBytes<Bytes = [u8; N]>,
     {
-        // Push the value's metadata:
-        let mut head_byte = IntValue::PREFIX_BIT;
-        head_byte |= IntValue::SIGNEDNESS_BIT;
+        let value = value.to_zig_zag();
 
-        let unsigned = value.to_zig_zag();
-        let bytes = unsigned.to_be_bytes();
+        // Push the value's header:
+        let header = match self.inner.profile {
+            Profile::Weak => IntHeader::Extended {
+                is_signed: true,
+                width: required_bytes_for_prim_int(value),
+            },
+            Profile::None => IntHeader::Extended {
+                is_signed: true,
+                width: N,
+            },
+        };
+        self.inner.push_byte(header.encode())?;
 
-        // Push the value's actual bytes:
-        head_byte |= (N as u8) - 1; // width of T in bytes, minus 1
-        self.inner.push_byte(head_byte)?;
-
-        self.inner.push_bytes(&bytes)?;
+        // Push the value's extension:
+        if let IntHeader::Extended { width, .. } = header {
+            let bytes = value.to_be_bytes();
+            let bytes_start = bytes.len() - width;
+            self.inner.push_bytes(&bytes[bytes_start..])?;
+        }
 
         Ok(())
     }
@@ -48,17 +60,25 @@ impl<'en> IntEncoder<'en> {
     where
         T: Unsigned + PrimInt + ToBytes<Bytes = [u8; N]>,
     {
-        // Push the value's metadata:
-        let mut head_byte = IntValue::PREFIX_BIT;
+        // Push the value's header:
+        let header = match self.inner.profile {
+            Profile::Weak => IntHeader::Extended {
+                is_signed: false,
+                width: required_bytes_for_prim_int(value),
+            },
+            Profile::None => IntHeader::Extended {
+                is_signed: false,
+                width: N,
+            },
+        };
+        self.inner.push_byte(header.encode())?;
 
-        let unsigned = value;
-        let bytes = unsigned.to_be_bytes();
-
-        // Push the value's actual bytes:
-        head_byte |= (N as u8) - 1; // width of T in bytes, minus 1
-        self.inner.push_byte(head_byte)?;
-
-        self.inner.push_bytes(&bytes)?;
+        // Push the value's extension:
+        if let IntHeader::Extended { width, .. } = header {
+            let bytes = value.to_be_bytes();
+            let bytes_start = bytes.len() - width;
+            self.inner.push_bytes(&bytes[bytes_start..])?;
+        }
 
         Ok(())
     }

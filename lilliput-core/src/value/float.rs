@@ -19,12 +19,6 @@ pub enum FloatValue {
 }
 
 impl FloatValue {
-    pub(crate) const PREFIX_BIT: u8 = 0b00001000;
-
-    pub(crate) const WIDTH_BITS: u8 = 0b00000111;
-}
-
-impl FloatValue {
     pub fn as_f32(self) -> f32 {
         match self {
             FloatValue::F32(value) => value,

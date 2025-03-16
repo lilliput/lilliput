@@ -3,8 +3,9 @@ use core::num::TryFromIntError;
 use num_traits::{FromBytes, PrimInt, Signed, Unsigned};
 
 use crate::{
+    header::IntHeader,
     num::{FromZigZag, TryFromInt, TryIntoInt as _},
-    value::{IntValue, SignedIntValue, UnsignedIntValue, ValueType},
+    value::{IntValue, SignedIntValue, UnsignedIntValue},
 };
 
 use super::{Decoder, DecoderError};
@@ -13,6 +14,10 @@ use super::{Decoder, DecoderError};
 pub enum IntDecoderError {
     #[error("integer value out of bounds")]
     OutOfBounds(#[from] TryFromIntError),
+    #[error("expected signed integer value")]
+    ExpectedSigned,
+    #[error("expected unsigned integer value")]
+    ExpectedUnsigned,
 }
 
 #[derive(Debug)]
@@ -56,61 +61,58 @@ impl<'a, 'de> IntDecoder<'a, 'de> {
     }
 
     pub(super) fn decode_signed_value(&mut self) -> Result<SignedIntValue, DecoderError> {
-        let byte = self.inner.pull_byte_expecting_type(ValueType::Int)?;
+        let header: IntHeader = self.inner.pull_header()?;
 
-        if byte & IntValue::SIGNEDNESS_BIT == 0b0 {
-            return Err(DecoderError::Other);
-        }
+        let width = match header {
+            IntHeader::CompactSigned { value } => return Ok(SignedIntValue::I8(value)),
+            IntHeader::CompactUnsigned { .. } => {
+                return Err(DecoderError::Int(IntDecoderError::ExpectedSigned));
+            }
+            IntHeader::Extended { is_signed, width } => match is_signed {
+                true => width,
+                false => return Err(DecoderError::Int(IntDecoderError::ExpectedSigned)),
+            },
+        };
 
-        if byte & IntValue::COMPACTNESS_BIT != 0b0 {
-            // Support for compact coding is not implemented yet.
-            return Err(DecoderError::IncompatibleProfile);
-        }
+        let bytes = self.inner.pull_bytes(width)?;
 
-        let is_valid = byte & IntValue::LONG_RESERVED_BITS == 0b0;
-        assert!(is_valid, "padding bits should be zero");
-
-        let size_len = (byte & IntValue::LONG_WIDTH_BITS) as usize + 1;
-        let bytes = self.inner.pull_bytes(size_len)?;
-
-        let signed = match Self::unsigned_from_be_bytes(bytes) {
+        let value = match Self::unsigned_from_be_bytes(bytes) {
             UnsignedIntValue::U8(unsigned) => SignedIntValue::I8(i8::from_zig_zag(unsigned)),
             UnsignedIntValue::U16(unsigned) => SignedIntValue::I16(i16::from_zig_zag(unsigned)),
             UnsignedIntValue::U32(unsigned) => SignedIntValue::I32(i32::from_zig_zag(unsigned)),
             UnsignedIntValue::U64(unsigned) => SignedIntValue::I64(i64::from_zig_zag(unsigned)),
         };
 
-        Ok(signed)
+        Ok(value)
     }
 
     pub(super) fn decode_unsigned_value(&mut self) -> Result<UnsignedIntValue, DecoderError> {
-        let byte = self.inner.pull_byte_expecting_type(ValueType::Int)?;
+        let header: IntHeader = self.inner.pull_header()?;
 
-        if byte & IntValue::SIGNEDNESS_BIT != 0b0 {
-            return Err(DecoderError::Other);
-        }
+        let width = match header {
+            IntHeader::CompactSigned { .. } => {
+                return Err(DecoderError::Int(IntDecoderError::ExpectedUnsigned))
+            }
+            IntHeader::CompactUnsigned { value } => {
+                return Ok(UnsignedIntValue::U8(value));
+            }
+            IntHeader::Extended { is_signed, width } => match is_signed {
+                true => return Err(DecoderError::Int(IntDecoderError::ExpectedUnsigned)),
+                false => width,
+            },
+        };
 
-        if byte & IntValue::COMPACTNESS_BIT != 0b0 {
-            // Support for compact coding is not implemented yet.
-            return Err(DecoderError::IncompatibleProfile);
-        }
+        let bytes = self.inner.pull_bytes(width)?;
 
-        let is_valid = byte & IntValue::LONG_RESERVED_BITS == 0b0;
-        assert!(is_valid, "padding bits should be zero");
+        let value = Self::unsigned_from_be_bytes(bytes);
 
-        let size_len = (byte & IntValue::LONG_WIDTH_BITS) as usize + 1;
-        let bytes = self.inner.pull_bytes(size_len)?;
-
-        let unsigned = Self::unsigned_from_be_bytes(bytes);
-
-        Ok(unsigned)
+        Ok(value)
     }
 
     pub(super) fn decode_int_value(&mut self) -> Result<IntValue, DecoderError> {
-        let byte = self.inner.peek_byte_expecting_type(ValueType::Int)?;
-        let is_signed = byte & IntValue::SIGNEDNESS_BIT != 0b0;
+        let header: IntHeader = self.inner.peek_header()?;
 
-        if is_signed {
+        if header.is_signed() {
             Ok(IntValue::Signed(self.decode_signed_value()?))
         } else {
             Ok(IntValue::Unsigned(self.decode_unsigned_value()?))

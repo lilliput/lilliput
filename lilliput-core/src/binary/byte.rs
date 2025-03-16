@@ -1,7 +1,21 @@
 #[derive(Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub(crate) struct Byte(pub u8);
 
+impl From<u8> for Byte {
+    fn from(value: u8) -> Self {
+        Self(value)
+    }
+}
+
+impl From<Byte> for u8 {
+    fn from(value: Byte) -> Self {
+        value.0
+    }
+}
+
 impl Byte {
+    #![allow(dead_code)]
+
     /// Returns `true`, if `self` contains only bits from `mask`, otherwise `false`.
     #[inline(always)]
     pub(crate) fn is_masked_by(self, mask: u8) -> bool {
@@ -10,20 +24,14 @@ impl Byte {
 
     /// Returns `true`, if `self` contains all bits from `mask`, or `mask` itself is empty, otherwise `false`.
     #[inline(always)]
-    pub(crate) fn contains_all_bits_of(self, mask: u8) -> bool {
+    pub(crate) fn contains_bits(self, mask: u8) -> bool {
         (self.0 & mask == mask) || mask == 0b0
     }
 
-    /// Returns `true`, if `self` contains any bits from `mask`, or `mask` itself is empty, otherwise `false`.
+    /// Returns a logical `self & mask`.
     #[inline(always)]
-    pub(crate) fn contains_any_bits_of(self, mask: u8) -> bool {
-        (self.0 & mask != 0b0) || mask == 0b0
-    }
-
-    /// Returns `true`, if `self` contains no bits from `mask`.
-    #[inline(always)]
-    pub(crate) fn contains_no_bits_of(self, mask: u8) -> bool {
-        self.0 & mask == 0b0
+    pub(crate) fn masked_bits(self, mask: u8) -> u8 {
+        self.0 & mask
     }
 
     /// Performs a logical `self &= mask`, clearing all bits not found in `mask`.
@@ -54,6 +62,29 @@ impl Byte {
     #[inline(always)]
     pub(crate) fn clear_bits_if(&mut self, mask: u8, condition: bool) {
         self.clear_bits(Self::mask_if(mask, condition));
+    }
+
+    /// Performs a logical `self \= mask`, setting all bits found in `mask`.
+    #[inline(always)]
+    pub(crate) fn set_bits_masked_by(&mut self, bits: u8, mask: u8) {
+        self.set_bits(Self::mask_by(bits, mask));
+    }
+
+    /// Performs a logical `self \= mask`, setting all bits found in `mask`.
+    #[inline(always)]
+    pub(crate) fn set_bits_assert_masked_by(&mut self, bits: u8, mask: u8) {
+        debug_assert!(
+            bits & !mask == 0b0,
+            "`bits` ({bits:08b}) contains bits not covered by `mask`  ({mask:08b})"
+        );
+
+        self.set_bits_masked_by(bits, mask);
+    }
+
+    /// Returns `bits`, masked by `mask`.
+    #[inline(always)]
+    fn mask_by(bits: u8, mask: u8) -> u8 {
+        bits & mask
     }
 
     #[inline(always)]
@@ -140,41 +171,26 @@ mod tests {
     }
 
     #[test]
-    fn contains_all_bits_of() {
+    fn contains_bits() {
         let byte = Byte(0b01010101);
 
-        assert!(!byte.contains_all_bits_of(0b10101010));
-        assert!(!byte.contains_all_bits_of(0b11110101));
-        assert!(!byte.contains_all_bits_of(0b11111111));
+        assert!(!byte.contains_bits(0b10101010));
+        assert!(!byte.contains_bits(0b11110101));
+        assert!(!byte.contains_bits(0b11111111));
 
-        assert!(byte.contains_all_bits_of(0b00000000));
-        assert!(byte.contains_all_bits_of(0b00000101));
-        assert!(byte.contains_all_bits_of(0b01010101));
+        assert!(byte.contains_bits(0b00000000));
+        assert!(byte.contains_bits(0b00000101));
+        assert!(byte.contains_bits(0b01010101));
     }
 
     #[test]
-    fn contains_any_bits_of() {
-        let byte = Byte(0b01010101);
+    fn masked_bits() {
+        let byte = Byte(0b11111111);
 
-        assert!(!byte.contains_any_bits_of(0b10100000));
-        assert!(!byte.contains_any_bits_of(0b10101010));
-
-        assert!(byte.contains_any_bits_of(0b00000000));
-        assert!(byte.contains_any_bits_of(0b00000101));
-        assert!(byte.contains_any_bits_of(0b00001111));
-        assert!(byte.contains_any_bits_of(0b11111111));
-    }
-
-    #[test]
-    fn contains_no_bits_of() {
-        let byte = Byte(0b01010101);
-
-        assert!(!byte.contains_no_bits_of(0b01010101));
-        assert!(!byte.contains_no_bits_of(0b01011111));
-        assert!(!byte.contains_no_bits_of(0b11111111));
-
-        assert!(byte.contains_no_bits_of(0b00000000));
-        assert!(byte.contains_no_bits_of(0b10101010));
+        assert_eq!(Byte(byte.masked_bits(0b11111111)), Byte(0b11111111));
+        assert_eq!(Byte(byte.masked_bits(0b11110000)), Byte(0b11110000));
+        assert_eq!(Byte(byte.masked_bits(0b01010101)), Byte(0b01010101));
+        assert_eq!(Byte(byte.masked_bits(0b00000000)), Byte(0b00000000));
     }
 
     #[test]

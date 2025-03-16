@@ -1,4 +1,8 @@
-use crate::value::{Map, MapValue};
+use crate::{
+    header::{EncodeHeader as _, MapHeader},
+    value::{Map, MapValue},
+    Profile,
+};
 
 use super::{Encoder, EncoderError};
 
@@ -28,14 +32,19 @@ impl<'en> MapEncoder<'en> {
     }
 
     pub(super) fn encode_map_start(&mut self, len: usize) -> Result<(), EncoderError> {
-        // Push the value's metadata:
-        let mut head_byte = MapValue::PREFIX_BIT;
-        head_byte |= 3; // width exponent of usize (2 ^ 3 = 8)
-        self.inner.push_byte(head_byte)?;
+        // Push the value's header:
+        let header = match self.inner.profile {
+            Profile::Weak => MapHeader::optimal(len),
+            Profile::None => MapHeader::extended(8),
+        };
+        self.inner.push_byte(header.encode())?;
 
-        // Push the value's length:
-        let neck_bytes = len.to_be_bytes();
-        self.inner.push_bytes(&neck_bytes)?;
+        // Push the value's length extension:
+        if let MapHeader::Extended { len_width } = header {
+            let len_bytes = len.to_be_bytes();
+            let len_bytes_start = len_bytes.len() - len_width;
+            self.inner.push_bytes(&len_bytes[len_bytes_start..])?;
+        }
 
         Ok(())
     }

@@ -14,7 +14,7 @@ pub use self::{signed::SignedIntValue, unsigned::UnsignedIntValue};
 ///   │││├───┘
 ///   │││└─ <depends on variant>
 ///   ││└─ Signedness
-///   │└─ Compactness
+///   │└─ Variant
 ///   └─ Integer type
 /// ```
 ///
@@ -29,7 +29,7 @@ pub use self::{signed::SignedIntValue, unsigned::UnsignedIntValue};
 ///   └─ Integer type
 /// ```
 ///
-/// ## Standard variant
+/// ## Extended variant
 ///
 /// ```plain
 /// 0b10X00XXX <INTEGER>
@@ -38,7 +38,7 @@ pub use self::{signed::SignedIntValue, unsigned::UnsignedIntValue};
 ///   ││││ └─ Width
 ///   │││└─ Reserved bits
 ///   ││└─ Signedness
-///   │└─ Standard variant
+///   │└─ Extended variant
 ///   └─ Integer type
 /// ```
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
@@ -55,15 +55,6 @@ impl IntValue {
             Self::Unsigned(_) => false,
         }
     }
-}
-
-impl IntValue {
-    pub(crate) const PREFIX_BIT: u8 = 0b10000000;
-    pub(crate) const COMPACTNESS_BIT: u8 = 0b01000000;
-    pub(crate) const SIGNEDNESS_BIT: u8 = 0b00100000;
-
-    pub(crate) const LONG_RESERVED_BITS: u8 = 0b00011000;
-    pub(crate) const LONG_WIDTH_BITS: u8 = 0b00000111;
 }
 
 impl Default for IntValue {
