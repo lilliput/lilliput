@@ -1,4 +1,7 @@
-use crate::value::BytesValue;
+use crate::{
+    header::{BytesHeader, EncodeHeader},
+    value::BytesValue,
+};
 
 use super::{Encoder, EncoderError};
 
@@ -13,14 +16,24 @@ impl<'en> BytesEncoder<'en> {
     }
 
     pub(super) fn encode_bytes(&mut self, value: &[u8]) -> Result<(), EncoderError> {
-        // Push the value's metadata:
-        let mut head_byte = BytesValue::PREFIX_BIT;
-        head_byte |= 3; // width exponent of usize (2 ^ 3 = 8)
-        self.inner.push_byte(head_byte)?;
+        let len = value.len();
+
+        // Push the value's header:
+        let header = BytesHeader::optimal(len);
+        self.inner.push_byte(header.encode())?;
 
         // Push the value's length:
-        let neck_bytes = value.len().to_be_bytes();
-        self.inner.push_bytes(&neck_bytes)?;
+        match header.len_width() {
+            8 => self.inner.push_bytes(&len.to_be_bytes())?,
+            len_width => {
+                debug_assert!(len_width <= 8);
+
+                const MAX_LEN_WIDTH: usize = 8;
+                let len_bytes: [u8; 8] = len.to_be_bytes();
+                let len_bytes_start = MAX_LEN_WIDTH - len_width;
+                self.inner.push_bytes(&len_bytes[len_bytes_start..])?;
+            }
+        }
 
         // Push the value's actual bytes:
         let tail_bytes = value;

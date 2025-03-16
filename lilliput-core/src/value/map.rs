@@ -18,7 +18,7 @@ pub type Map = std::collections::BTreeMap<Value, Value>;
 ///   ├──┘│├─┘ ├───────┘  ├───────────┘
 ///   │   ││   └─ Length? └─ Key-value pairs
 ///   │   │└─ <depends on variant>
-///   │   └─ Compactness
+///   │   └─ Variant
 ///   └─ Map type
 /// ```
 ///
@@ -33,25 +33,18 @@ pub type Map = std::collections::BTreeMap<Value, Value>;
 ///   └─ Map type
 /// ```
 ///
-/// ## Standard variant
+/// ## Extended variant
 ///
 /// ```plain
 /// 0b00010XXX <INTEGER> [KEY:VALUE,*]
 ///   ├──┘│├─┘ ├───────┘ ├───────────┘
 ///   │   ││   └─ Length └─ Key-value pairs
 ///   │   │└─ Number of bytes in length
-///   │   └─ Standard variant
+///   │   └─ Extended variant
 ///   └─ Map type
 /// ```
 #[derive(Default, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct MapValue(pub Map);
-
-impl MapValue {
-    pub(crate) const PREFIX_BIT: u8 = 0b00010000;
-    pub(crate) const COMPACTNESS_BIT: u8 = 0b00001000;
-
-    pub(crate) const LONG_LEN_WIDTH_BITS: u8 = 0b00000111;
-}
 
 impl From<Map> for MapValue {
     fn from(value: Map) -> Self {

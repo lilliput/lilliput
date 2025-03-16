@@ -1,4 +1,8 @@
-use crate::value::{SeqValue, Value};
+use crate::{
+    header::{EncodeHeader as _, SeqHeader},
+    value::{SeqValue, Value},
+    Profile,
+};
 
 use super::{Encoder, EncoderError};
 
@@ -27,14 +31,19 @@ impl<'en> SeqEncoder<'en> {
     }
 
     pub(super) fn encode_seq_start(&mut self, len: usize) -> Result<(), EncoderError> {
-        // Push the value's metadata:
-        let mut head_byte = SeqValue::PREFIX_BIT;
-        head_byte |= 8 - 1; // width, minus 1
-        self.inner.push_byte(head_byte)?;
+        // Push the value's header:
+        let header = match self.inner.profile {
+            Profile::Weak => SeqHeader::optimal(len),
+            Profile::None => SeqHeader::extended(8),
+        };
+        self.inner.push_byte(header.encode())?;
 
-        // Push the value's length:
-        let neck_bytes = len.to_be_bytes();
-        self.inner.push_bytes(&neck_bytes)?;
+        // Push the value's length extension:
+        if let SeqHeader::Extended { len_width } = header {
+            let len_bytes = len.to_be_bytes();
+            let len_bytes_start = len_bytes.len() - len_width;
+            self.inner.push_bytes(&len_bytes[len_bytes_start..])?;
+        }
 
         Ok(())
     }

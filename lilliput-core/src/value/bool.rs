@@ -10,11 +10,6 @@
 #[derive(Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct BoolValue(pub bool);
 
-impl BoolValue {
-    pub(crate) const PREFIX_BIT: u8 = 0b0000010;
-    pub(crate) const VALUE_BIT: u8 = 0b0000001;
-}
-
 impl From<bool> for BoolValue {
     fn from(value: bool) -> Self {
         Self(value)

@@ -1,4 +1,4 @@
-use crate::value::{BoolValue, ValueType};
+use crate::{header::BoolHeader, value::BoolValue};
 
 use super::{Decoder, DecoderError};
 
@@ -13,11 +13,13 @@ impl<'a, 'de> BoolDecoder<'a, 'de> {
     }
 
     pub(super) fn decode_bool(&mut self) -> Result<bool, DecoderError> {
-        let byte = self.inner.pull_byte_expecting_type(ValueType::Bool)?;
+        let header: BoolHeader = self.inner.pull_header()?;
 
-        let value = byte & BoolValue::VALUE_BIT != 0b0;
+        {
+            // nothing left to decode for bool values
+        }
 
-        Ok(value)
+        Ok(header.value())
     }
 
     pub(super) fn decode_bool_value(&mut self) -> Result<BoolValue, DecoderError> {

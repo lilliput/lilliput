@@ -9,7 +9,7 @@ use proptest::prelude::*;
 /// 0b01XXXXXX
 ///   ├┘│├───┘
 ///   │ │└─ <depends on variant>
-///   │ └─ Compactness
+///   │ └─ Variant
 ///   └─ String type
 /// ```
 ///
@@ -24,7 +24,7 @@ use proptest::prelude::*;
 ///   └─ String type
 /// ```
 ///
-/// ## Standard variant
+/// ## Extended variant
 ///
 /// ```plain
 /// 0b01000XXX <INTEGER> [CHAR,*]
@@ -32,19 +32,11 @@ use proptest::prelude::*;
 ///   │ ││ │   └─ Length └─ Characters
 ///   │ ││ └─ Number of bytes in <Length> - 1
 ///   │ │└─ Empty padding bits
-///   │ └─ Standard variant
+///   │ └─ Extended variant
 ///   └─ String type
 /// ```
 #[derive(Default, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct StringValue(pub String);
-
-impl StringValue {
-    pub(crate) const PREFIX_BIT: u8 = 0b01000000;
-    pub(crate) const COMPACTNESS_BIT: u8 = 0b00100000;
-
-    pub(crate) const LONG_RESERVED_BITS: u8 = 0b00011000;
-    pub(crate) const LONG_LEN_WIDTH_BITS: u8 = 0b00000111;
-}
 
 impl From<String> for StringValue {
     fn from(value: String) -> Self {

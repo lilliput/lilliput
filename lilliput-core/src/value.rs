@@ -7,31 +7,31 @@ mod null;
 mod seq;
 mod string;
 
+use crate::header::HeaderType;
+
 pub use self::{
     bool::BoolValue,
     bytes::BytesValue,
     float::FloatValue,
-    int::IntValue,
+    int::{IntValue, SignedIntValue, UnsignedIntValue},
     map::{Map, MapValue},
     null::NullValue,
     seq::SeqValue,
     string::StringValue,
 };
 
-pub(crate) use self::int::{SignedIntValue, UnsignedIntValue};
-
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub enum ValueType {
-    Int = 0b10000000,
-    String = 0b01000000,
-    Seq = 0b00100000,
-    Map = 0b00010000,
-    Float = 0b00001000,
-    Bytes = 0b00000100,
-    Bool = 0b00000010,
-    Null = 0b00000001,
-    Reserved = 0b00000000,
+    Int,
+    String,
+    Seq,
+    Map,
+    Float,
+    Bytes,
+    Bool,
+    Null,
+    Reserved,
 }
 
 impl ValueType {
@@ -47,27 +47,20 @@ impl ValueType {
             Value::Null(_) => ValueType::Null,
         }
     }
+}
 
-    pub fn detect(byte: u8) -> Self {
-        match byte.leading_zeros() {
-            // 0b10000000
-            0 => Self::Int,
-            // 0b01000000
-            1 => Self::String,
-            // 0b00100000
-            2 => Self::Seq,
-            // 0b00010000
-            3 => Self::Map,
-            // 0b00001000
-            4 => Self::Float,
-            // 0b00000100
-            5 => Self::Bytes,
-            // 0b00000010
-            6 => Self::Bool,
-            // 0b00000001
-            7 => Self::Null,
-            // 0b00000000
-            _ => Self::Reserved,
+impl From<HeaderType> for ValueType {
+    fn from(value: HeaderType) -> Self {
+        match value {
+            HeaderType::Int => Self::Int,
+            HeaderType::String => Self::String,
+            HeaderType::Seq => Self::Seq,
+            HeaderType::Map => Self::Map,
+            HeaderType::Float => Self::Float,
+            HeaderType::Bytes => Self::Bytes,
+            HeaderType::Bool => Self::Bool,
+            HeaderType::Null => Self::Null,
+            HeaderType::Reserved => Self::Reserved,
         }
     }
 }

@@ -47,11 +47,6 @@ impl From<BytesValue> for Vec<u8> {
     }
 }
 
-impl BytesValue {
-    pub(crate) const PREFIX_BIT: u8 = 0b00000100;
-    pub(crate) const LONG_WIDTH_BITS: u8 = 0b00000011;
-}
-
 impl std::fmt::Debug for BytesValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         std::fmt::Debug::fmt(&BytesSlice(&self.0), f)

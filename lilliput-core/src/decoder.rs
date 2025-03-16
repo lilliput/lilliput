@@ -1,7 +1,9 @@
 use crate::{
+    header::{DecodeHeader, HeaderDecodeError, HeaderType},
+    num::TryFromInt,
     value::{
         BoolValue, BytesValue, FloatValue, IntValue, Map, MapValue, NullValue, SeqValue,
-        StringValue, Value, ValueType,
+        StringValue, Value,
     },
     Profile,
 };
@@ -23,13 +25,10 @@ pub enum DecoderError {
     Utf8(#[from] std::string::FromUtf8Error),
     #[error("unexpected end of file")]
     Eof,
-    #[error("expected type {expected:?}, found {actual:?}")]
-    Type {
-        expected: ValueType,
-        actual: ValueType,
-    },
-    #[error("incompatible profile")]
-    IncompatibleProfile,
+    #[error(transparent)]
+    Header(#[from] HeaderDecodeError),
+    #[error("insufficient profile {profile:?}")]
+    Profile { profile: Profile },
     #[error("invalid int")]
     Int(#[from] IntDecoderError),
     #[error("invalid seq")]
@@ -104,16 +103,18 @@ impl Decoder<'_> {
     // MARK: - Any Values
 
     pub fn decode_any(&mut self) -> Result<Value, DecoderError> {
-        match ValueType::detect(self.peek_byte()?) {
-            ValueType::Int => self.decode_int_value().map(From::from),
-            ValueType::String => self.decode_string_value().map(From::from),
-            ValueType::Seq => self.decode_seq_value().map(From::from),
-            ValueType::Map => self.decode_map_value().map(From::from),
-            ValueType::Float => self.decode_float_value().map(From::from),
-            ValueType::Bytes => self.decode_bytes_value().map(From::from),
-            ValueType::Bool => self.decode_bool_value().map(From::from),
-            ValueType::Null => self.decode_null_value().map(From::from),
-            ValueType::Reserved => unimplemented!(),
+        match HeaderType::detect(self.peek_byte()?) {
+            HeaderType::Int => self.decode_int_value().map(From::from),
+            HeaderType::String => self.decode_string_value().map(From::from),
+            HeaderType::Seq => self.decode_seq_value().map(From::from),
+            HeaderType::Map => self.decode_map_value().map(From::from),
+            HeaderType::Float => self.decode_float_value().map(From::from),
+            HeaderType::Bytes => self.decode_bytes_value().map(From::from),
+            HeaderType::Bool => self.decode_bool_value().map(From::from),
+            HeaderType::Null => self.decode_null_value().map(From::from),
+            HeaderType::Reserved => {
+                unimplemented!()
+            }
         }
     }
 
@@ -393,24 +394,26 @@ impl Decoder<'_> {
         Ok(self.buf[self.pos])
     }
 
-    fn peek_byte_expecting_type(&self, expected: ValueType) -> Result<u8, DecoderError> {
+    fn peek_header<T>(&mut self) -> Result<T, DecoderError>
+    where
+        T: DecodeHeader,
+    {
         let byte = self.peek_byte()?;
 
-        let actual = ValueType::detect(byte);
+        let header = T::decode(byte)?;
 
-        if actual == expected {
-            Ok(byte)
-        } else {
-            Err(DecoderError::Type { expected, actual })
-        }
+        Ok(header)
     }
 
-    fn pull_byte_expecting_type(&mut self, expected: ValueType) -> Result<u8, DecoderError> {
-        let byte = self.peek_byte_expecting_type(expected)?;
+    fn pull_header<T>(&mut self) -> Result<T, DecoderError>
+    where
+        T: DecodeHeader,
+    {
+        let header = self.peek_header()?;
 
         self.pos += 1;
 
-        Ok(byte)
+        Ok(header)
     }
 
     fn pull_bytes(&mut self, len: usize) -> Result<&[u8], DecoderError> {
@@ -423,6 +426,54 @@ impl Decoder<'_> {
         self.pos += len;
 
         Ok(&self.buf[range])
+    }
+
+    fn pull_fixed_bytes<const N: usize>(&mut self) -> Result<&[u8; N], DecoderError> {
+        let bytes = self.pull_bytes(N)?;
+        Ok(bytes.try_into().unwrap())
+    }
+
+    #[inline(always)]
+    fn pull_len_bytes(&mut self, len_width: usize) -> Result<usize, DecoderError> {
+        match len_width {
+            1 => {
+                let len_bytes: &[u8; 1] = self.pull_fixed_bytes()?;
+                let len = u8::from_be_bytes(*len_bytes);
+                Ok(usize::try_from_int(len).map_err(IntDecoderError::OutOfBounds)?)
+            }
+            2 => {
+                let len_bytes: &[u8; 2] = self.pull_fixed_bytes()?;
+                let len = u16::from_be_bytes(*len_bytes);
+                Ok(usize::try_from_int(len).map_err(IntDecoderError::OutOfBounds)?)
+            }
+            3 => {
+                const MAX_LEN_WIDTH: usize = 4;
+                let mut len_bytes: [u8; MAX_LEN_WIDTH] = [0b0; MAX_LEN_WIDTH];
+                let len_width_start = MAX_LEN_WIDTH - len_width;
+                len_bytes[len_width_start..].copy_from_slice(self.pull_bytes(len_width)?);
+                let len = u32::from_be_bytes(len_bytes);
+                Ok(usize::try_from_int(len).map_err(IntDecoderError::OutOfBounds)?)
+            }
+            4 => {
+                let len_bytes: &[u8; 4] = self.pull_fixed_bytes()?;
+                let len = u32::from_be_bytes(*len_bytes);
+                Ok(usize::try_from_int(len).map_err(IntDecoderError::OutOfBounds)?)
+            }
+            5..=7 => {
+                const MAX_LEN_WIDTH: usize = 8;
+                let mut len_bytes: [u8; MAX_LEN_WIDTH] = [0b0; MAX_LEN_WIDTH];
+                let len_width_start = MAX_LEN_WIDTH - len_width;
+                len_bytes[len_width_start..].copy_from_slice(self.pull_bytes(len_width)?);
+                let len = u64::from_be_bytes(len_bytes);
+                Ok(usize::try_from_int(len).map_err(IntDecoderError::OutOfBounds)?)
+            }
+            8 => {
+                let len_bytes: &[u8; 8] = self.pull_fixed_bytes()?;
+                let len = u64::from_be_bytes(*len_bytes);
+                Ok(usize::try_from_int(len).map_err(IntDecoderError::OutOfBounds)?)
+            }
+            _ => unreachable!(),
+        }
     }
 
     fn remaining_len(&self) -> usize {

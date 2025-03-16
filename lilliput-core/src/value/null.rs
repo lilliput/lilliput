@@ -11,10 +11,6 @@
 #[derive(Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct NullValue;
 
-impl NullValue {
-    pub(crate) const BIT_REPR: u8 = 0b00000001;
-}
-
 impl std::fmt::Debug for NullValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "null")

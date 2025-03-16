@@ -1,4 +1,4 @@
-use crate::value::{NullValue, ValueType};
+use crate::{header::NullHeader, value::NullValue};
 
 use super::{Decoder, DecoderError};
 
@@ -13,7 +13,11 @@ impl<'a, 'de> NullDecoder<'a, 'de> {
     }
 
     pub(super) fn decode_null(&mut self) -> Result<(), DecoderError> {
-        let _byte = self.inner.pull_byte_expecting_type(ValueType::Null)?;
+        let _header: NullHeader = self.inner.pull_header()?;
+
+        {
+            // nothing left to decode for null values
+        }
 
         Ok(())
     }

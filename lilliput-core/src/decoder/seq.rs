@@ -1,4 +1,7 @@
-use crate::value::{SeqValue, Value, ValueType};
+use crate::{
+    header::SeqHeader,
+    value::{SeqValue, Value},
+};
 
 use super::{Decoder, DecoderError};
 
@@ -31,29 +34,12 @@ impl<'a, 'de> SeqDecoder<'a, 'de> {
     }
 
     pub(super) fn decode_seq_start(&mut self) -> Result<usize, DecoderError> {
-        let byte = self.inner.pull_byte_expecting_type(ValueType::Seq)?;
+        let header: SeqHeader = self.inner.pull_header()?;
 
-        if byte & SeqValue::COMPACTNESS_BIT != 0b0 {
-            // Support for compact coding is not implemented yet.
-            return Err(DecoderError::IncompatibleProfile);
-        }
-
-        let is_valid = byte & SeqValue::LONG_RESERVED_BIT == 0b0;
-        let len_width = (byte & SeqValue::LONG_LEN_WIDTH_BITS) as usize + 1;
-
-        assert!(is_valid, "padding bits should be zero");
-
-        let mut bytes: [u8; 8] = [0b0; 8];
-
-        let range = {
-            let start = 8 - len_width;
-            let end = start + len_width;
-            start..end
+        let len = match header {
+            SeqHeader::Compact { len } => len,
+            SeqHeader::Extended { len_width } => self.inner.pull_len_bytes(len_width)?,
         };
-
-        bytes[range].copy_from_slice(self.inner.pull_bytes(len_width)?);
-
-        let len = u64::from_be_bytes(bytes) as usize;
 
         if self.inner.remaining_len() < len {
             return Err(DecoderError::Eof);
