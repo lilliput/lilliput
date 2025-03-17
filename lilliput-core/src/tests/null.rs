@@ -1,4 +1,7 @@
-use crate::value::NullValue;
+use crate::{
+    io::{StdIoBufReader, StdIoWriter},
+    value::NullValue,
+};
 
 use super::*;
 
@@ -11,14 +14,17 @@ proptest! {
     fn roundtrip(value in values()) {
         let profile = Profile::None;
 
-        let mut encoder = Encoder::new(profile);
+        let writer: StdIoWriter<Vec<u8>> = StdIoWriter(vec![]);
+        let mut encoder = Encoder::new(writer, profile);
         encoder.encode_null().unwrap();
-        let encoded = encoder.into_vec().unwrap();
+        let encoded = encoder.into_writer().unwrap().0;
 
-        let mut decoder = Decoder::new(&encoded, profile);
+        let reader: StdIoBufReader<&[u8]> = StdIoBufReader(&encoded);
+        let mut decoder = Decoder::new(reader, profile);
         decoder.decode_null().unwrap();
 
-        let mut decoder = Decoder::new(&encoded, profile);
+        let reader: StdIoBufReader<&[u8]> = StdIoBufReader(&encoded);
+        let mut decoder = Decoder::new(reader, profile);
         let decoded = decoder.decode_any().unwrap();
         let Value::Null(decoded) = decoded else {
             panic!("expected null value");

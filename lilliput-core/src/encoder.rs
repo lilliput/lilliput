@@ -1,4 +1,5 @@
 use crate::{
+    io::Write,
     value::{
         BoolValue, BytesValue, FloatValue, IntValue, Map, MapValue, NullValue, SeqValue,
         StringValue, Value,
@@ -23,6 +24,8 @@ pub enum EncoderError {
     Seq,
     #[error("invalid map")]
     Map,
+    #[error("writer error: {0}")]
+    Writer(String),
 }
 
 #[derive(Debug)]
@@ -66,18 +69,18 @@ impl EncoderState {
 }
 
 #[derive(Debug)]
-pub struct Encoder {
-    buf: Vec<u8>,
+pub struct Encoder<W> {
+    writer: W,
     pos: usize,
     #[allow(dead_code)]
     profile: Profile,
     state: Vec<EncoderState>,
 }
 
-impl Encoder {
-    pub fn new(profile: Profile) -> Self {
+impl<W> Encoder<W> {
+    pub fn new(writer: W, profile: Profile) -> Self {
         Encoder {
-            buf: vec![],
+            writer,
             pos: 0,
             profile,
             state: vec![],
@@ -85,15 +88,18 @@ impl Encoder {
     }
 }
 
-impl Encoder {
-    pub fn into_vec(self) -> Result<Vec<u8>, EncoderError> {
+impl<W> Encoder<W>
+where
+    W: Write,
+{
+    pub fn into_writer(self) -> Result<W, EncoderError> {
         if let Some(state) = self.state.last() {
             match state {
                 EncoderState::Seq { .. } => Err(EncoderError::Seq),
                 EncoderState::Map { .. } => Err(EncoderError::Map),
             }
         } else {
-            Ok(self.buf)
+            Ok(self.writer)
         }
     }
 
@@ -383,18 +389,15 @@ impl Encoder {
 
 // MARK: - Auxiliary Methods
 
-impl Encoder {
-    fn push_byte(&mut self, byte: u8) -> Result<(), EncoderError> {
-        self.buf.push(byte);
-        self.pos += 1;
-
-        Ok(())
-    }
-
+impl<W> Encoder<W>
+where
+    W: Write,
+{
     fn push_bytes(&mut self, bytes: &[u8]) -> Result<(), EncoderError> {
+        self.writer
+            .write(bytes)
+            .map_err(|err| EncoderError::Writer(err.to_string()))?;
         self.pos += bytes.len();
-
-        self.buf.extend_from_slice(bytes);
 
         Ok(())
     }
@@ -417,47 +420,38 @@ impl Encoder {
 
 #[cfg(test)]
 mod test {
+    use crate::io::StdIoWriter;
+
     use super::*;
 
     #[test]
-    fn push_byte() {
-        let mut encoder = Encoder::new(Profile::None);
-
-        encoder.push_byte(1).unwrap();
-        assert_eq!(encoder.buf, vec![1]);
-
-        encoder.push_byte(2).unwrap();
-        assert_eq!(encoder.buf, vec![1, 2]);
-
-        encoder.push_byte(3).unwrap();
-        assert_eq!(encoder.buf, vec![1, 2, 3]);
-    }
-
-    #[test]
     fn push_bytes() {
-        let mut encoder = Encoder::new(Profile::None);
+        let buffer: StdIoWriter<Vec<u8>> = StdIoWriter(vec![]);
+        let mut encoder = Encoder::new(buffer, Profile::None);
 
         encoder.push_bytes(&[1]).unwrap();
-        assert_eq!(encoder.buf, vec![1]);
+        assert_eq!(encoder.writer.0, vec![1]);
 
         encoder.push_bytes(&[2, 3]).unwrap();
-        assert_eq!(encoder.buf, vec![1, 2, 3]);
+        assert_eq!(encoder.writer.0, vec![1, 2, 3]);
     }
 
     #[test]
     fn existing() {
-        let mut encoder = Encoder::new(Profile::None);
+        let buffer: StdIoWriter<Vec<u8>> = StdIoWriter(vec![]);
+        let mut encoder = Encoder::new(buffer, Profile::None);
         assert_eq!(encoder.existing(), 0);
 
-        encoder.push_byte(42).unwrap();
+        encoder.push_bytes(&[42]).unwrap();
         assert_eq!(encoder.existing(), 1);
     }
 
     #[test]
     fn into_vec() {
-        let mut encoder = Encoder::new(Profile::None);
+        let buffer: StdIoWriter<Vec<u8>> = StdIoWriter(vec![]);
+        let mut encoder = Encoder::new(buffer, Profile::None);
         encoder.push_bytes(&[1, 2, 3]).unwrap();
 
-        assert_eq!(encoder.into_vec().unwrap(), vec![1, 2, 3]);
+        assert_eq!(encoder.into_writer().unwrap().0, vec![1, 2, 3]);
     }
 }

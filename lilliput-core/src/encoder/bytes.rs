@@ -1,17 +1,21 @@
 use crate::{
     header::{BytesHeader, EncodeHeader},
+    io::Write,
     value::BytesValue,
 };
 
 use super::{Encoder, EncoderError};
 
 #[derive(Debug)]
-pub(super) struct BytesEncoder<'en> {
-    inner: &'en mut Encoder,
+pub(super) struct BytesEncoder<'en, W> {
+    inner: &'en mut Encoder<W>,
 }
 
-impl<'en> BytesEncoder<'en> {
-    pub(super) fn with(inner: &'en mut Encoder) -> Self {
+impl<'en, W> BytesEncoder<'en, W>
+where
+    W: Write,
+{
+    pub(super) fn with(inner: &'en mut Encoder<W>) -> Self {
         Self { inner }
     }
 
@@ -20,7 +24,7 @@ impl<'en> BytesEncoder<'en> {
 
         // Push the value's header:
         let header = BytesHeader::optimal(len);
-        self.inner.push_byte(header.encode())?;
+        self.inner.push_bytes(&[header.encode()])?;
 
         // Push the value's length:
         match header.len_width() {

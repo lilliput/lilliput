@@ -1,5 +1,6 @@
 pub mod decoder;
 pub mod encoder;
+pub mod io;
 pub mod value;
 
 mod binary;

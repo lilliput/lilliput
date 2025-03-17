@@ -3,15 +3,18 @@ use crate::{
     value::{Map, MapValue, Value},
 };
 
-use super::{Decoder, DecoderError};
+use super::{BufRead, Decoder, DecoderError};
 
 #[derive(Debug)]
-pub struct MapDecoder<'a, 'de> {
-    inner: &'de mut Decoder<'a>,
+pub struct MapDecoder<'de, R> {
+    inner: &'de mut Decoder<R>,
 }
 
-impl<'a, 'de> MapDecoder<'a, 'de> {
-    pub(super) fn with(inner: &'de mut Decoder<'a>) -> Self {
+impl<'de, R> MapDecoder<'de, R>
+where
+    R: BufRead,
+{
+    pub(super) fn with(inner: &'de mut Decoder<R>) -> Self {
         Self { inner }
     }
 
@@ -48,10 +51,6 @@ impl<'a, 'de> MapDecoder<'a, 'de> {
             MapHeader::Compact { len } => len,
             MapHeader::Extended { len_width } => self.inner.pull_len_bytes(len_width)?,
         };
-
-        if self.inner.remaining_len() < len {
-            return Err(DecoderError::Eof);
-        }
 
         Ok(len)
     }

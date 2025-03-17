@@ -2,6 +2,7 @@ use num_traits::{float::FloatCore, ToBytes};
 
 use crate::{
     header::{EncodeHeader, FloatHeader},
+    io::Write,
     value::FloatValue,
     Profile,
 };
@@ -9,12 +10,15 @@ use crate::{
 use super::{Encoder, EncoderError};
 
 #[derive(Debug)]
-pub(super) struct FloatEncoder<'en> {
-    inner: &'en mut Encoder,
+pub(super) struct FloatEncoder<'en, W> {
+    inner: &'en mut Encoder<W>,
 }
 
-impl<'en> FloatEncoder<'en> {
-    pub(super) fn with(inner: &'en mut Encoder) -> Self {
+impl<'en, W> FloatEncoder<'en, W>
+where
+    W: Write,
+{
+    pub(super) fn with(inner: &'en mut Encoder<W>) -> Self {
         Self { inner }
     }
 
@@ -30,7 +34,7 @@ impl<'en> FloatEncoder<'en> {
 
         // Push the value's header:
         let header = FloatHeader::new(width);
-        self.inner.push_byte(header.encode())?;
+        self.inner.push_bytes(&[header.encode()])?;
 
         // Push the value's actual bytes:
         match profile {

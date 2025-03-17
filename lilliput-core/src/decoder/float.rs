@@ -4,15 +4,18 @@ use crate::{
     value::FloatValue,
 };
 
-use super::{Decoder, DecoderError};
+use super::{BufRead, Decoder, DecoderError};
 
 #[derive(Debug)]
-pub struct FloatDecoder<'a, 'de> {
-    inner: &'de mut Decoder<'a>,
+pub struct FloatDecoder<'de, R> {
+    inner: &'de mut Decoder<R>,
 }
 
-impl<'a, 'de> FloatDecoder<'a, 'de> {
-    pub(super) fn with(inner: &'de mut Decoder<'a>) -> Self {
+impl<'de, R> FloatDecoder<'de, R>
+where
+    R: BufRead,
+{
+    pub(super) fn with(inner: &'de mut Decoder<R>) -> Self {
         Self { inner }
     }
 
@@ -48,14 +51,14 @@ impl<'a, 'de> FloatDecoder<'a, 'de> {
             1..=3 => Err(DecoderError::Profile { profile }),
             4 => {
                 let mut bytes: [u8; 4] = [0b0; 4];
-                bytes.copy_from_slice(self.inner.pull_bytes(width)?);
+                self.inner.pull_bytes_exact(&mut bytes)?;
 
                 Ok(f32::from_be_bytes(bytes).into_float())
             }
             5..=7 => Err(DecoderError::Profile { profile }),
             8 => {
                 let mut bytes: [u8; 8] = [0b0; 8];
-                bytes.copy_from_slice(self.inner.pull_bytes(width)?);
+                self.inner.pull_bytes_exact(&mut bytes)?;
 
                 Ok(f64::from_be_bytes(bytes).into_float())
             }

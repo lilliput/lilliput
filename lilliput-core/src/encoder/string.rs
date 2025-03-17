@@ -1,5 +1,6 @@
 use crate::{
     header::{EncodeHeader as _, StringHeader},
+    io::Write,
     value::StringValue,
     Profile,
 };
@@ -7,12 +8,15 @@ use crate::{
 use super::{Encoder, EncoderError};
 
 #[derive(Debug)]
-pub(super) struct StringEncoder<'en> {
-    inner: &'en mut Encoder,
+pub(super) struct StringEncoder<'en, W> {
+    inner: &'en mut Encoder<W>,
 }
 
-impl<'en> StringEncoder<'en> {
-    pub(super) fn with(inner: &'en mut Encoder) -> Self {
+impl<'en, W> StringEncoder<'en, W>
+where
+    W: Write,
+{
+    pub(super) fn with(inner: &'en mut Encoder<W>) -> Self {
         Self { inner }
     }
 
@@ -24,9 +28,7 @@ impl<'en> StringEncoder<'en> {
             Profile::Weak => StringHeader::optimal(len),
             Profile::None => StringHeader::extended(8),
         };
-        println!("header for len {len}: {header:?}");
-        self.inner.push_byte(header.encode())?;
-        println!("header encoded: {:08b}", header.encode());
+        self.inner.push_bytes(&[header.encode()])?;
 
         // Push the value's length extension:
         if let StringHeader::Extended { len_width } = header {

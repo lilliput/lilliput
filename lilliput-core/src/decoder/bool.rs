@@ -1,14 +1,17 @@
 use crate::{header::BoolHeader, value::BoolValue};
 
-use super::{Decoder, DecoderError};
+use super::{BufRead, Decoder, DecoderError};
 
 #[derive(Debug)]
-pub struct BoolDecoder<'a, 'de> {
-    inner: &'de mut Decoder<'a>,
+pub struct BoolDecoder<'de, R> {
+    inner: &'de mut Decoder<R>,
 }
 
-impl<'a, 'de> BoolDecoder<'a, 'de> {
-    pub(super) fn with(inner: &'de mut Decoder<'a>) -> Self {
+impl<'de, R> BoolDecoder<'de, R>
+where
+    R: BufRead,
+{
+    pub(super) fn with(inner: &'de mut Decoder<R>) -> Self {
         Self { inner }
     }
 

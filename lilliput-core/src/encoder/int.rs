@@ -3,6 +3,7 @@ use num_traits::{PrimInt, Signed, ToBytes, Unsigned};
 use crate::{
     binary::required_bytes_for_prim_int,
     header::{EncodeHeader as _, IntHeader},
+    io::Write,
     num::ToZigZag,
     value::{IntValue, SignedIntValue, UnsignedIntValue},
     Profile,
@@ -11,12 +12,15 @@ use crate::{
 use super::{Encoder, EncoderError};
 
 #[derive(Debug)]
-pub(super) struct IntEncoder<'en> {
-    inner: &'en mut Encoder,
+pub(super) struct IntEncoder<'en, W> {
+    inner: &'en mut Encoder<W>,
 }
 
-impl<'en> IntEncoder<'en> {
-    pub(super) fn with(inner: &'en mut Encoder) -> Self {
+impl<'en, W> IntEncoder<'en, W>
+where
+    W: Write,
+{
+    pub(super) fn with(inner: &'en mut Encoder<W>) -> Self {
         Self { inner }
     }
 
@@ -41,7 +45,7 @@ impl<'en> IntEncoder<'en> {
                 width: N,
             },
         };
-        self.inner.push_byte(header.encode())?;
+        self.inner.push_bytes(&[header.encode()])?;
 
         // Push the value's extension:
         if let IntHeader::Extended { width, .. } = header {
@@ -71,7 +75,7 @@ impl<'en> IntEncoder<'en> {
                 width: N,
             },
         };
-        self.inner.push_byte(header.encode())?;
+        self.inner.push_bytes(&[header.encode()])?;
 
         // Push the value's extension:
         if let IntHeader::Extended { width, .. } = header {
