@@ -1,5 +1,6 @@
 use crate::{
     header::{EncodeHeader as _, SeqHeader},
+    io::Write,
     value::{SeqValue, Value},
     Profile,
 };
@@ -7,12 +8,15 @@ use crate::{
 use super::{Encoder, EncoderError};
 
 #[derive(Debug)]
-pub(super) struct SeqEncoder<'en> {
-    inner: &'en mut Encoder,
+pub(super) struct SeqEncoder<'en, W> {
+    inner: &'en mut Encoder<W>,
 }
 
-impl<'en> SeqEncoder<'en> {
-    pub(super) fn with(inner: &'en mut Encoder) -> Self {
+impl<'en, W> SeqEncoder<'en, W>
+where
+    W: Write,
+{
+    pub(super) fn with(inner: &'en mut Encoder<W>) -> Self {
         Self { inner }
     }
 
@@ -36,7 +40,7 @@ impl<'en> SeqEncoder<'en> {
             Profile::Weak => SeqHeader::optimal(len),
             Profile::None => SeqHeader::extended(8),
         };
-        self.inner.push_byte(header.encode())?;
+        self.inner.push_bytes(&[header.encode()])?;
 
         // Push the value's length extension:
         if let SeqHeader::Extended { len_width } = header {

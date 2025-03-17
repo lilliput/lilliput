@@ -3,15 +3,18 @@ use crate::{
     value::{SeqValue, Value},
 };
 
-use super::{Decoder, DecoderError};
+use super::{BufRead, Decoder, DecoderError};
 
 #[derive(Debug)]
-pub struct SeqDecoder<'a, 'de> {
-    inner: &'de mut Decoder<'a>,
+pub struct SeqDecoder<'de, R> {
+    inner: &'de mut Decoder<R>,
 }
 
-impl<'a, 'de> SeqDecoder<'a, 'de> {
-    pub(super) fn with(inner: &'de mut Decoder<'a>) -> Self {
+impl<'de, R> SeqDecoder<'de, R>
+where
+    R: BufRead,
+{
+    pub(super) fn with(inner: &'de mut Decoder<R>) -> Self {
         Self { inner }
     }
 
@@ -40,10 +43,6 @@ impl<'a, 'de> SeqDecoder<'a, 'de> {
             SeqHeader::Compact { len } => len,
             SeqHeader::Extended { len_width } => self.inner.pull_len_bytes(len_width)?,
         };
-
-        if self.inner.remaining_len() < len {
-            return Err(DecoderError::Eof);
-        }
 
         Ok(len)
     }

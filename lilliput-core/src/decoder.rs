@@ -1,5 +1,6 @@
 use crate::{
     header::{DecodeHeader, HeaderDecodeError, HeaderType},
+    io::BufRead,
     num::TryFromInt,
     value::{
         BoolValue, BytesValue, FloatValue, IntValue, Map, MapValue, NullValue, SeqValue,
@@ -21,7 +22,7 @@ use self::{bool::*, bytes::*, float::*, int::*, map::*, null::*, seq::*, string:
 
 #[derive(Eq, PartialEq, Debug, thiserror::Error)]
 pub enum DecoderError {
-    #[error("not a valid UTF-8 string")]
+    #[error("not a valid UTF-8 sequence")]
     Utf8(#[from] std::string::FromUtf8Error),
     #[error("unexpected end of file")]
     Eof,
@@ -37,6 +38,8 @@ pub enum DecoderError {
     Map,
     #[error("other")]
     Other,
+    #[error("reader error: {0}")]
+    Reader(String),
 }
 
 #[derive(Eq, PartialEq, Debug)]
@@ -80,18 +83,18 @@ impl DecoderState {
 }
 
 #[derive(Debug)]
-pub struct Decoder<'a> {
-    buf: &'a [u8],
+pub struct Decoder<R> {
+    reader: R,
     pos: usize,
     #[allow(dead_code)]
     profile: Profile,
     state: Vec<DecoderState>,
 }
 
-impl<'a> Decoder<'a> {
-    pub fn new(buf: &'a [u8], profile: Profile) -> Self {
+impl<R> Decoder<R> {
+    pub fn new(reader: R, profile: Profile) -> Self {
         Decoder {
-            buf,
+            reader,
             pos: 0,
             profile,
             state: vec![],
@@ -99,7 +102,10 @@ impl<'a> Decoder<'a> {
     }
 }
 
-impl Decoder<'_> {
+impl<R> Decoder<R>
+where
+    R: BufRead,
+{
     // MARK: - Any Values
 
     pub fn decode_any(&mut self) -> Result<Value, DecoderError> {
@@ -385,13 +391,34 @@ impl Decoder<'_> {
 
 // MARK: - Auxiliary Methods
 
-impl Decoder<'_> {
-    fn peek_byte(&self) -> Result<u8, DecoderError> {
-        if self.eof() {
-            return Err(DecoderError::Eof);
-        }
+impl<R> Decoder<R>
+where
+    R: BufRead,
+{
+    fn peek_byte(&mut self) -> Result<u8, DecoderError> {
+        let peek_buf = self
+            .reader
+            .fill_buf()
+            .map_err(|err| DecoderError::Reader(err.to_string()))?;
 
-        Ok(self.buf[self.pos])
+        if let Some(&byte) = peek_buf.first() {
+            Ok(byte)
+        } else {
+            Err(DecoderError::Eof)
+        }
+    }
+
+    fn peek_bytes(&mut self) -> Result<&[u8], DecoderError> {
+        self.reader
+            .fill_buf()
+            .map_err(|err| DecoderError::Reader(err.to_string()))
+    }
+
+    fn consume_bytes(&mut self, len: usize) -> Result<(), DecoderError> {
+        self.reader.consume(len);
+        self.pos += 1;
+
+        Ok(())
     }
 
     fn peek_header<T>(&mut self) -> Result<T, DecoderError>
@@ -411,82 +438,79 @@ impl Decoder<'_> {
     {
         let header = self.peek_header()?;
 
-        self.pos += 1;
+        self.consume_bytes(1)?;
 
         Ok(header)
     }
 
-    fn pull_bytes(&mut self, len: usize) -> Result<&[u8], DecoderError> {
-        if self.pos + len > self.buf.len() {
-            return Err(DecoderError::Eof);
-        }
-
-        let range = self.pos..(self.pos + len);
-
-        self.pos += len;
-
-        Ok(&self.buf[range])
+    fn pull_bytes(&mut self, buf: &mut [u8]) -> Result<usize, DecoderError> {
+        self.reader
+            .read(buf)
+            .map_err(|err| DecoderError::Reader(err.to_string()))
     }
 
-    fn pull_fixed_bytes<const N: usize>(&mut self) -> Result<&[u8; N], DecoderError> {
-        let bytes = self.pull_bytes(N)?;
-        Ok(bytes.try_into().unwrap())
+    fn pull_bytes_exact(&mut self, buf: &mut [u8]) -> Result<(), DecoderError> {
+        let mut buf_pos = 0;
+
+        while buf_pos < buf.len() {
+            let read_len = self.pull_bytes(&mut buf[buf_pos..])?;
+
+            if read_len == 0 {
+                return Err(DecoderError::Eof);
+            }
+
+            self.pos += read_len;
+            buf_pos += read_len;
+        }
+
+        Ok(())
     }
 
     #[inline(always)]
     fn pull_len_bytes(&mut self, len_width: usize) -> Result<usize, DecoderError> {
         match len_width {
             1 => {
-                let len_bytes: &[u8; 1] = self.pull_fixed_bytes()?;
-                let len = u8::from_be_bytes(*len_bytes);
+                let mut len_bytes: [u8; 1] = [0; 1];
+                self.pull_bytes_exact(&mut len_bytes)?;
+                let len = u8::from_be_bytes(len_bytes);
                 Ok(usize::try_from_int(len).map_err(IntDecoderError::OutOfBounds)?)
             }
             2 => {
-                let len_bytes: &[u8; 2] = self.pull_fixed_bytes()?;
-                let len = u16::from_be_bytes(*len_bytes);
+                let mut len_bytes: [u8; 2] = [0; 2];
+                self.pull_bytes_exact(&mut len_bytes)?;
+                let len = u16::from_be_bytes(len_bytes);
                 Ok(usize::try_from_int(len).map_err(IntDecoderError::OutOfBounds)?)
             }
             3 => {
                 const MAX_LEN_WIDTH: usize = 4;
                 let mut len_bytes: [u8; MAX_LEN_WIDTH] = [0b0; MAX_LEN_WIDTH];
                 let len_width_start = MAX_LEN_WIDTH - len_width;
-                len_bytes[len_width_start..].copy_from_slice(self.pull_bytes(len_width)?);
+                self.pull_bytes_exact(&mut len_bytes[len_width_start..])?;
                 let len = u32::from_be_bytes(len_bytes);
                 Ok(usize::try_from_int(len).map_err(IntDecoderError::OutOfBounds)?)
             }
             4 => {
-                let len_bytes: &[u8; 4] = self.pull_fixed_bytes()?;
-                let len = u32::from_be_bytes(*len_bytes);
+                let mut len_bytes: [u8; 4] = [0; 4];
+                self.pull_bytes_exact(&mut len_bytes)?;
+                let len = u32::from_be_bytes(len_bytes);
                 Ok(usize::try_from_int(len).map_err(IntDecoderError::OutOfBounds)?)
             }
             5..=7 => {
                 const MAX_LEN_WIDTH: usize = 8;
                 let mut len_bytes: [u8; MAX_LEN_WIDTH] = [0b0; MAX_LEN_WIDTH];
                 let len_width_start = MAX_LEN_WIDTH - len_width;
-                len_bytes[len_width_start..].copy_from_slice(self.pull_bytes(len_width)?);
+                self.pull_bytes_exact(&mut len_bytes[len_width_start..])?;
                 let len = u64::from_be_bytes(len_bytes);
                 Ok(usize::try_from_int(len).map_err(IntDecoderError::OutOfBounds)?)
             }
             8 => {
-                let len_bytes: &[u8; 8] = self.pull_fixed_bytes()?;
-                let len = u64::from_be_bytes(*len_bytes);
+                let mut len_bytes: [u8; 8] = [0; 8];
+                self.pull_bytes_exact(&mut len_bytes)?;
+                let len = u64::from_be_bytes(len_bytes);
                 Ok(usize::try_from_int(len).map_err(IntDecoderError::OutOfBounds)?)
             }
             _ => unreachable!(),
         }
-    }
-
-    fn remaining_len(&self) -> usize {
-        self.buf.len() - self.pos
-    }
-
-    #[allow(dead_code)]
-    fn remaining(&self) -> &[u8] {
-        &self.buf[self.pos..]
-    }
-
-    fn eof(&self) -> bool {
-        self.pos >= self.buf.len()
     }
 
     fn on_decode_value(&mut self) -> Result<(), DecoderError> {
@@ -502,58 +526,46 @@ impl Decoder<'_> {
 
 #[cfg(test)]
 mod test {
+    use crate::io::StdIoBufReader;
+
     use super::*;
 
     #[test]
     fn new() {
-        let bytes = vec![1, 2, 3];
+        let bytes: StdIoBufReader<&[u8]> = StdIoBufReader(&[1, 2, 3]);
         let decoder = Decoder::new(&bytes, Profile::None);
-        assert_eq!(decoder.buf, vec![1, 2, 3]);
+        assert_eq!(decoder.reader.0, vec![1, 2, 3]);
         assert_eq!(decoder.pos, 0);
         assert_eq!(decoder.profile, Profile::None);
         assert_eq!(decoder.state.len(), 0);
     }
 
     #[test]
-    fn pull_bytes() {
-        let bytes = vec![1, 2, 3];
-        let mut decoder = Decoder::new(&bytes, Profile::None);
-        assert_eq!(decoder.remaining(), &[1, 2, 3]);
+    fn pull_bytes_exact() {
+        let bytes: StdIoBufReader<&[u8]> = StdIoBufReader(&[1, 2, 3]);
+        let mut decoder = Decoder::new(bytes, Profile::None);
         assert_eq!(decoder.pos, 0);
-        assert_eq!(decoder.remaining_len(), 3);
 
-        assert_eq!(decoder.pull_bytes(0).unwrap(), &[]);
-        assert_eq!(decoder.remaining(), &[1, 2, 3]);
+        let mut buf = vec![];
+        decoder.pull_bytes_exact(&mut buf).unwrap();
+        assert_eq!(buf, &[]);
         assert_eq!(decoder.pos, 0);
-        assert_eq!(decoder.remaining_len(), 3);
 
-        assert_eq!(decoder.pull_bytes(1).unwrap(), &[1]);
-        assert_eq!(decoder.remaining(), &[2, 3]);
+        let mut buf = vec![0];
+        decoder.pull_bytes_exact(&mut buf).unwrap();
+        assert_eq!(buf, &[1]);
         assert_eq!(decoder.pos, 1);
-        assert_eq!(decoder.remaining_len(), 2);
 
-        assert_eq!(decoder.pull_bytes(2).unwrap(), &[2, 3]);
-        assert_eq!(decoder.remaining(), &[]);
+        let mut buf = vec![0, 0];
+        decoder.pull_bytes_exact(&mut buf).unwrap();
+        assert_eq!(buf, &[2, 3]);
         assert_eq!(decoder.pos, 3);
-        assert_eq!(decoder.remaining_len(), 0);
 
-        assert_eq!(decoder.pull_bytes(3).unwrap_err(), DecoderError::Eof);
-        assert_eq!(decoder.remaining(), &[]);
+        let mut buf = vec![0, 0, 0];
+        assert_eq!(
+            decoder.pull_bytes_exact(&mut buf).unwrap_err(),
+            DecoderError::Eof
+        );
         assert_eq!(decoder.pos, 3);
-        assert_eq!(decoder.remaining_len(), 0);
-    }
-
-    #[test]
-    fn remaining_len() {
-        let bytes = vec![1, 2, 3];
-        let decoder = Decoder::new(&bytes, Profile::None);
-        assert_eq!(decoder.remaining_len(), 3);
-    }
-
-    #[test]
-    fn remaining() {
-        let bytes = vec![1, 2, 3];
-        let decoder = Decoder::new(&bytes, Profile::None);
-        assert_eq!(decoder.remaining(), &[1, 2, 3]);
     }
 }

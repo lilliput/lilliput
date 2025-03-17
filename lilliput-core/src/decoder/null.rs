@@ -1,14 +1,17 @@
 use crate::{header::NullHeader, value::NullValue};
 
-use super::{Decoder, DecoderError};
+use super::{BufRead, Decoder, DecoderError};
 
 #[derive(Debug)]
-pub struct NullDecoder<'a, 'de> {
-    inner: &'de mut Decoder<'a>,
+pub struct NullDecoder<'de, R> {
+    inner: &'de mut Decoder<R>,
 }
 
-impl<'a, 'de> NullDecoder<'a, 'de> {
-    pub(super) fn with(inner: &'de mut Decoder<'a>) -> Self {
+impl<'de, R> NullDecoder<'de, R>
+where
+    R: BufRead,
+{
+    pub(super) fn with(inner: &'de mut Decoder<R>) -> Self {
         Self { inner }
     }
 

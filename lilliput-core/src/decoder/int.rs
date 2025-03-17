@@ -8,7 +8,7 @@ use crate::{
     value::{IntValue, SignedIntValue, UnsignedIntValue},
 };
 
-use super::{Decoder, DecoderError};
+use super::{BufRead, Decoder, DecoderError};
 
 #[derive(Eq, PartialEq, Debug, thiserror::Error)]
 pub enum IntDecoderError {
@@ -21,12 +21,15 @@ pub enum IntDecoderError {
 }
 
 #[derive(Debug)]
-pub struct IntDecoder<'a, 'de> {
-    inner: &'de mut Decoder<'a>,
+pub struct IntDecoder<'de, R> {
+    inner: &'de mut Decoder<R>,
 }
 
-impl<'a, 'de> IntDecoder<'a, 'de> {
-    pub(super) fn with(inner: &'de mut Decoder<'a>) -> Self {
+impl<'de, R> IntDecoder<'de, R>
+where
+    R: BufRead,
+{
+    pub(super) fn with(inner: &'de mut Decoder<R>) -> Self {
         Self { inner }
     }
 
@@ -73,8 +76,12 @@ impl<'a, 'de> IntDecoder<'a, 'de> {
                 false => return Err(DecoderError::Int(IntDecoderError::ExpectedSigned)),
             },
         };
+        debug_assert!(width <= 8);
 
-        let bytes = self.inner.pull_bytes(width)?;
+        const MAX_WIDTH: usize = 8;
+        let mut padded_bytes: [u8; MAX_WIDTH] = [0; MAX_WIDTH];
+        let bytes = &mut padded_bytes[(MAX_WIDTH - width)..];
+        self.inner.pull_bytes_exact(bytes)?;
 
         let value = match Self::unsigned_from_be_bytes(bytes) {
             UnsignedIntValue::U8(unsigned) => SignedIntValue::I8(i8::from_zig_zag(unsigned)),
@@ -101,8 +108,12 @@ impl<'a, 'de> IntDecoder<'a, 'de> {
                 false => width,
             },
         };
+        debug_assert!(width <= 8);
 
-        let bytes = self.inner.pull_bytes(width)?;
+        const MAX_WIDTH: usize = 8;
+        let mut padded_bytes: [u8; MAX_WIDTH] = [0; MAX_WIDTH];
+        let bytes = &mut padded_bytes[(MAX_WIDTH - width)..];
+        self.inner.pull_bytes_exact(bytes)?;
 
         let value = Self::unsigned_from_be_bytes(bytes);
 

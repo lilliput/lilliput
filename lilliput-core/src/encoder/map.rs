@@ -1,5 +1,6 @@
 use crate::{
     header::{EncodeHeader as _, MapHeader},
+    io::Write,
     value::{Map, MapValue},
     Profile,
 };
@@ -7,12 +8,15 @@ use crate::{
 use super::{Encoder, EncoderError};
 
 #[derive(Debug)]
-pub(super) struct MapEncoder<'en> {
-    inner: &'en mut Encoder,
+pub(super) struct MapEncoder<'en, W> {
+    inner: &'en mut Encoder<W>,
 }
 
-impl<'en> MapEncoder<'en> {
-    pub(super) fn with(inner: &'en mut Encoder) -> Self {
+impl<'en, W> MapEncoder<'en, W>
+where
+    W: Write,
+{
+    pub(super) fn with(inner: &'en mut Encoder<W>) -> Self {
         Self { inner }
     }
 
@@ -37,7 +41,7 @@ impl<'en> MapEncoder<'en> {
             Profile::Weak => MapHeader::optimal(len),
             Profile::None => MapHeader::extended(8),
         };
-        self.inner.push_byte(header.encode())?;
+        self.inner.push_bytes(&[header.encode()])?;
 
         // Push the value's length extension:
         if let MapHeader::Extended { len_width } = header {

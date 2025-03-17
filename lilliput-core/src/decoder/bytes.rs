@@ -1,14 +1,17 @@
 use crate::{header::BytesHeader, value::BytesValue};
 
-use super::{Decoder, DecoderError};
+use super::{BufRead, Decoder, DecoderError};
 
 #[derive(Debug)]
-pub struct BytesDecoder<'a, 'de> {
-    inner: &'de mut Decoder<'a>,
+pub struct BytesDecoder<'de, R> {
+    inner: &'de mut Decoder<R>,
 }
 
-impl<'a, 'de> BytesDecoder<'a, 'de> {
-    pub(super) fn with(inner: &'de mut Decoder<'a>) -> Self {
+impl<'de, R> BytesDecoder<'de, R>
+where
+    R: BufRead,
+{
+    pub(super) fn with(inner: &'de mut Decoder<R>) -> Self {
         Self { inner }
     }
 
@@ -18,12 +21,23 @@ impl<'a, 'de> BytesDecoder<'a, 'de> {
         let len_width = header.len_width();
         let len = self.inner.pull_len_bytes(len_width)?;
 
-        let remaining_len = self.inner.remaining_len();
-        debug_assert!(len <= remaining_len);
+        // We cannot trust the decoded length, so we only ever
+        // allocate as much bytes as we know (with certainty)
+        // to be remaining in the incoming byte stream:
 
-        let capacity = len.min(remaining_len);
+        let capacity = len.min(self.inner.peek_bytes()?.len());
         let mut value = Vec::with_capacity(capacity);
-        value.extend_from_slice(self.inner.pull_bytes(len)?);
+
+        let mut pos: usize = 0;
+
+        while pos < len {
+            let peek_buf = self.inner.peek_bytes()?;
+            let pull_len = (len - pos).min(peek_buf.len());
+            value.extend_from_slice(&peek_buf[0..pull_len]);
+            self.inner.consume_bytes(pull_len)?;
+
+            pos += pull_len;
+        }
 
         Ok(value)
     }
