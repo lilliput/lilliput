@@ -1,4 +1,4 @@
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 use proptest::{prelude::*, sample::SizeRange};
 
 use super::Value;
@@ -10,39 +10,6 @@ pub type Map = ordermap::OrderMap<Value, Value>;
 pub type Map = std::collections::BTreeMap<Value, Value>;
 
 /// Represents a map of key-value pairs.
-///
-/// # Binary representation
-///
-/// ```plain
-/// 0b0001XXXX <INTEGER>? [KEY:VALUE,*]
-///   ├──┘│├─┘ ├───────┘  ├───────────┘
-///   │   ││   └─ Length? └─ Key-value pairs
-///   │   │└─ <depends on variant>
-///   │   └─ Variant
-///   └─ Map type
-/// ```
-///
-/// ## Compact variant
-///
-/// ```plain
-/// 0b00011XXX [KEY:VALUE,*]
-///   ├──┘│├─┘ ├───────────┘
-///   │   ││   └─ Key-value pairs
-///   │   │└─ Length
-///   │   └─ Compact variant
-///   └─ Map type
-/// ```
-///
-/// ## Extended variant
-///
-/// ```plain
-/// 0b00010XXX <INTEGER> [KEY:VALUE,*]
-///   ├──┘│├─┘ ├───────┘ ├───────────┘
-///   │   ││   └─ Length └─ Key-value pairs
-///   │   │└─ Number of bytes in length
-///   │   └─ Extended variant
-///   └─ Map type
-/// ```
 #[derive(Default, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct MapValue(pub Map);
 
@@ -64,15 +31,21 @@ impl From<MapValue> for Map {
     }
 }
 
+impl std::fmt::Debug for MapValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_map().entries(self.0.iter()).finish()
+    }
+}
+
 #[doc(hidden)]
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 pub struct MapValueArbitraryParameters {
     pub keys: BoxedStrategy<Value>,
     pub values: BoxedStrategy<Value>,
     pub size: SizeRange,
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 impl Default for MapValueArbitraryParameters {
     fn default() -> Self {
         Self {
@@ -83,13 +56,7 @@ impl Default for MapValueArbitraryParameters {
     }
 }
 
-impl std::fmt::Debug for MapValue {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_map().entries(self.0.iter()).finish()
-    }
-}
-
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 impl proptest::arbitrary::Arbitrary for MapValue {
     type Parameters = MapValueArbitraryParameters;
     type Strategy = BoxedStrategy<Self>;
@@ -105,14 +72,25 @@ impl proptest::arbitrary::Arbitrary for MapValue {
 
 #[cfg(test)]
 mod tests {
-    use crate::value::NullValue;
+    use proptest::prelude::*;
+
+    use crate::{
+        decoder::Decoder,
+        encoder::Encoder,
+        io::{SliceReader, VecWriter},
+        value::{NullValue, Value},
+        Profile,
+    };
 
     use super::*;
 
     #[test]
     fn debug() {
         let mut map = Map::default();
-        map.insert(Value::Null(NullValue), Value::Null(NullValue));
+        map.insert(
+            Value::Null(NullValue::default()),
+            Value::Null(NullValue::default()),
+        );
         let value = MapValue::from(map);
 
         assert_eq!(format!("{:?}", value), "{null: null}");
@@ -120,5 +98,30 @@ mod tests {
             format!("{:#?}", value),
             "{\n    Null(\n        null,\n    ): Null(\n        null,\n    ),\n}"
         );
+    }
+
+    proptest! {
+        #[test]
+        fn encode_decode_roundtrip(value in MapValue::arbitrary()) {
+            let profile = Profile::None;
+
+            let mut encoded: Vec<u8> = Vec::new();
+            let writer = VecWriter::new(&mut encoded);
+            let mut encoder = Encoder::new(writer, profile);
+            encoder.encode_map(&value.0).unwrap();
+
+            let reader = SliceReader::new(&encoded);
+            let mut decoder = Decoder::new(reader, profile);
+            let decoded = decoder.decode_map().unwrap();
+            prop_assert_eq!(&decoded, &value.0);
+
+            let reader = SliceReader::new(&encoded);
+            let mut decoder = Decoder::new(reader, profile);
+            let decoded = decoder.decode_any().unwrap();
+            let Value::Map(decoded) = decoded else {
+                panic!("expected map value");
+            };
+            prop_assert_eq!(&decoded, &value);
+        }
     }
 }

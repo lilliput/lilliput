@@ -1,21 +1,6 @@
 use crate::binary::BytesSlice;
 
 /// Represents a byte sequence.
-///
-/// # Binary representation
-///
-/// ```plain
-/// 0b000001XX <INTEGER> [ BYTE, … ]
-///   ├────┘├┘  └─ Length  └─ Bytes
-///   │     └─ Length width exponent
-///   └─ Bytes type
-/// ```
-///
-/// The byte-width of the length value is obtained by:
-///
-/// ```plain
-/// width = 2 ^ exponent
-/// ```
 #[derive(Default, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct BytesValue(pub Vec<u8>);
 
@@ -59,14 +44,14 @@ impl std::fmt::Display for BytesValue {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 impl proptest::prelude::Arbitrary for BytesValue {
     type Parameters = ();
     type Strategy = proptest::prelude::BoxedStrategy<Self>;
 
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         use proptest::prelude::Strategy as _;
-        proptest::collection::vec((u8::MIN)..(u8::MAX), 0..=10)
+        proptest::collection::vec(proptest::num::u8::ANY, 0..=10)
             .prop_map(Self)
             .boxed()
     }
@@ -74,7 +59,17 @@ impl proptest::prelude::Arbitrary for BytesValue {
 
 #[cfg(test)]
 mod tests {
-    use super::BytesValue;
+    use proptest::prelude::*;
+
+    use crate::{
+        decoder::Decoder,
+        encoder::Encoder,
+        io::{SliceReader, VecWriter},
+        value::Value,
+        Profile,
+    };
+
+    use super::*;
 
     #[test]
     fn display() {
@@ -95,5 +90,30 @@ mod tests {
             format!("{:#?}", BytesValue::from(vec![1, 2, 3])),
             "[0b00000001, 0b00000010, 0b00000011]"
         );
+    }
+
+    proptest! {
+        #[test]
+        fn encode_decode_roundtrip(value in BytesValue::arbitrary()) {
+            let profile = Profile::None;
+
+            let mut encoded: Vec<u8> = Vec::new();
+            let writer = VecWriter::new(&mut encoded);
+            let mut encoder = Encoder::new(writer, profile);
+            encoder.encode_bytes(value.as_slice()).unwrap();
+
+            let reader = SliceReader::new(&encoded);
+            let mut decoder = Decoder::new(reader, profile);
+            let decoded = decoder.decode_bytes_buf().unwrap();
+            prop_assert_eq!(&decoded, value.as_slice());
+
+            let reader = SliceReader::new(&encoded);
+            let mut decoder = Decoder::new(reader, profile);
+            let decoded = decoder.decode_any().unwrap();
+            let Value::Bytes(decoded) = decoded else {
+                panic!("expected bytes value");
+            };
+            prop_assert_eq!(&decoded, &value);
+        }
     }
 }

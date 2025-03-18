@@ -7,22 +7,15 @@ mod null;
 mod seq;
 mod string;
 
+use crate::error::Expectation;
+
 pub use self::{
     bool::BoolHeader, bytes::BytesHeader, float::FloatHeader, int::IntHeader, map::MapHeader,
     null::NullHeader, seq::SeqHeader, string::StringHeader,
 };
 
-#[derive(Eq, PartialEq, Debug, thiserror::Error)]
-pub enum HeaderDecodeError {
-    #[error("expected type {expected:?}, found {actual:?}")]
-    UnexpectedType {
-        expected: HeaderType,
-        actual: HeaderType,
-    },
-}
-
 pub trait DecodeHeader: Sized {
-    fn decode(byte: u8) -> Result<Self, HeaderDecodeError>;
+    fn decode(byte: u8) -> Result<Self, Expectation<Marker>>;
 }
 
 pub trait EncodeHeader: Sized {
@@ -31,7 +24,7 @@ pub trait EncodeHeader: Sized {
 
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
-pub enum HeaderType {
+pub enum Marker {
     Int = 0b10000000,
     String = 0b01000000,
     Seq = 0b00100000,
@@ -43,17 +36,40 @@ pub enum HeaderType {
     Reserved = 0b00000000,
 }
 
-impl HeaderType {
+impl std::fmt::Display for Marker {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Int => write!(f, "integer"),
+            Self::String => write!(f, "string"),
+            Self::Seq => write!(f, "sequence"),
+            Self::Map => write!(f, "map"),
+            Self::Float => write!(f, "float"),
+            Self::Bytes => write!(f, "byte sequence"),
+            Self::Bool => write!(f, "bool"),
+            Self::Null => write!(f, "null"),
+            Self::Reserved => write!(f, "reserved"),
+        }
+    }
+}
+
+#[cfg(feature = "serde")]
+impl serde::de::Expected for Marker {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        std::fmt::Display::fmt(self, f)
+    }
+}
+
+impl Marker {
     pub fn of(header: &Header) -> Self {
         match header {
-            Header::Int(_) => HeaderType::Int,
-            Header::String(_) => HeaderType::String,
-            Header::Seq(_) => HeaderType::Seq,
-            Header::Map(_) => HeaderType::Map,
-            Header::Float(_) => HeaderType::Float,
-            Header::Bytes(_) => HeaderType::Bytes,
-            Header::Bool(_) => HeaderType::Bool,
-            Header::Null(_) => HeaderType::Null,
+            Header::Int(_) => Marker::Int,
+            Header::String(_) => Marker::String,
+            Header::Seq(_) => Marker::Seq,
+            Header::Map(_) => Marker::Map,
+            Header::Float(_) => Marker::Float,
+            Header::Bytes(_) => Marker::Bytes,
+            Header::Bool(_) => Marker::Bool,
+            Header::Null(_) => Marker::Null,
         }
     }
 
@@ -80,15 +96,20 @@ impl HeaderType {
         }
     }
 
-    fn validate(self, byte: u8) -> Result<(), HeaderDecodeError> {
-        let type_bit = self as u8;
-        let mask = !type_bit.saturating_sub(1);
-        let masked_byte = byte & mask;
+    fn validate(self, byte: u8) -> Result<(), Expectation<Self>> {
+        let detected = Marker::detect(byte);
+        let is_valid = detected == self;
 
-        if masked_byte != type_bit {
-            return Err(HeaderDecodeError::UnexpectedType {
-                expected: HeaderType::Map,
-                actual: HeaderType::detect(byte),
+        // let type_bit = self as u8;
+        // let mask = !type_bit.saturating_sub(1);
+        // let masked_byte = byte & mask;
+        // let is_valid = masked_byte == type_bit;
+
+        if !is_valid {
+            // let detected = Marker::detect(byte);
+            return Err(Expectation {
+                unexpected: detected,
+                expected: self,
             });
         }
 
@@ -96,7 +117,7 @@ impl HeaderType {
     }
 }
 
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum Header {
     /// Represents a integer number.
     Int(IntHeader),
@@ -181,8 +202,18 @@ impl From<NullHeader> for Header {
     }
 }
 
-impl Header {
-    pub fn has_type(&self, header_type: HeaderType) -> bool {
-        HeaderType::of(self) == header_type
+impl DecodeHeader for Header {
+    fn decode(byte: u8) -> Result<Self, Expectation<Marker>> {
+        match Marker::detect(byte) {
+            Marker::Int => Ok(Header::Int(IntHeader::decode(byte)?)),
+            Marker::String => Ok(Header::String(StringHeader::decode(byte)?)),
+            Marker::Seq => Ok(Header::Seq(SeqHeader::decode(byte)?)),
+            Marker::Map => Ok(Header::Map(MapHeader::decode(byte)?)),
+            Marker::Float => Ok(Header::Float(FloatHeader::decode(byte)?)),
+            Marker::Bytes => Ok(Header::Bytes(BytesHeader::decode(byte)?)),
+            Marker::Bool => Ok(Header::Bool(BoolHeader::decode(byte)?)),
+            Marker::Null => Ok(Header::Null(NullHeader::decode(byte)?)),
+            Marker::Reserved => unimplemented!(),
+        }
     }
 }

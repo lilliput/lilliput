@@ -1,12 +1,4 @@
 /// Represents a boolean.
-///
-/// # Binary representation
-///
-/// ```plain
-/// 0b0000001X
-///   ├─────┘└─ Value (0 = false, 1 = true)
-///   └─ Data type
-/// ```
 #[derive(Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct BoolValue(pub bool);
 
@@ -34,7 +26,7 @@ impl std::fmt::Display for BoolValue {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 impl proptest::prelude::Arbitrary for BoolValue {
     type Parameters = ();
     type Strategy = proptest::prelude::BoxedStrategy<Self>;
@@ -47,7 +39,17 @@ impl proptest::prelude::Arbitrary for BoolValue {
 
 #[cfg(test)]
 mod tests {
-    use super::BoolValue;
+    use proptest::prelude::*;
+
+    use crate::{
+        decoder::Decoder,
+        encoder::Encoder,
+        io::{SliceReader, VecWriter},
+        value::Value,
+        Profile,
+    };
+
+    use super::*;
 
     #[test]
     fn display() {
@@ -62,5 +64,31 @@ mod tests {
 
         assert_eq!(format!("{:#?}", BoolValue::from(false)), "false");
         assert_eq!(format!("{:#?}", BoolValue::from(true)), "true");
+    }
+
+    proptest! {
+        #[test]
+        fn encode_decode_roundtrip(value in BoolValue::arbitrary()) {
+            let profile = Profile::None;
+
+            let mut encoded: Vec<u8> = Vec::new();
+            let writer = VecWriter::new(&mut encoded);
+            let mut encoder = Encoder::new(writer, profile);
+            encoder.encode_bool(value.0).unwrap();
+            prop_assert_eq!(encoded.len(), 1);
+
+            let reader = SliceReader::new(&encoded);
+            let mut decoder = Decoder::new(reader, profile);
+            let decoded = decoder.decode_bool().unwrap();
+            prop_assert_eq!(decoded, value.0);
+
+            let reader = SliceReader::new(&encoded);
+            let mut decoder = Decoder::new(reader, profile);
+            let decoded = decoder.decode_any().unwrap();
+            let Value::Bool(decoded) = decoded else {
+                panic!("expected bool value");
+            };
+            prop_assert_eq!(&decoded, &value);
+        }
     }
 }

@@ -1,6 +1,9 @@
-use crate::binary::{required_bytes_for_prim_int, Byte};
+use crate::{
+    binary::{trailing_non_zero_bytes, Byte},
+    error::Expectation,
+};
 
-use super::{DecodeHeader, EncodeHeader, HeaderDecodeError, HeaderType};
+use super::{DecodeHeader, EncodeHeader, Marker};
 
 /// Represents a byte sequence.
 ///
@@ -28,32 +31,35 @@ impl BytesHeader {
 
     const LEN_WIDTH_EXPONENT_BITS: u8 = 0b00000011;
 
+    #[inline]
     pub fn new(len_width_exponent: usize) -> Self {
-        debug_assert!(len_width_exponent <= 3);
+        debug_assert!(len_width_exponent <= Self::LEN_WIDTH_EXPONENT_BITS as usize);
 
-        Self {
-            len_width_exponent: len_width_exponent.min(3),
-        }
+        Self { len_width_exponent }
     }
 
+    #[inline]
     pub fn optimal(len: usize) -> Self {
-        let len_width = match required_bytes_for_prim_int(len) {
-            0 | 1 => 1,
+        let len_width = match trailing_non_zero_bytes(len).max(1) {
+            1 => 1,
             2 => 2,
             3..=4 => 4,
             5..=8 => 8,
             _ => unreachable!(),
         };
-        let len_width_exponent = Self::len_width_exponent(len_width);
-        Self { len_width_exponent }
+        Self {
+            len_width_exponent: Self::len_width_exponent(len_width),
+        }
     }
 
+    #[inline]
     pub fn exact(_len: usize) -> Self {
-        let len_width = 8;
-        let len_width_exponent = Self::len_width_exponent(len_width);
-        Self { len_width_exponent }
+        Self {
+            len_width_exponent: Self::len_width_exponent(8),
+        }
     }
 
+    #[inline]
     pub fn len_width(&self) -> usize {
         1usize << self.len_width_exponent
     }
@@ -71,8 +77,8 @@ impl BytesHeader {
 }
 
 impl DecodeHeader for BytesHeader {
-    fn decode(byte: u8) -> Result<Self, HeaderDecodeError> {
-        HeaderType::Bytes.validate(byte)?;
+    fn decode(byte: u8) -> Result<Self, Expectation<Marker>> {
+        Marker::Bytes.validate(byte)?;
 
         let byte = Byte(byte);
 
@@ -95,7 +101,7 @@ impl EncodeHeader for BytesHeader {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 impl proptest::prelude::Arbitrary for BytesHeader {
     type Parameters = ();
     type Strategy = proptest::prelude::BoxedStrategy<Self>;

@@ -1,6 +1,6 @@
 use crate::binary::Byte;
 
-use super::{DecodeHeader, EncodeHeader, HeaderDecodeError, HeaderType};
+use super::{DecodeHeader, EncodeHeader, Expectation, Marker};
 
 /// Represents a null value.
 ///
@@ -19,8 +19,8 @@ impl NullHeader {
 }
 
 impl DecodeHeader for NullHeader {
-    fn decode(byte: u8) -> Result<Self, HeaderDecodeError> {
-        HeaderType::Null.validate(byte)?;
+    fn decode(byte: u8) -> Result<Self, Expectation<Marker>> {
+        Marker::Null.validate(byte)?;
 
         Ok(Self)
     }
@@ -34,7 +34,7 @@ impl EncodeHeader for NullHeader {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 impl proptest::prelude::Arbitrary for NullHeader {
     type Parameters = ();
     type Strategy = proptest::prelude::BoxedStrategy<Self>;

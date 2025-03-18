@@ -1,8 +1,12 @@
-use std::hash::Hasher;
+use std::{
+    hash::{Hash, Hasher},
+    num::TryFromIntError,
+};
 
-use std::hash::Hash;
+use crate::num::{TryFromInt, TryIntoInt as _};
 
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+use super::SignedIntValue;
+
 #[derive(Copy, Clone)]
 pub enum UnsignedIntValue {
     U8(u8),
@@ -17,29 +21,43 @@ impl Default for UnsignedIntValue {
     }
 }
 
-impl From<u8> for UnsignedIntValue {
-    fn from(value: u8) -> Self {
-        Self::U8(value)
-    }
+macro_rules! impl_unsigned_int_value_from {
+    ($t:ty => $v:ident) => {
+        impl From<$t> for UnsignedIntValue {
+            fn from(value: $t) -> Self {
+                Self::$v(value)
+            }
+        }
+    };
 }
 
-impl From<u16> for UnsignedIntValue {
-    fn from(value: u16) -> Self {
-        Self::U16(value)
-    }
+impl_unsigned_int_value_from!(u8 => U8);
+impl_unsigned_int_value_from!(u16 => U16);
+impl_unsigned_int_value_from!(u32 => U32);
+impl_unsigned_int_value_from!(u64 => U64);
+
+macro_rules! impl_try_from_unsigned_int_value {
+    ($t:ty) => {
+        impl TryFrom<UnsignedIntValue> for $t {
+            type Error = std::num::TryFromIntError;
+
+            fn try_from(value: UnsignedIntValue) -> Result<Self, Self::Error> {
+                match value {
+                    UnsignedIntValue::U8(value) => value.try_into_int(),
+                    UnsignedIntValue::U16(value) => value.try_into_int(),
+                    UnsignedIntValue::U32(value) => value.try_into_int(),
+                    UnsignedIntValue::U64(value) => value.try_into_int(),
+                }
+            }
+        }
+    };
 }
 
-impl From<u32> for UnsignedIntValue {
-    fn from(value: u32) -> Self {
-        Self::U32(value)
-    }
-}
-
-impl From<u64> for UnsignedIntValue {
-    fn from(value: u64) -> Self {
-        Self::U64(value)
-    }
-}
+impl_try_from_unsigned_int_value!(u8);
+impl_try_from_unsigned_int_value!(u16);
+impl_try_from_unsigned_int_value!(u32);
+impl_try_from_unsigned_int_value!(u64);
+impl_try_from_unsigned_int_value!(usize);
 
 impl PartialEq for UnsignedIntValue {
     fn eq(&self, other: &Self) -> bool {
@@ -110,7 +128,52 @@ impl std::fmt::Display for UnsignedIntValue {
     }
 }
 
+#[cfg(any(test, feature = "testing"))]
+impl proptest::prelude::Arbitrary for UnsignedIntValue {
+    type Parameters = ();
+    type Strategy = proptest::strategy::BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        use proptest::strategy::Strategy;
+
+        proptest::prop_oneof![
+            proptest::num::u8::ANY.prop_map(UnsignedIntValue::U8),
+            proptest::num::u16::ANY.prop_map(UnsignedIntValue::U16),
+            proptest::num::u32::ANY.prop_map(UnsignedIntValue::U32),
+            proptest::num::u64::ANY.prop_map(UnsignedIntValue::U64),
+        ]
+        .boxed()
+    }
+}
+
 impl UnsignedIntValue {
+    pub fn to_signed(self) -> Result<SignedIntValue, TryFromIntError> {
+        match self {
+            Self::U8(unsigned) => {
+                if unsigned <= i8::MAX as u8 {
+                    i8::try_from_int(unsigned).map(SignedIntValue::I8)
+                } else {
+                    i16::try_from_int(unsigned).map(SignedIntValue::I16)
+                }
+            }
+            Self::U16(unsigned) => {
+                if unsigned <= i16::MAX as u16 {
+                    i16::try_from_int(unsigned).map(SignedIntValue::I16)
+                } else {
+                    i32::try_from_int(unsigned).map(SignedIntValue::I32)
+                }
+            }
+            Self::U32(unsigned) => {
+                if unsigned <= i32::MAX as u32 {
+                    i32::try_from_int(unsigned).map(SignedIntValue::I32)
+                } else {
+                    i64::try_from_int(unsigned).map(SignedIntValue::I64)
+                }
+            }
+            Self::U64(unsigned) => i64::try_from_int(unsigned).map(SignedIntValue::I64),
+        }
+    }
+
     pub(crate) fn canonicalized(&self) -> u64 {
         match *self {
             Self::U8(value) => value as u64,
@@ -126,6 +189,14 @@ mod tests {
     use std::hash::RandomState;
 
     use proptest::prelude::*;
+
+    use crate::{
+        decoder::Decoder,
+        encoder::Encoder,
+        io::{SliceReader, VecWriter},
+        value::{IntValue, Value},
+        Profile,
+    };
 
     use super::*;
 
@@ -222,5 +293,30 @@ mod tests {
         assert_eq!(format!("{:#?}", UnsignedIntValue::from(42_u16)), "42_u16");
         assert_eq!(format!("{:#?}", UnsignedIntValue::from(42_u32)), "42_u32");
         assert_eq!(format!("{:#?}", UnsignedIntValue::from(42_u64)), "42_u64");
+    }
+
+    proptest! {
+        #[test]
+        fn encode_decode_roundtrip(value in UnsignedIntValue::arbitrary()) {
+            let profile = Profile::None;
+
+            let mut encoded: Vec<u8> = Vec::new();
+            let writer = VecWriter::new(&mut encoded);
+            let mut encoder = Encoder::new(writer, profile);
+            encoder.encode_unsigned_int_value(&value).unwrap();
+
+            let reader = SliceReader::new(&encoded);
+            let mut decoder = Decoder::new(reader, profile);
+            let decoded = decoder.decode_unsigned_int_value().unwrap();
+            prop_assert_eq!(&decoded, &value);
+
+            let reader = SliceReader::new(&encoded);
+            let mut decoder = Decoder::new(reader, profile);
+            let decoded = decoder.decode_any().unwrap();
+            let Value::Int(decoded) = decoded else {
+                panic!("expected int value");
+            };
+            prop_assert_eq!(&decoded, &IntValue::Unsigned(value));
+        }
     }
 }

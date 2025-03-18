@@ -1,32 +1,39 @@
 use num_traits::{float::FloatCore, ToBytes};
 
 use crate::{
+    error::Result,
     header::{EncodeHeader, FloatHeader},
     io::Write,
     value::FloatValue,
     Profile,
 };
 
-use super::{Encoder, EncoderError};
+use super::Encoder;
 
-#[derive(Debug)]
-pub(super) struct FloatEncoder<'en, W> {
-    inner: &'en mut Encoder<W>,
-}
-
-impl<'en, W> FloatEncoder<'en, W>
+impl<W> Encoder<W>
 where
     W: Write,
 {
-    pub(super) fn with(inner: &'en mut Encoder<W>) -> Self {
-        Self { inner }
+    pub fn encode_f32(&mut self, value: f32) -> Result<()> {
+        self.encode_float(value)
     }
 
-    pub(super) fn encode_float<T, const N: usize>(&mut self, value: T) -> Result<(), EncoderError>
+    pub fn encode_f64(&mut self, value: f64) -> Result<()> {
+        self.encode_float(value)
+    }
+
+    pub fn encode_float_value(&mut self, value: &FloatValue) -> Result<()> {
+        match *value {
+            FloatValue::F32(value) => self.encode_float(value),
+            FloatValue::F64(value) => self.encode_float(value),
+        }
+    }
+
+    fn encode_float<T, const N: usize>(&mut self, value: T) -> Result<()>
     where
         T: FloatCore + ToBytes<Bytes = [u8; N]>,
     {
-        let profile = self.inner.profile;
+        let profile = self.profile;
 
         let width = match profile {
             Profile::Weak | Profile::None => N,
@@ -34,7 +41,7 @@ where
 
         // Push the value's header:
         let header = FloatHeader::new(width);
-        self.inner.push_bytes(&[header.encode()])?;
+        self.push_bytes(&[header.encode()])?;
 
         // Push the value's actual bytes:
         match profile {
@@ -43,18 +50,7 @@ where
         }
     }
 
-    pub(super) fn encode_float_value(&mut self, value: &FloatValue) -> Result<(), EncoderError> {
-        match *value {
-            FloatValue::F32(value) => self.encode_float(value),
-            FloatValue::F64(value) => self.encode_float(value),
-        }
-    }
-
-    fn push_value_bytes_variable<T, const N: usize>(
-        &mut self,
-        value: T,
-        width: usize,
-    ) -> Result<(), EncoderError>
+    fn push_value_bytes_variable<T, const N: usize>(&mut self, value: T, width: usize) -> Result<()>
     where
         T: FloatCore + ToBytes<Bytes = [u8; N]>,
     {
@@ -62,16 +58,12 @@ where
         self.push_value_bytes_fixed(value, width)
     }
 
-    fn push_value_bytes_fixed<T, const N: usize>(
-        &mut self,
-        value: T,
-        width: usize,
-    ) -> Result<(), EncoderError>
+    fn push_value_bytes_fixed<T, const N: usize>(&mut self, value: T, width: usize) -> Result<()>
     where
         T: FloatCore + ToBytes<Bytes = [u8; N]>,
     {
         let bytes = value.to_be_bytes();
         assert_eq!(bytes.len(), width);
-        self.inner.push_bytes(&value.to_be_bytes())
+        self.push_bytes(&value.to_be_bytes())
     }
 }

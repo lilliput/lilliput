@@ -1,6 +1,6 @@
 use crate::binary::Byte;
 
-use super::{DecodeHeader, EncodeHeader, HeaderDecodeError, HeaderType};
+use super::{DecodeHeader, EncodeHeader, Expectation, Marker};
 
 /// Represents a floating-point number.
 ///
@@ -22,22 +22,22 @@ impl FloatHeader {
 
     const VALUE_WIDTH_BITS: u8 = 0b00000111;
 
+    #[inline]
     pub fn new(width: usize) -> Self {
         debug_assert!(width <= 8);
 
-        Self {
-            width: width.min(8) as u8,
-        }
+        Self { width: width as u8 }
     }
 
+    #[inline]
     pub fn width(&self) -> usize {
         self.width.into()
     }
 }
 
 impl DecodeHeader for FloatHeader {
-    fn decode(byte: u8) -> Result<Self, HeaderDecodeError> {
-        HeaderType::Float.validate(byte)?;
+    fn decode(byte: u8) -> Result<Self, Expectation<Marker>> {
+        Marker::Float.validate(byte)?;
 
         let byte = Byte(byte);
 
@@ -58,7 +58,7 @@ impl EncodeHeader for FloatHeader {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 impl proptest::prelude::Arbitrary for FloatHeader {
     type Parameters = ();
     type Strategy = proptest::strategy::BoxedStrategy<Self>;

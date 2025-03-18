@@ -3,15 +3,6 @@ use std::hash::{Hash, Hasher};
 use decorum::{constraint::IsFloat, proxy::Constrained};
 
 /// Represents a floating-point number.
-///
-/// # Binary representation
-///
-/// ```plain
-/// 0b00001XXX <FLOAT>
-///   ├───┘├─┘  └─ Value
-///   │    └─ Width in bytes, minus 1
-///   └─ Float type
-/// ```
 #[derive(Copy, Clone)]
 pub enum FloatValue {
     F32(f32),
@@ -94,13 +85,13 @@ impl std::fmt::Debug for FloatValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if f.alternate() {
             match self {
-                FloatValue::F32(value) => write!(f, "{value:#?}_f32"),
-                FloatValue::F64(value) => write!(f, "{value:#?}_f64"),
+                Self::F32(value) => write!(f, "{value:#?}_f32"),
+                Self::F64(value) => write!(f, "{value:#?}_f64"),
             }
         } else {
             match self {
-                FloatValue::F32(value) => std::fmt::Debug::fmt(value, f),
-                FloatValue::F64(value) => std::fmt::Debug::fmt(value, f),
+                Self::F32(value) => std::fmt::Debug::fmt(value, f),
+                Self::F64(value) => std::fmt::Debug::fmt(value, f),
             }
         }
     }
@@ -109,8 +100,8 @@ impl std::fmt::Debug for FloatValue {
 impl std::fmt::Display for FloatValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            FloatValue::F32(value) => std::fmt::Display::fmt(value, f),
-            FloatValue::F64(value) => std::fmt::Display::fmt(value, f),
+            Self::F32(value) => std::fmt::Display::fmt(value, f),
+            Self::F64(value) => std::fmt::Display::fmt(value, f),
         }
     }
 }
@@ -121,7 +112,7 @@ impl FloatValue {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 impl proptest::prelude::Arbitrary for FloatValue {
     type Parameters = ();
     type Strategy = proptest::strategy::BoxedStrategy<Self>;
@@ -139,7 +130,17 @@ impl proptest::prelude::Arbitrary for FloatValue {
 
 #[cfg(test)]
 mod tests {
-    use super::FloatValue;
+    use proptest::prelude::*;
+
+    use crate::{
+        decoder::Decoder,
+        encoder::Encoder,
+        io::{SliceReader, VecWriter},
+        value::Value,
+        Profile,
+    };
+
+    use super::*;
 
     #[test]
     fn display() {
@@ -154,5 +155,30 @@ mod tests {
 
         assert_eq!(format!("{:#?}", FloatValue::from(4.2_f32)), "4.2_f32");
         assert_eq!(format!("{:#?}", FloatValue::from(4.2_f64)), "4.2_f64");
+    }
+
+    proptest! {
+        #[test]
+        fn encode_decode_roundtrip(value in FloatValue::arbitrary()) {
+            let profile = Profile::None;
+
+            let mut encoded: Vec<u8> = Vec::new();
+            let writer = VecWriter::new(&mut encoded);
+            let mut encoder = Encoder::new(writer, profile);
+            encoder.encode_float_value(&value).unwrap();
+
+            let reader = SliceReader::new(&encoded);
+            let mut decoder = Decoder::new(reader, profile);
+            let decoded = decoder.decode_float_value().unwrap();
+            prop_assert_eq!(&decoded, &value);
+
+            let reader = SliceReader::new(&encoded);
+            let mut decoder = Decoder::new(reader, profile);
+            let decoded = decoder.decode_any().unwrap();
+            let Value::Float(decoded) = decoded else {
+                panic!("expected float value");
+            };
+            prop_assert_eq!(&decoded, &value);
+        }
     }
 }

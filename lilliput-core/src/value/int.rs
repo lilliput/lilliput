@@ -1,4 +1,7 @@
-use std::hash::{Hash, Hasher};
+use std::{
+    hash::{Hash, Hasher},
+    num::TryFromIntError,
+};
 
 mod signed;
 mod unsigned;
@@ -6,42 +9,6 @@ mod unsigned;
 pub use self::{signed::SignedIntValue, unsigned::UnsignedIntValue};
 
 /// Represents an integer number.
-///
-/// # Binary representation
-///
-/// ```plain
-/// 0b1XXXXXXX <INTEGER>?
-///   │││├───┘
-///   │││└─ <depends on variant>
-///   ││└─ Signedness
-///   │└─ Variant
-///   └─ Integer type
-/// ```
-///
-/// ## Compact variant
-///
-/// ```plain
-/// 0b11XXXXXX
-///   │││├───┘
-///   │││└─ Value
-///   ││└─ Signedness
-///   │└─ Compact variant
-///   └─ Integer type
-/// ```
-///
-/// ## Extended variant
-///
-/// ```plain
-/// 0b10X00XXX <INTEGER>
-///   │││├┘├─┘ ├───────┘
-///   ││││ │   └─ Value
-///   ││││ └─ Width
-///   │││└─ Reserved bits
-///   ││└─ Signedness
-///   │└─ Extended variant
-///   └─ Integer type
-/// ```
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 #[derive(Copy, Clone)]
 pub enum IntValue {
     Signed(SignedIntValue),
@@ -63,53 +30,44 @@ impl Default for IntValue {
     }
 }
 
-impl From<i8> for IntValue {
-    fn from(value: i8) -> Self {
-        Self::Signed(value.into())
-    }
+macro_rules! impl_int_value_from {
+    ($t:ty => $v:ident) => {
+        impl From<$t> for IntValue {
+            fn from(value: $t) -> Self {
+                Self::$v(value.into())
+            }
+        }
+    };
 }
 
-impl From<i16> for IntValue {
-    fn from(value: i16) -> Self {
-        Self::Signed(value.into())
-    }
+impl_int_value_from!(i8 => Signed);
+impl_int_value_from!(i16 => Signed);
+impl_int_value_from!(i32 => Signed);
+impl_int_value_from!(i64 => Signed);
+
+impl_int_value_from!(u8 => Unsigned);
+impl_int_value_from!(u16 => Unsigned);
+impl_int_value_from!(u32 => Unsigned);
+impl_int_value_from!(u64 => Unsigned);
+
+macro_rules! impl_int_value_from_size {
+    ($t:ty) => {
+        impl From<$t> for IntValue {
+            fn from(value: $t) -> Self {
+                match <$t>::BITS {
+                    8 => Self::from(value as u8),
+                    16 => Self::from(value as u16),
+                    32 => Self::from(value as u32),
+                    64 => Self::from(value as u64),
+                    _ => unimplemented!(),
+                }
+            }
+        }
+    };
 }
 
-impl From<i32> for IntValue {
-    fn from(value: i32) -> Self {
-        Self::Signed(value.into())
-    }
-}
-
-impl From<i64> for IntValue {
-    fn from(value: i64) -> Self {
-        Self::Signed(value.into())
-    }
-}
-
-impl From<u8> for IntValue {
-    fn from(value: u8) -> Self {
-        Self::Unsigned(value.into())
-    }
-}
-
-impl From<u16> for IntValue {
-    fn from(value: u16) -> Self {
-        Self::Unsigned(value.into())
-    }
-}
-
-impl From<u32> for IntValue {
-    fn from(value: u32) -> Self {
-        Self::Unsigned(value.into())
-    }
-}
-
-impl From<u64> for IntValue {
-    fn from(value: u64) -> Self {
-        Self::Unsigned(value.into())
-    }
-}
+impl_int_value_from_size!(isize);
+impl_int_value_from_size!(usize);
 
 impl PartialEq for IntValue {
     fn eq(&self, other: &Self) -> bool {
@@ -212,12 +170,51 @@ impl std::fmt::Display for IntValue {
     }
 }
 
+#[cfg(any(test, feature = "testing"))]
+impl proptest::prelude::Arbitrary for IntValue {
+    type Parameters = ();
+    type Strategy = proptest::strategy::BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        use proptest::strategy::Strategy;
+
+        proptest::prop_oneof![
+            SignedIntValue::arbitrary().prop_map(IntValue::Signed),
+            UnsignedIntValue::arbitrary().prop_map(IntValue::Unsigned),
+        ]
+        .boxed()
+    }
+}
+
+impl IntValue {
+    pub fn to_signed(self) -> Result<SignedIntValue, TryFromIntError> {
+        match self {
+            IntValue::Signed(signed) => Ok(signed),
+            IntValue::Unsigned(unsigned) => unsigned.to_signed(),
+        }
+    }
+
+    pub fn to_unsigned(self) -> Result<UnsignedIntValue, TryFromIntError> {
+        match self {
+            IntValue::Signed(signed) => signed.to_unsigned(),
+            IntValue::Unsigned(unsigned) => Ok(unsigned),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use std::cmp::Ordering;
-    use std::hash::RandomState;
+    use std::{cmp::Ordering, hash::RandomState};
 
     use proptest::prelude::*;
+
+    use crate::{
+        decoder::Decoder,
+        encoder::Encoder,
+        io::{SliceReader, VecWriter},
+        value::Value,
+        Profile,
+    };
 
     use super::*;
 
@@ -389,5 +386,30 @@ mod tests {
         assert_eq!(format!("{:#?}", IntValue::from(42_i16)), "42_i16");
         assert_eq!(format!("{:#?}", IntValue::from(42_i32)), "42_i32");
         assert_eq!(format!("{:#?}", IntValue::from(42_i64)), "42_i64");
+    }
+
+    proptest! {
+        #[test]
+        fn encode_decode_roundtrip(value in IntValue::arbitrary()) {
+            let profile = Profile::None;
+
+            let mut encoded: Vec<u8> = Vec::new();
+            let writer = VecWriter::new(&mut encoded);
+            let mut encoder = Encoder::new(writer, profile);
+            encoder.encode_int_value(&value).unwrap();
+
+            let reader = SliceReader::new(&encoded);
+            let mut decoder = Decoder::new(reader, profile);
+            let decoded = decoder.decode_int_value().unwrap();
+            prop_assert_eq!(&decoded, &value);
+
+            let reader = SliceReader::new(&encoded);
+            let mut decoder = Decoder::new(reader, profile);
+            let decoded = decoder.decode_any().unwrap();
+            let Value::Int(decoded) = decoded else {
+                panic!("expected int value");
+            };
+            prop_assert_eq!(&decoded, &value);
+        }
     }
 }

@@ -1,4 +1,4 @@
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 use proptest::prelude::*;
 
 use crate::{
@@ -6,7 +6,7 @@ use crate::{
     num::{FromZigZag, ToZigZag},
 };
 
-use super::{DecodeHeader, EncodeHeader, HeaderDecodeError, HeaderType};
+use super::{DecodeHeader, EncodeHeader, Expectation, Marker};
 
 /// Represents an integer number.
 ///
@@ -61,44 +61,46 @@ impl IntHeader {
 
     const EXTENDED_WIDTH_BITS: u8 = 0b00000111;
 
+    #[inline]
     pub fn compact_signed(value: i8) -> Self {
         Self::CompactSigned { value }
     }
 
+    #[inline]
     pub fn compact_unsigned(value: u8) -> Self {
         Self::CompactUnsigned { value }
     }
 
+    #[inline]
     pub fn extended(is_signed: bool, width: usize) -> Self {
+        debug_assert!(width >= 1);
+        debug_assert!(width <= 8);
         Self::Extended { is_signed, width }
     }
 
+    #[inline]
     pub fn extended_signed(width: usize) -> Self {
-        Self::Extended {
-            is_signed: true,
-            width,
-        }
+        Self::extended(true, width)
     }
 
+    #[inline]
     pub fn extended_unsigned(width: usize) -> Self {
-        Self::Extended {
-            is_signed: false,
-            width,
-        }
+        Self::extended(false, width)
     }
 
-    pub fn is_signed(&self) -> bool {
+    #[inline]
+    pub fn is_signed(self) -> bool {
         match self {
             Self::CompactSigned { .. } => true,
             Self::CompactUnsigned { .. } => false,
-            Self::Extended { is_signed, .. } => *is_signed,
+            Self::Extended { is_signed, .. } => is_signed,
         }
     }
 }
 
 impl DecodeHeader for IntHeader {
-    fn decode(byte: u8) -> Result<Self, HeaderDecodeError> {
-        HeaderType::Int.validate(byte)?;
+    fn decode(byte: u8) -> Result<Self, Expectation<Marker>> {
+        Marker::Int.validate(byte)?;
 
         let byte = Byte(byte);
 
@@ -107,17 +109,13 @@ impl DecodeHeader for IntHeader {
         if byte.contains_bits(Self::VARIANT_BIT) {
             let unsigned = byte.masked_bits(Self::COMPACT_VALUE_BITS);
             if is_signed {
-                let signed = i8::from_zig_zag(unsigned);
-                Ok(Self::CompactSigned { value: signed })
+                Ok(Self::compact_signed(i8::from_zig_zag(unsigned)))
             } else {
-                Ok(Self::CompactUnsigned { value: unsigned })
+                Ok(Self::compact_unsigned(unsigned))
             }
         } else {
             let width = byte.masked_bits(Self::EXTENDED_WIDTH_BITS) + 1;
-            Ok(Self::Extended {
-                is_signed,
-                width: width.into(),
-            })
+            Ok(Self::extended(is_signed, width.into()))
         }
     }
 }
@@ -153,7 +151,7 @@ impl EncodeHeader for IntHeader {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 impl proptest::arbitrary::Arbitrary for IntHeader {
     type Parameters = ();
     type Strategy = BoxedStrategy<Self>;

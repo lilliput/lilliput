@@ -1,6 +1,6 @@
-use crate::binary::Byte;
+use crate::{binary::Byte, error::Expectation};
 
-use super::{DecodeHeader, EncodeHeader, HeaderDecodeError, HeaderType};
+use super::{DecodeHeader, EncodeHeader, Marker};
 
 /// Represents a boolean.
 ///
@@ -20,18 +20,20 @@ impl BoolHeader {
     const TYPE_BITS: u8 = 0b0000010;
     const VALUE_BIT: u8 = 0b0000001;
 
+    #[inline]
     pub fn new(value: bool) -> Self {
         Self { value }
     }
 
+    #[inline]
     pub fn value(&self) -> bool {
         self.value
     }
 }
 
 impl DecodeHeader for BoolHeader {
-    fn decode(byte: u8) -> Result<Self, HeaderDecodeError> {
-        HeaderType::Bool.validate(byte)?;
+    fn decode(byte: u8) -> Result<Self, Expectation<Marker>> {
+        Marker::Bool.validate(byte)?;
 
         let byte = Byte(byte);
 
@@ -51,7 +53,7 @@ impl EncodeHeader for BoolHeader {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 impl proptest::prelude::Arbitrary for BoolHeader {
     type Parameters = ();
     type Strategy = proptest::prelude::BoxedStrategy<Self>;
