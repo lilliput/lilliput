@@ -9,13 +9,26 @@ version = "0.1.0"
 decorum = { version = "0.4.0", default-features = false }
 num-traits = { version = "0.2.19", default-features = false }
 ordermap = { version = "0.5.5", optional = true }
+proptest = { workspace = true, optional = true }
+proptest-derive = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+serde_bytes = { version = "0.11.17", default-features = false, optional = true }
 thiserror = "2.0.12"
 
 [dev-dependencies]
-proptest = "1.6.0"
-proptest-derive = "0.5.1"
+proptest = { workspace = true }
+proptest-derive = { workspace = true }
 
 [features]
+default = ["std"]
+alloc = ["serde_bytes?/alloc"]
+std = ["alloc", "serde_bytes?/std"]
 preserve_order = [
     "ordermap"
+]
+serde = [
+    "dep:serde", "dep:serde_bytes", "ordermap?/serde"
+]
+testing = [
+    "proptest", "proptest-derive"
 ]

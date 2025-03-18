@@ -1,43 +1,9 @@
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 use proptest::{prelude::*, sample::SizeRange};
 
 use super::Value;
 
 /// Represents a sequence of values.
-///
-/// # Binary representation
-///
-/// ```plain
-/// 0b001XXXXX <INTEGER>? [VALUE,*]
-///   ├─┘│├──┘ ├───────┘  ├───────┘
-///   │  ││    └─ Length? └─ Values
-///   │  │└─ <depends on variant>
-///   │  └─ Variant
-///   └─ Seq type
-/// ```
-///
-/// ## Compact variant
-///
-/// ```plain
-/// 0b0011XXXX [VALUE,*]
-///   ├─┘│├──┘ ├───────┘
-///   │  ││    └─ Values
-///   │  │└─ Number of elements
-///   │  └─ Compact variant
-///   └─ Seq type
-/// ```
-///
-/// ## Extended variant
-///
-/// ```plain
-/// 0b00100XXX <INTEGER> [VALUE,*]
-///   ├─┘││├─┘ ├───────┘ ├───────┘
-///   │  │││   └─ Length └─ Values
-///   │  ││└─ Width of length in bytes
-///   │  │└─ Reserved bit
-///   │  └─ Extended variant
-///   └─ Seq type
-/// ```
 #[derive(Default, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct SeqValue(pub Vec<Value>);
 
@@ -76,13 +42,13 @@ impl std::fmt::Debug for SeqValue {
 }
 
 #[doc(hidden)]
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 pub struct SeqValueArbitraryParameters {
     pub items: BoxedStrategy<Value>,
     pub size: SizeRange,
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 impl Default for SeqValueArbitraryParameters {
     fn default() -> Self {
         Self {
@@ -92,8 +58,8 @@ impl Default for SeqValueArbitraryParameters {
     }
 }
 
-#[cfg(test)]
-impl Arbitrary for SeqValue {
+#[cfg(any(test, feature = "testing"))]
+impl proptest::arbitrary::Arbitrary for SeqValue {
     type Parameters = SeqValueArbitraryParameters;
     type Strategy = proptest::strategy::BoxedStrategy<Self>;
 
@@ -106,20 +72,59 @@ impl Arbitrary for SeqValue {
 
 #[cfg(test)]
 mod tests {
-    use crate::value::NullValue;
+    use proptest::prelude::*;
+
+    use crate::{
+        decoder::Decoder,
+        encoder::Encoder,
+        io::{SliceReader, VecWriter},
+        value::{NullValue, Value},
+        Profile,
+    };
 
     use super::*;
 
     #[test]
     fn debug() {
         assert_eq!(
-            format!("{:?}", SeqValue::from(vec![Value::Null(NullValue)])),
+            format!(
+                "{:?}",
+                SeqValue::from(vec![Value::Null(NullValue::default())])
+            ),
             "[null]"
         );
 
         assert_eq!(
-            format!("{:#?}", SeqValue::from(vec![Value::Null(NullValue)])),
+            format!(
+                "{:#?}",
+                SeqValue::from(vec![Value::Null(NullValue::default())])
+            ),
             "[\n    Null(\n        null,\n    ),\n]"
         );
+    }
+
+    proptest! {
+        #[test]
+        fn encode_decode_roundtrip(value in SeqValue::arbitrary()) {
+            let profile = Profile::None;
+
+            let mut encoded: Vec<u8> = Vec::new();
+            let writer = VecWriter::new(&mut encoded);
+            let mut encoder = Encoder::new(writer, profile);
+            encoder.encode_seq(&value.0).unwrap();
+
+            let reader = SliceReader::new(&encoded);
+            let mut decoder = Decoder::new(reader, profile);
+            let decoded = decoder.decode_seq().unwrap();
+            prop_assert_eq!(&decoded, &value.0);
+
+            let reader = SliceReader::new(&encoded);
+            let mut decoder = Decoder::new(reader, profile);
+            let decoded = decoder.decode_any().unwrap();
+            let Value::Seq(decoded) = decoded else {
+                panic!("expected seq value");
+            };
+            prop_assert_eq!(&decoded, &value);
+        }
     }
 }

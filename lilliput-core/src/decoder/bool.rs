@@ -1,31 +1,32 @@
-use crate::{header::BoolHeader, value::BoolValue};
+use crate::{error::Result, header::BoolHeader, io::Read, value::BoolValue};
 
-use super::{BufRead, Decoder, DecoderError};
+use super::Decoder;
 
-#[derive(Debug)]
-pub struct BoolDecoder<'de, R> {
-    inner: &'de mut Decoder<R>,
-}
-
-impl<'de, R> BoolDecoder<'de, R>
+impl<'de, R> Decoder<R>
 where
-    R: BufRead,
+    R: Read<'de>,
 {
-    pub(super) fn with(inner: &'de mut Decoder<R>) -> Self {
-        Self { inner }
+    pub fn decode_bool(&mut self) -> Result<bool>
+    where
+        R: Read<'de>,
+    {
+        let header: BoolHeader = self.pull_header()?;
+        self.decode_bool_headed_by(header)
     }
 
-    pub(super) fn decode_bool(&mut self) -> Result<bool, DecoderError> {
-        let header: BoolHeader = self.inner.pull_header()?;
+    pub fn decode_bool_value(&mut self) -> Result<BoolValue> {
+        let header: BoolHeader = self.pull_header()?;
+        self.decode_bool_value_headed_by(header)
+    }
 
-        {
-            // nothing left to decode for bool values
-        }
+    pub(super) fn decode_bool_value_headed_by(&mut self, header: BoolHeader) -> Result<BoolValue> {
+        self.decode_bool_headed_by(header).map(From::from)
+    }
 
+    fn decode_bool_headed_by(&mut self, header: BoolHeader) -> Result<bool>
+    where
+        R: Read<'de>,
+    {
         Ok(header.value())
-    }
-
-    pub(super) fn decode_bool_value(&mut self) -> Result<BoolValue, DecoderError> {
-        self.decode_bool().map(From::from)
     }
 }

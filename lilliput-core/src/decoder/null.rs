@@ -1,33 +1,30 @@
-use crate::{header::NullHeader, value::NullValue};
+use crate::{error::Result, header::NullHeader, value::NullValue};
 
-use super::{BufRead, Decoder, DecoderError};
+use super::{Decoder, Read};
 
-#[derive(Debug)]
-pub struct NullDecoder<'de, R> {
-    inner: &'de mut Decoder<R>,
-}
-
-impl<'de, R> NullDecoder<'de, R>
+impl<'r, R> Decoder<R>
 where
-    R: BufRead,
+    R: Read<'r>,
 {
-    pub(super) fn with(inner: &'de mut Decoder<R>) -> Self {
-        Self { inner }
+    pub fn decode_null(&mut self) -> Result<()> {
+        let header: NullHeader = self.pull_header()?;
+        self.decode_null_headed_by(header)
     }
 
-    pub(super) fn decode_null(&mut self) -> Result<(), DecoderError> {
-        let _header: NullHeader = self.inner.pull_header()?;
+    pub fn decode_null_value(&mut self) -> Result<NullValue> {
+        let header: NullHeader = self.pull_header()?;
+        self.decode_null_value_headed_by(header)
+    }
 
-        {
-            // nothing left to decode for null values
-        }
+    fn decode_null_headed_by(&mut self, header: NullHeader) -> Result<()> {
+        let _ = header;
 
         Ok(())
     }
 
-    pub(super) fn decode_null_value(&mut self) -> Result<NullValue, DecoderError> {
-        self.decode_null()?;
+    pub(super) fn decode_null_value_headed_by(&mut self, header: NullHeader) -> Result<NullValue> {
+        self.decode_null_headed_by(header)?;
 
-        Ok(NullValue)
+        Ok(NullValue::default())
     }
 }

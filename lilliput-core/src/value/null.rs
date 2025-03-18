@@ -1,15 +1,6 @@
 /// Represents a null value.
-///
-/// # Binary representation
-///
-/// ```plain
-/// 0b00000001
-///   ├──────┘
-///   └─ Null type
-/// ```
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 #[derive(Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct NullValue;
+pub struct NullValue(pub ());
 
 impl std::fmt::Debug for NullValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -23,18 +14,63 @@ impl std::fmt::Display for NullValue {
     }
 }
 
+#[cfg(any(test, feature = "testing"))]
+impl proptest::prelude::Arbitrary for NullValue {
+    type Parameters = ();
+    type Strategy = proptest::prelude::BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        use proptest::prelude::*;
+        Just(NullValue::default()).boxed()
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::NullValue;
+    use proptest::prelude::*;
+
+    use crate::{
+        decoder::Decoder,
+        encoder::Encoder,
+        io::{SliceReader, VecWriter},
+        value::Value,
+        Profile,
+    };
+
+    use super::*;
 
     #[test]
     fn display() {
-        assert_eq!(format!("{}", NullValue), "null");
+        assert_eq!(format!("{}", NullValue::default()), "null");
     }
 
     #[test]
     fn debug() {
-        assert_eq!(format!("{:?}", NullValue), "null");
-        assert_eq!(format!("{:#?}", NullValue), "null");
+        assert_eq!(format!("{:?}", NullValue::default()), "null");
+        assert_eq!(format!("{:#?}", NullValue::default()), "null");
+    }
+
+    proptest! {
+        #[test]
+        fn encode_decode_roundtrip(value in NullValue::arbitrary()) {
+            let profile = Profile::None;
+
+            let mut encoded: Vec<u8> = Vec::new();
+            let writer = VecWriter::new(&mut encoded);
+            let mut encoder = Encoder::new(writer, profile);
+            encoder.encode_null().unwrap();
+
+            let reader = SliceReader::new(&encoded);
+            let mut decoder = Decoder::new(reader, profile);
+            decoder.decode_null().unwrap();
+
+            let reader = SliceReader::new(&encoded);
+            let mut decoder = Decoder::new(reader, profile);
+            let decoded = decoder.decode_any().unwrap();
+            let Value::Null(decoded) = decoded else {
+                panic!("expected null value");
+            };
+            prop_assert_eq!(&decoded, &value);
+        }
     }
 }

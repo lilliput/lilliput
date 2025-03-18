@@ -9,6 +9,11 @@ license = "MPL-2.0"
 edition = "2021"
 rust-version = "1.70.0"
 
+[workspace.dependencies]
+proptest = { version = "1.6.0" }
+proptest-derive = { version = "0.5.1" }
+serde = { version = "1.0.197", default-features = false }
+
 [profile.test.package.proptest]
 opt-level = 3
 

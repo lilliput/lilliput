@@ -1,29 +1,37 @@
 use crate::{
+    error::Result,
     header::SeqHeader,
+    io::Read,
     value::{SeqValue, Value},
 };
 
-use super::{BufRead, Decoder, DecoderError};
+use super::Decoder;
 
-#[derive(Debug)]
-pub struct SeqDecoder<'de, R> {
-    inner: &'de mut Decoder<R>,
-}
-
-impl<'de, R> SeqDecoder<'de, R>
+impl<'de, R> Decoder<R>
 where
-    R: BufRead,
+    R: Read<'de>,
 {
-    pub(super) fn with(inner: &'de mut Decoder<R>) -> Self {
-        Self { inner }
+    pub fn decode_seq(&mut self) -> Result<Vec<Value>> {
+        let header: SeqHeader = self.pull_header()?;
+        self.decode_seq_headed_by(header)
     }
 
-    pub(super) fn decode_seq(&mut self) -> Result<Vec<Value>, DecoderError> {
-        let len = self.decode_seq_start()?;
+    pub fn decode_seq_start(&mut self) -> Result<usize> {
+        let header: SeqHeader = self.pull_header()?;
+        self.decode_seq_start_headed_by(header)
+    }
+
+    pub fn decode_seq_value(&mut self) -> Result<SeqValue> {
+        let header: SeqHeader = self.pull_header()?;
+        self.decode_seq_value_headed_by(header)
+    }
+
+    fn decode_seq_headed_by(&mut self, header: SeqHeader) -> Result<Vec<Value>> {
+        let len = self.decode_seq_start_headed_by(header)?;
         let mut vec = Vec::with_capacity(len);
 
         for _ in 0..len {
-            let value = self.inner.decode_any()?;
+            let value = self.decode_any()?;
             vec.push(value);
         }
 
@@ -32,22 +40,20 @@ where
         Ok(vec)
     }
 
-    pub(super) fn decode_seq_value(&mut self) -> Result<SeqValue, DecoderError> {
-        self.decode_seq().map(From::from)
+    pub(super) fn decode_seq_value_headed_by(&mut self, header: SeqHeader) -> Result<SeqValue> {
+        self.decode_seq_headed_by(header).map(From::from)
     }
 
-    pub(super) fn decode_seq_start(&mut self) -> Result<usize, DecoderError> {
-        let header: SeqHeader = self.inner.pull_header()?;
-
+    fn decode_seq_start_headed_by(&mut self, header: SeqHeader) -> Result<usize> {
         let len = match header {
             SeqHeader::Compact { len } => len,
-            SeqHeader::Extended { len_width } => self.inner.pull_len_bytes(len_width)?,
+            SeqHeader::Extended { len_width } => self.pull_len_bytes(len_width)?,
         };
 
         Ok(len)
     }
 
-    pub(super) fn decode_seq_end(&mut self) -> Result<(), DecoderError> {
+    pub fn decode_seq_end(&mut self) -> Result<()> {
         Ok(())
     }
 }

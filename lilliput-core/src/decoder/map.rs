@@ -1,25 +1,32 @@
 use crate::{
+    error::Result,
     header::MapHeader,
     value::{Map, MapValue, Value},
 };
 
-use super::{BufRead, Decoder, DecoderError};
+use super::{Decoder, Read};
 
-#[derive(Debug)]
-pub struct MapDecoder<'de, R> {
-    inner: &'de mut Decoder<R>,
-}
-
-impl<'de, R> MapDecoder<'de, R>
+impl<'de, R> Decoder<R>
 where
-    R: BufRead,
+    R: Read<'de>,
 {
-    pub(super) fn with(inner: &'de mut Decoder<R>) -> Self {
-        Self { inner }
+    pub fn decode_map(&mut self) -> Result<Map> {
+        let header: MapHeader = self.pull_header()?;
+        self.decode_map_headed_by(header)
     }
 
-    pub(super) fn decode_map(&mut self) -> Result<Map, DecoderError> {
-        let len = self.decode_map_start()?;
+    pub fn decode_map_value(&mut self) -> Result<MapValue> {
+        let header: MapHeader = self.pull_header()?;
+        self.decode_map_value_headed_by(header)
+    }
+
+    pub fn decode_map_start(&mut self) -> Result<usize> {
+        let header: MapHeader = self.pull_header()?;
+        self.decode_map_start_headed_by(header)
+    }
+
+    fn decode_map_headed_by(&mut self, header: MapHeader) -> Result<Map> {
+        let len = self.decode_map_start_headed_by(header)?;
 
         #[cfg(feature = "preserve_order")]
         pub(crate) type Map = ordermap::OrderMap<Value, Value>;
@@ -30,8 +37,8 @@ where
         let mut map = Map::default();
 
         for _ in 0..len {
-            let key = self.inner.decode_any()?;
-            let value = self.inner.decode_any()?;
+            let key = self.decode_any()?;
+            let value = self.decode_any()?;
             map.insert(key, value);
         }
 
@@ -40,22 +47,20 @@ where
         Ok(map)
     }
 
-    pub(super) fn decode_map_value(&mut self) -> Result<MapValue, DecoderError> {
-        self.decode_map().map(From::from)
+    pub(super) fn decode_map_value_headed_by(&mut self, header: MapHeader) -> Result<MapValue> {
+        self.decode_map_headed_by(header).map(From::from)
     }
 
-    pub(super) fn decode_map_start(&mut self) -> Result<usize, DecoderError> {
-        let header: MapHeader = self.inner.pull_header()?;
-
+    fn decode_map_start_headed_by(&mut self, header: MapHeader) -> Result<usize> {
         let len = match header {
             MapHeader::Compact { len } => len,
-            MapHeader::Extended { len_width } => self.inner.pull_len_bytes(len_width)?,
+            MapHeader::Extended { len_width } => self.pull_len_bytes(len_width)?,
         };
 
         Ok(len)
     }
 
-    pub(super) fn decode_map_end(&mut self) -> Result<(), DecoderError> {
+    pub fn decode_map_end(&mut self) -> Result<()> {
         Ok(())
     }
 }

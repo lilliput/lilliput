@@ -1,8 +1,12 @@
-use std::hash::Hasher;
+use std::{
+    hash::{Hash, Hasher},
+    num::TryFromIntError,
+};
 
-use std::hash::Hash;
+use crate::num::{TryFromInt, TryIntoInt as _};
 
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+use super::UnsignedIntValue;
+
 #[derive(Copy, Clone)]
 pub enum SignedIntValue {
     I8(i8),
@@ -17,29 +21,43 @@ impl Default for SignedIntValue {
     }
 }
 
-impl From<i8> for SignedIntValue {
-    fn from(value: i8) -> Self {
-        Self::I8(value)
-    }
+macro_rules! impl_signed_int_value_from {
+    ($t:ty => $v:ident) => {
+        impl From<$t> for SignedIntValue {
+            fn from(value: $t) -> Self {
+                Self::$v(value)
+            }
+        }
+    };
 }
 
-impl From<i16> for SignedIntValue {
-    fn from(value: i16) -> Self {
-        Self::I16(value)
-    }
+impl_signed_int_value_from!(i8 => I8);
+impl_signed_int_value_from!(i16 => I16);
+impl_signed_int_value_from!(i32 => I32);
+impl_signed_int_value_from!(i64 => I64);
+
+macro_rules! impl_try_from_signed_int_value {
+    ($t:ty) => {
+        impl TryFrom<SignedIntValue> for $t {
+            type Error = std::num::TryFromIntError;
+
+            fn try_from(value: SignedIntValue) -> Result<Self, Self::Error> {
+                match value {
+                    SignedIntValue::I8(value) => value.try_into_int(),
+                    SignedIntValue::I16(value) => value.try_into_int(),
+                    SignedIntValue::I32(value) => value.try_into_int(),
+                    SignedIntValue::I64(value) => value.try_into_int(),
+                }
+            }
+        }
+    };
 }
 
-impl From<i32> for SignedIntValue {
-    fn from(value: i32) -> Self {
-        Self::I32(value)
-    }
-}
-
-impl From<i64> for SignedIntValue {
-    fn from(value: i64) -> Self {
-        Self::I64(value)
-    }
-}
+impl_try_from_signed_int_value!(i8);
+impl_try_from_signed_int_value!(i16);
+impl_try_from_signed_int_value!(i32);
+impl_try_from_signed_int_value!(i64);
+impl_try_from_signed_int_value!(isize);
 
 impl PartialEq for SignedIntValue {
     fn eq(&self, other: &Self) -> bool {
@@ -110,7 +128,34 @@ impl std::fmt::Display for SignedIntValue {
     }
 }
 
+#[cfg(any(test, feature = "testing"))]
+impl proptest::prelude::Arbitrary for SignedIntValue {
+    type Parameters = ();
+    type Strategy = proptest::strategy::BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        use proptest::strategy::Strategy;
+
+        proptest::prop_oneof![
+            proptest::num::i8::ANY.prop_map(SignedIntValue::I8),
+            proptest::num::i16::ANY.prop_map(SignedIntValue::I16),
+            proptest::num::i32::ANY.prop_map(SignedIntValue::I32),
+            proptest::num::i64::ANY.prop_map(SignedIntValue::I64),
+        ]
+        .boxed()
+    }
+}
+
 impl SignedIntValue {
+    pub fn to_unsigned(self) -> Result<UnsignedIntValue, TryFromIntError> {
+        match self {
+            Self::I8(signed) => u8::try_from_int(signed).map(UnsignedIntValue::U8),
+            Self::I16(signed) => u16::try_from_int(signed).map(UnsignedIntValue::U16),
+            Self::I32(signed) => u32::try_from_int(signed).map(UnsignedIntValue::U32),
+            Self::I64(signed) => u64::try_from_int(signed).map(UnsignedIntValue::U64),
+        }
+    }
+
     pub(crate) fn canonicalized(&self) -> i64 {
         match *self {
             Self::I8(value) => value as i64,
@@ -126,6 +171,14 @@ mod tests {
     use std::hash::RandomState;
 
     use proptest::prelude::*;
+
+    use crate::{
+        decoder::Decoder,
+        encoder::Encoder,
+        io::{SliceReader, VecWriter},
+        value::{IntValue, Value},
+        Profile,
+    };
 
     use super::*;
 
@@ -222,5 +275,30 @@ mod tests {
         assert_eq!(format!("{:#?}", SignedIntValue::from(42_i16)), "42_i16");
         assert_eq!(format!("{:#?}", SignedIntValue::from(42_i32)), "42_i32");
         assert_eq!(format!("{:#?}", SignedIntValue::from(42_i64)), "42_i64");
+    }
+
+    proptest! {
+        #[test]
+        fn encode_decode_roundtrip(value in SignedIntValue::arbitrary()) {
+            let profile = Profile::None;
+
+            let mut encoded: Vec<u8> = Vec::new();
+            let writer = VecWriter::new(&mut encoded);
+            let mut encoder = Encoder::new(writer, profile);
+            encoder.encode_signed_int_value(&value).unwrap();
+
+            let reader = SliceReader::new(&encoded);
+            let mut decoder = Decoder::new(reader, profile);
+            let decoded = decoder.decode_signed_int_value().unwrap();
+            prop_assert_eq!(&decoded, &value);
+
+            let reader = SliceReader::new(&encoded);
+            let mut decoder = Decoder::new(reader, profile);
+            let decoded = decoder.decode_any().unwrap();
+            let Value::Int(decoded) = decoded else {
+                panic!("expected int value");
+            };
+            prop_assert_eq!(&decoded, &IntValue::Signed(value));
+        }
     }
 }

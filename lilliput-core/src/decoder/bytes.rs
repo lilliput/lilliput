@@ -1,48 +1,65 @@
-use crate::{header::BytesHeader, value::BytesValue};
+use crate::{
+    error::Result,
+    header::BytesHeader,
+    io::{Read, Reference},
+    value::BytesValue,
+};
 
-use super::{BufRead, Decoder, DecoderError};
+use super::Decoder;
 
-#[derive(Debug)]
-pub struct BytesDecoder<'de, R> {
-    inner: &'de mut Decoder<R>,
-}
-
-impl<'de, R> BytesDecoder<'de, R>
+impl<'de, R> Decoder<R>
 where
-    R: BufRead,
+    R: Read<'de>,
 {
-    pub(super) fn with(inner: &'de mut Decoder<R>) -> Self {
-        Self { inner }
+    pub fn decode_bytes<'s>(
+        &'s mut self,
+        scratch: &'s mut Vec<u8>,
+    ) -> Result<Reference<'de, 's, [u8]>> {
+        let header: BytesHeader = self.pull_header()?;
+        self.decode_bytes_headed_by(scratch, header)
     }
 
-    pub(super) fn decode_bytes(&mut self) -> Result<Vec<u8>, DecoderError> {
-        let header: BytesHeader = self.inner.pull_header()?;
+    pub fn decode_bytes_buf(&mut self) -> Result<Vec<u8>> {
+        let header: BytesHeader = self.pull_header()?;
+        self.decode_bytes_buf_headed_by(header)
+    }
 
+    pub fn decode_bytes_value(&mut self) -> Result<BytesValue> {
+        let header: BytesHeader = self.pull_header()?;
+        self.decode_bytes_buf_headed_by(header).map(From::from)
+    }
+
+    fn decode_bytes_headed_by<'s>(
+        &'s mut self,
+        scratch: &'s mut Vec<u8>,
+        header: BytesHeader,
+    ) -> Result<Reference<'de, 's, [u8]>> {
         let len_width = header.len_width();
-        let len = self.inner.pull_len_bytes(len_width)?;
+        let len = self.pull_len_bytes(len_width)?;
 
-        // We cannot trust the decoded length, so we only ever
-        // allocate as much bytes as we know (with certainty)
-        // to be remaining in the incoming byte stream:
+        self.pull_bytes(len, scratch)
+    }
 
-        let capacity = len.min(self.inner.peek_bytes()?.len());
-        let mut value = Vec::with_capacity(capacity);
+    fn decode_bytes_buf_headed_by(&mut self, header: BytesHeader) -> Result<Vec<u8>> {
+        let mut buf = Vec::new();
 
-        let mut pos: usize = 0;
-
-        while pos < len {
-            let peek_buf = self.inner.peek_bytes()?;
-            let pull_len = (len - pos).min(peek_buf.len());
-            value.extend_from_slice(&peek_buf[0..pull_len]);
-            self.inner.consume_bytes(pull_len)?;
-
-            pos += pull_len;
+        match self.decode_bytes_headed_by(&mut buf, header)? {
+            Reference::Borrowed(slice) => {
+                debug_assert_eq!(buf.len(), 0);
+                buf.extend_from_slice(slice);
+            }
+            Reference::Copied(slice) => {
+                debug_assert_eq!(slice.len(), buf.len());
+            }
         }
 
-        Ok(value)
+        Ok(buf)
     }
 
-    pub(super) fn decode_bytes_value(&mut self) -> Result<BytesValue, DecoderError> {
-        self.decode_bytes().map(From::from)
+    pub(super) fn decode_bytes_value_headed_by(
+        &mut self,
+        header: BytesHeader,
+    ) -> Result<BytesValue> {
+        self.decode_bytes_buf_headed_by(header).map(From::from)
     }
 }

@@ -1,9 +1,9 @@
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 use proptest::prelude::*;
 
-use crate::binary::{required_bytes_for_prim_int, Byte};
+use crate::binary::{trailing_non_zero_bytes, Byte};
 
-use super::{DecodeHeader, EncodeHeader, HeaderDecodeError, HeaderType};
+use super::{DecodeHeader, EncodeHeader, Expectation, Marker};
 
 /// Represents a map of key-value pairs.
 ///
@@ -54,24 +54,26 @@ impl MapHeader {
 
     const EXTENDED_LEN_WIDTH_BITS: u8 = 0b00000111;
 
+    #[inline]
     pub fn optimal(len: usize) -> Self {
         if Self::can_be_compact(len) {
             Self::Compact { len }
         } else {
-            let len_width = required_bytes_for_prim_int(len);
-            Self::extended(len_width)
+            Self::extended(len)
         }
     }
 
+    #[inline]
     pub fn compact(len: usize) -> Self {
         assert!(Self::can_be_compact(len));
 
         Self::Compact { len }
     }
 
-    pub fn extended(len_width: usize) -> Self {
+    #[inline]
+    pub fn extended(len: usize) -> Self {
         Self::Extended {
-            len_width: len_width.max(1),
+            len_width: trailing_non_zero_bytes(len).max(1),
         }
     }
 
@@ -81,8 +83,8 @@ impl MapHeader {
 }
 
 impl DecodeHeader for MapHeader {
-    fn decode(byte: u8) -> Result<Self, HeaderDecodeError> {
-        HeaderType::Map.validate(byte)?;
+    fn decode(byte: u8) -> Result<Self, Expectation<Marker>> {
+        Marker::Map.validate(byte)?;
 
         let byte = Byte(byte);
 
@@ -119,7 +121,7 @@ impl EncodeHeader for MapHeader {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 impl proptest::arbitrary::Arbitrary for MapHeader {
     type Parameters = ();
     type Strategy = BoxedStrategy<Self>;

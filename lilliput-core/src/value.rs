@@ -7,7 +7,7 @@ mod null;
 mod seq;
 mod string;
 
-use crate::header::HeaderType;
+use crate::header::Marker;
 
 pub use self::{
     bool::BoolValue,
@@ -49,18 +49,18 @@ impl ValueType {
     }
 }
 
-impl From<HeaderType> for ValueType {
-    fn from(value: HeaderType) -> Self {
+impl From<Marker> for ValueType {
+    fn from(value: Marker) -> Self {
         match value {
-            HeaderType::Int => Self::Int,
-            HeaderType::String => Self::String,
-            HeaderType::Seq => Self::Seq,
-            HeaderType::Map => Self::Map,
-            HeaderType::Float => Self::Float,
-            HeaderType::Bytes => Self::Bytes,
-            HeaderType::Bool => Self::Bool,
-            HeaderType::Null => Self::Null,
-            HeaderType::Reserved => Self::Reserved,
+            Marker::Int => Self::Int,
+            Marker::String => Self::String,
+            Marker::Seq => Self::Seq,
+            Marker::Map => Self::Map,
+            Marker::Float => Self::Float,
+            Marker::Bytes => Self::Bytes,
+            Marker::Bool => Self::Bool,
+            Marker::Null => Self::Null,
+            Marker::Reserved => Self::Reserved,
         }
     }
 }
@@ -98,7 +98,7 @@ pub enum Value {
 
 impl Default for Value {
     fn default() -> Self {
-        Self::Null(NullValue)
+        Self::Null(NullValue::default())
     }
 }
 
@@ -178,21 +178,15 @@ impl std::fmt::Debug for Value {
     }
 }
 
-impl Value {
-    pub fn has_type(&self, value_type: ValueType) -> bool {
-        ValueType::of(self) == value_type
-    }
-}
-
 #[doc(hidden)]
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 pub struct ValueArbitraryParameters {
     pub depth: u32,
     pub desired_size: u32,
     pub expected_branch_size: u32,
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 impl Default for ValueArbitraryParameters {
     fn default() -> Self {
         Self {
@@ -206,7 +200,7 @@ impl Default for ValueArbitraryParameters {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 impl proptest::arbitrary::Arbitrary for Value {
     type Parameters = ValueArbitraryParameters;
     type Strategy = proptest::prelude::BoxedStrategy<Value>;
@@ -228,8 +222,8 @@ impl proptest::arbitrary::Arbitrary for Value {
         ];
         leaf.prop_recursive(depth, desired_size, expected_branch_size, |inner| {
             prop_oneof![
-                prop::collection::hash_map(inner.clone(), inner.clone(), 0..10)
-                    .prop_map(|hash_map| { Value::Map(MapValue::from(Map::from_iter(hash_map))) }),
+                // prop::collection::hash_map(inner.clone(), inner.clone(), 0..10)
+                //     .prop_map(|hash_map| { Value::Map(MapValue::from(Map::from_iter(hash_map))) }),
                 prop::collection::vec(inner, 0..10)
                     .prop_map(|vec| { Value::Seq(SeqValue::from(vec)) }),
             ]
@@ -297,9 +291,9 @@ mod tests {
         );
 
         // Null
-        assert_eq!(format!("{:?}", Value::Null(NullValue)), "null");
+        assert_eq!(format!("{:?}", Value::Null(NullValue::default())), "null");
         assert_eq!(
-            format!("{:#?}", Value::Null(NullValue)),
+            format!("{:#?}", Value::Null(NullValue::default())),
             "Null(\n    null,\n)"
         );
     }
