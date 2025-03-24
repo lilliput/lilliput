@@ -17,7 +17,7 @@ where
 
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_null_value(&mut self) -> Result<NullValue> {
-        self.decode_null().map(From::from)
+        self.decode_null().map(|_| NullValue)
     }
 
     // MARK: - Header

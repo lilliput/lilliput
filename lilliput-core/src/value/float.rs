@@ -112,6 +112,49 @@ impl std::fmt::Display for FloatValue {
     }
 }
 
+#[cfg(feature = "serde")]
+impl serde::Serialize for FloatValue {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            Self::F32(value) => value.serialize(serializer),
+            Self::F64(value) => value.serialize(serializer),
+        }
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for FloatValue {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct ValueVisitor;
+
+        impl serde::de::Visitor<'_> for ValueVisitor {
+            type Value = FloatValue;
+
+            fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
+                formatter.write_str("floating-point value")
+            }
+
+            #[inline]
+            fn visit_f32<E>(self, value: f32) -> Result<Self::Value, E> {
+                Ok(value.into())
+            }
+
+            #[inline]
+            fn visit_f64<E>(self, value: f64) -> Result<Self::Value, E> {
+                Ok(value.into())
+            }
+        }
+
+        deserializer.deserialize_any(ValueVisitor)
+    }
+}
+
 impl FloatValue {
     fn canonical_total(self) -> Constrained<f64, IsFloat> {
         decorum::Total::assert(self.as_f64())

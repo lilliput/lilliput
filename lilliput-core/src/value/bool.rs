@@ -32,6 +32,26 @@ impl std::fmt::Display for BoolValue {
     }
 }
 
+#[cfg(feature = "serde")]
+impl serde::Serialize for BoolValue {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_bool(self.0)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for BoolValue {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        Ok(Self(bool::deserialize(deserializer)?))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use proptest::prelude::*;

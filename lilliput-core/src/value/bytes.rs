@@ -58,6 +58,28 @@ impl std::fmt::Display for BytesValue {
     }
 }
 
+#[cfg(feature = "serde")]
+impl serde::Serialize for BytesValue {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serde_bytes::Bytes::new(&self.0).serialize(serializer)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for BytesValue {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        Ok(Self(
+            serde_bytes::ByteBuf::deserialize(deserializer)?.into_vec(),
+        ))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use proptest::prelude::*;

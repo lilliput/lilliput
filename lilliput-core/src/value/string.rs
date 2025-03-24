@@ -60,6 +60,26 @@ impl std::fmt::Display for StringValue {
     }
 }
 
+#[cfg(feature = "serde")]
+impl serde::Serialize for StringValue {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.0.serialize(serializer)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for StringValue {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        Ok(Self(String::deserialize(deserializer)?))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use proptest::prelude::*;
