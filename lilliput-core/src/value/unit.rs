@@ -9,7 +9,7 @@ use proptest_derive::Arbitrary;
 pub struct UnitValue;
 
 impl From<()> for UnitValue {
-    fn from(_value: ()) -> Self {
+    fn from(_: ()) -> Self {
         Self
     }
 }
@@ -23,6 +23,43 @@ impl std::fmt::Debug for UnitValue {
 impl std::fmt::Display for UnitValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "unit")
+    }
+}
+
+#[cfg(feature = "serde")]
+impl serde::Serialize for UnitValue {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_unit()
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for UnitValue {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct UnitValueVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for UnitValueVisitor {
+            type Value = UnitValue;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("unit value")
+            }
+
+            fn visit_unit<E>(self) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(UnitValue)
+            }
+        }
+
+        deserializer.deserialize_unit(UnitValueVisitor)
     }
 }
 

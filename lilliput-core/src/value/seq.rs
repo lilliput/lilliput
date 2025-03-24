@@ -69,6 +69,26 @@ impl std::fmt::Debug for SeqValue {
     }
 }
 
+#[cfg(feature = "serde")]
+impl serde::Serialize for SeqValue {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.0.serialize(serializer)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for SeqValue {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        Ok(Self(Vec::deserialize(deserializer)?))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use proptest::prelude::*;

@@ -147,6 +147,263 @@ impl std::fmt::Debug for Value {
     }
 }
 
+#[cfg(feature = "serde")]
+impl serde::Serialize for Value {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            Value::Int(value) => value.serialize(serializer),
+            Value::String(value) => value.serialize(serializer),
+            Value::Seq(value) => value.serialize(serializer),
+            Value::Map(value) => value.serialize(serializer),
+            Value::Float(value) => value.serialize(serializer),
+            Value::Bytes(value) => value.serialize(serializer),
+            Value::Bool(value) => value.serialize(serializer),
+            Value::Unit(value) => value.serialize(serializer),
+            Value::Null(value) => value.serialize(serializer),
+        }
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for Value {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct ValueVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for ValueVisitor {
+            type Value = Value;
+
+            fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
+                formatter.write_str("any valid lilliput value")
+            }
+
+            fn visit_bool<E>(self, value: bool) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(Value::Bool(BoolValue::from(value)))
+            }
+
+            fn visit_i8<E>(self, value: i8) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(Value::Int(IntValue::from(value)))
+            }
+
+            fn visit_i16<E>(self, value: i16) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(Value::Int(IntValue::from(value)))
+            }
+
+            fn visit_i32<E>(self, value: i32) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(Value::Int(IntValue::from(value)))
+            }
+
+            fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(Value::Int(IntValue::from(value)))
+            }
+
+            fn visit_i128<E>(self, _value: i128) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Err(serde::de::Error::invalid_type(
+                    serde::de::Unexpected::Other("i128 value"),
+                    &self,
+                ))
+            }
+
+            fn visit_u8<E>(self, value: u8) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(Value::Int(IntValue::from(value)))
+            }
+
+            fn visit_u16<E>(self, value: u16) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(Value::Int(IntValue::from(value)))
+            }
+
+            fn visit_u32<E>(self, value: u32) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(Value::Int(IntValue::from(value)))
+            }
+
+            fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(Value::Int(IntValue::from(value)))
+            }
+
+            fn visit_u128<E>(self, _value: u128) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Err(serde::de::Error::invalid_type(
+                    serde::de::Unexpected::Other("u128 value"),
+                    &self,
+                ))
+            }
+
+            fn visit_f32<E>(self, value: f32) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(Value::Float(FloatValue::from(value)))
+            }
+
+            fn visit_f64<E>(self, value: f64) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(Value::Float(FloatValue::from(value)))
+            }
+
+            fn visit_char<E>(self, value: char) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                self.visit_str(value.encode_utf8(&mut [0u8; 4]))
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                self.visit_string(value.to_owned())
+            }
+
+            fn visit_borrowed_str<E>(self, value: &'de str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                self.visit_string(value.to_owned())
+            }
+
+            fn visit_string<E>(self, value: String) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(Value::String(StringValue::from(value)))
+            }
+
+            fn visit_bytes<E>(self, value: &[u8]) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                self.visit_byte_buf(value.to_owned())
+            }
+
+            fn visit_borrowed_bytes<E>(self, value: &'de [u8]) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                self.visit_byte_buf(value.to_owned())
+            }
+
+            fn visit_byte_buf<E>(self, value: Vec<u8>) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(Value::Bytes(BytesValue::from(value)))
+            }
+
+            fn visit_none<E>(self) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(Value::Null(NullValue::default()))
+            }
+
+            fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                serde::Deserialize::deserialize(deserializer)
+            }
+
+            fn visit_unit<E>(self) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(Value::Unit(UnitValue::default()))
+            }
+
+            fn visit_newtype_struct<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                serde::Deserialize::deserialize(deserializer)
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::SeqAccess<'de>,
+            {
+                let mut values = Vec::new();
+
+                while let Some(value) = seq.next_element()? {
+                    values.push(value);
+                }
+
+                Ok(Value::Seq(SeqValue::from(values)))
+            }
+
+            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::MapAccess<'de>,
+            {
+                match map.next_key_seed(map::MapKeyClassifier)? {
+                    Some(map::MapKeyClass::Map(first_key)) => {
+                        let mut values = Map::new();
+
+                        values.insert(first_key, map.next_value()?);
+                        while let Some((key, value)) = map.next_entry()? {
+                            values.insert(key, value);
+                        }
+
+                        Ok(Value::Map(MapValue::from(values)))
+                    }
+                    None => Ok(Value::Map(MapValue::default())),
+                }
+            }
+
+            fn visit_enum<A>(self, data: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::EnumAccess<'de>,
+            {
+                let _ = data;
+                Err(serde::de::Error::invalid_type(
+                    serde::de::Unexpected::Enum,
+                    &self,
+                ))
+            }
+        }
+
+        deserializer.deserialize_any(ValueVisitor)
+    }
+}
+
 #[doc(hidden)]
 #[cfg(any(test, feature = "testing"))]
 pub struct ValueArbitraryParameters {

@@ -176,6 +176,79 @@ impl std::fmt::Display for IntValue {
     }
 }
 
+#[cfg(feature = "serde")]
+impl serde::Serialize for IntValue {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            Self::Signed(value) => value.serialize(serializer),
+            Self::Unsigned(value) => value.serialize(serializer),
+        }
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for IntValue {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct ValueVisitor;
+
+        impl serde::de::Visitor<'_> for ValueVisitor {
+            type Value = IntValue;
+
+            fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
+                formatter.write_str("integer value")
+            }
+
+            #[inline]
+            fn visit_i8<E>(self, value: i8) -> Result<Self::Value, E> {
+                Ok(value.into())
+            }
+
+            #[inline]
+            fn visit_i16<E>(self, value: i16) -> Result<Self::Value, E> {
+                Ok(value.into())
+            }
+
+            #[inline]
+            fn visit_i32<E>(self, value: i32) -> Result<Self::Value, E> {
+                Ok(value.into())
+            }
+
+            #[inline]
+            fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E> {
+                Ok(value.into())
+            }
+
+            #[inline]
+            fn visit_u8<E>(self, value: u8) -> Result<Self::Value, E> {
+                Ok(value.into())
+            }
+
+            #[inline]
+            fn visit_u16<E>(self, value: u16) -> Result<Self::Value, E> {
+                Ok(value.into())
+            }
+
+            #[inline]
+            fn visit_u32<E>(self, value: u32) -> Result<Self::Value, E> {
+                Ok(value.into())
+            }
+
+            #[inline]
+            fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E> {
+                Ok(value.into())
+            }
+        }
+
+        deserializer.deserialize_any(ValueVisitor)
+    }
+}
+
 impl IntValue {
     pub fn to_signed(self) -> Result<SignedIntValue, TryFromIntError> {
         match self {

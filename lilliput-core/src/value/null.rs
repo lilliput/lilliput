@@ -9,7 +9,7 @@ use proptest_derive::Arbitrary;
 pub struct NullValue;
 
 impl From<()> for NullValue {
-    fn from(_value: ()) -> Self {
+    fn from(_: ()) -> Self {
         Self
     }
 }
@@ -23,6 +23,43 @@ impl std::fmt::Debug for NullValue {
 impl std::fmt::Display for NullValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "null")
+    }
+}
+
+#[cfg(feature = "serde")]
+impl serde::Serialize for NullValue {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_none()
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for NullValue {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct NullValueVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for NullValueVisitor {
+            type Value = NullValue;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("null value")
+            }
+
+            fn visit_none<E>(self) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(NullValue)
+            }
+        }
+
+        deserializer.deserialize_option(NullValueVisitor)
     }
 }
 

@@ -74,6 +74,48 @@ impl std::fmt::Debug for MapValue {
     }
 }
 
+#[cfg(feature = "serde")]
+impl serde::Serialize for MapValue {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.0.serialize(serializer)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for MapValue {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        Ok(Self(Map::deserialize(deserializer)?))
+    }
+}
+
+#[cfg(feature = "serde")]
+pub(crate) struct MapKeyClassifier;
+
+#[cfg(feature = "serde")]
+pub(crate) enum MapKeyClass {
+    Map(Value),
+}
+
+#[cfg(feature = "serde")]
+impl<'de> serde::de::DeserializeSeed<'de> for MapKeyClassifier {
+    type Value = MapKeyClass;
+
+    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::Deserialize as _;
+
+        Ok(MapKeyClass::Map(Value::deserialize(deserializer)?))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use proptest::prelude::*;

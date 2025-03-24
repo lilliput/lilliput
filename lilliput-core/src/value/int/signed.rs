@@ -135,6 +135,61 @@ impl std::fmt::Display for SignedIntValue {
     }
 }
 
+#[cfg(feature = "serde")]
+impl serde::Serialize for SignedIntValue {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            Self::I8(value) => value.serialize(serializer),
+            Self::I16(value) => value.serialize(serializer),
+            Self::I32(value) => value.serialize(serializer),
+            Self::I64(value) => value.serialize(serializer),
+        }
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for SignedIntValue {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct ValueVisitor;
+
+        impl serde::de::Visitor<'_> for ValueVisitor {
+            type Value = SignedIntValue;
+
+            fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
+                formatter.write_str("signed integer value")
+            }
+
+            #[inline]
+            fn visit_i8<E>(self, value: i8) -> Result<Self::Value, E> {
+                Ok(value.into())
+            }
+
+            #[inline]
+            fn visit_i16<E>(self, value: i16) -> Result<Self::Value, E> {
+                Ok(value.into())
+            }
+
+            #[inline]
+            fn visit_i32<E>(self, value: i32) -> Result<Self::Value, E> {
+                Ok(value.into())
+            }
+
+            #[inline]
+            fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E> {
+                Ok(value.into())
+            }
+        }
+
+        deserializer.deserialize_any(ValueVisitor)
+    }
+}
+
 impl SignedIntValue {
     pub fn to_unsigned(self) -> Result<UnsignedIntValue, TryFromIntError> {
         match self {
