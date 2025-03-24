@@ -2,6 +2,7 @@
 members = [
     "lilliput-core",
     "lilliput-float",
+    "lilliput-serde",
 ]
 resolver = "2"
 
