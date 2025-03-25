@@ -19,3 +19,7 @@ pub enum Profile {
     #[default]
     Weak = 1,
 }
+
+mod sealed {
+    pub trait Sealed {}
+}
