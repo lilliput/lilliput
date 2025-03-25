@@ -14,6 +14,21 @@ where
     pub fn encode_bytes(&mut self, value: &[u8]) -> Result<()> {
         let len = value.len();
 
+        // Push the value's header and length:
+        self.encode_bytes_start(len)?;
+
+        // Push the value's actual bytes:
+        let tail_bytes = value;
+        self.push_bytes(tail_bytes)?;
+
+        Ok(())
+    }
+
+    pub fn encode_bytes_value(&mut self, value: &BytesValue) -> Result<()> {
+        self.encode_bytes(&value.0)
+    }
+
+    pub fn encode_bytes_start(&mut self, len: usize) -> Result<()> {
         // Push the value's header:
         let header = BytesHeader::optimal(len);
         self.push_bytes(&[header.encode()])?;
@@ -31,14 +46,6 @@ where
             }
         }
 
-        // Push the value's actual bytes:
-        let tail_bytes = value;
-        self.push_bytes(tail_bytes)?;
-
         Ok(())
-    }
-
-    pub fn encode_bytes_value(&mut self, value: &BytesValue) -> Result<()> {
-        self.encode_bytes(&value.0)
     }
 }
