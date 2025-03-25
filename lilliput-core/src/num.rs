@@ -1,19 +1,23 @@
 use num_traits::{float::FloatCore, PrimInt, Signed, Unsigned};
 
-pub(crate) trait ToZigZag: Signed {
+use crate::sealed::Sealed;
+
+pub trait ToZigZag: Signed + Sealed {
     type ZigZag: Unsigned;
 
     fn to_zig_zag(self) -> Self::ZigZag;
 }
 
-pub(crate) trait FromZigZag {
-    type ZigZag;
+pub trait FromZigZag: Signed + Sealed {
+    type ZigZag: Unsigned;
 
     fn from_zig_zag(zig_zag: Self::ZigZag) -> Self;
 }
 
 macro_rules! impl_zig_zag {
     (signed: $s:ty, unsigned: $u:ty) => {
+        impl Sealed for $s {}
+
         impl ToZigZag for $s {
             type ZigZag = $u;
 
