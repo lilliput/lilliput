@@ -15,6 +15,23 @@ where
     pub fn encode_str(&mut self, value: &str) -> Result<()> {
         let len = value.len();
 
+        // Push the value's header and length:
+        self.encode_str_start(len)?;
+
+        // Push the value's actual bytes:
+        let tail_bytes = value.as_bytes();
+        self.push_bytes(tail_bytes)?;
+
+        Ok(())
+    }
+
+    pub fn encode_string_value(&mut self, value: &StringValue) -> Result<()> {
+        self.encode_str(&value.0)?;
+
+        Ok(())
+    }
+
+    pub fn encode_str_start(&mut self, len: usize) -> Result<()> {
         // Push the value's header:
         let header = match self.profile {
             Profile::Weak => StringHeader::optimal(len),
@@ -28,16 +45,6 @@ where
             let len_bytes_start = len_bytes.len() - len_width;
             self.push_bytes(&len_bytes[len_bytes_start..])?;
         }
-
-        // Push the value's actual bytes:
-        let tail_bytes = value.as_bytes();
-        self.push_bytes(tail_bytes)?;
-
-        Ok(())
-    }
-
-    pub fn encode_string_value(&mut self, value: &StringValue) -> Result<()> {
-        self.encode_str(&value.0)?;
 
         Ok(())
     }
