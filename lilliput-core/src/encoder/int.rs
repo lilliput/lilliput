@@ -17,63 +17,38 @@ where
     W: Write,
 {
     pub fn encode_i8(&mut self, value: i8) -> Result<()> {
-        self.encode_signed(value)
+        self.encode_signed_int(value)
     }
 
     pub fn encode_i16(&mut self, value: i16) -> Result<()> {
-        self.encode_signed(value)
+        self.encode_signed_int(value)
     }
 
     pub fn encode_i32(&mut self, value: i32) -> Result<()> {
-        self.encode_signed(value)
+        self.encode_signed_int(value)
     }
 
     pub fn encode_i64(&mut self, value: i64) -> Result<()> {
-        self.encode_signed(value)
+        self.encode_signed_int(value)
     }
 
     pub fn encode_u8(&mut self, value: u8) -> Result<()> {
-        self.encode_unsigned(value)
+        self.encode_unsigned_int(value)
     }
 
     pub fn encode_u16(&mut self, value: u16) -> Result<()> {
-        self.encode_unsigned(value)
+        self.encode_unsigned_int(value)
     }
 
     pub fn encode_u32(&mut self, value: u32) -> Result<()> {
-        self.encode_unsigned(value)
+        self.encode_unsigned_int(value)
     }
 
     pub fn encode_u64(&mut self, value: u64) -> Result<()> {
-        self.encode_unsigned(value)
+        self.encode_unsigned_int(value)
     }
 
-    pub fn encode_signed_int_value(&mut self, value: &SignedIntValue) -> Result<()> {
-        match *value {
-            SignedIntValue::I8(value) => self.encode_signed(value),
-            SignedIntValue::I16(value) => self.encode_signed(value),
-            SignedIntValue::I32(value) => self.encode_signed(value),
-            SignedIntValue::I64(value) => self.encode_signed(value),
-        }
-    }
-
-    pub fn encode_unsigned_int_value(&mut self, value: &UnsignedIntValue) -> Result<()> {
-        match *value {
-            UnsignedIntValue::U8(value) => self.encode_unsigned(value),
-            UnsignedIntValue::U16(value) => self.encode_unsigned(value),
-            UnsignedIntValue::U32(value) => self.encode_unsigned(value),
-            UnsignedIntValue::U64(value) => self.encode_unsigned(value),
-        }
-    }
-
-    pub fn encode_int_value(&mut self, value: &IntValue) -> Result<()> {
-        match value {
-            IntValue::Signed(value) => self.encode_signed_int_value(value),
-            IntValue::Unsigned(value) => self.encode_unsigned_int_value(value),
-        }
-    }
-
-    pub(super) fn encode_signed<S, U, const N: usize>(&mut self, value: S) -> Result<()>
+    pub fn encode_signed_int<S, U, const N: usize>(&mut self, value: S) -> Result<()>
     where
         S: Signed + ToZigZag<ZigZag = U>,
         U: PrimInt + ToBytes<Bytes = [u8; N]>,
@@ -103,7 +78,7 @@ where
         Ok(())
     }
 
-    pub(super) fn encode_unsigned<T, const N: usize>(&mut self, value: T) -> Result<()>
+    pub fn encode_unsigned_int<T, const N: usize>(&mut self, value: T) -> Result<()>
     where
         T: Unsigned + PrimInt + ToBytes<Bytes = [u8; N]>,
     {
@@ -128,5 +103,30 @@ where
         }
 
         Ok(())
+    }
+
+    pub fn encode_signed_int_value(&mut self, value: &SignedIntValue) -> Result<()> {
+        match *value {
+            SignedIntValue::I8(value) => self.encode_signed_int(value),
+            SignedIntValue::I16(value) => self.encode_signed_int(value),
+            SignedIntValue::I32(value) => self.encode_signed_int(value),
+            SignedIntValue::I64(value) => self.encode_signed_int(value),
+        }
+    }
+
+    pub fn encode_unsigned_int_value(&mut self, value: &UnsignedIntValue) -> Result<()> {
+        match *value {
+            UnsignedIntValue::U8(value) => self.encode_unsigned_int(value),
+            UnsignedIntValue::U16(value) => self.encode_unsigned_int(value),
+            UnsignedIntValue::U32(value) => self.encode_unsigned_int(value),
+            UnsignedIntValue::U64(value) => self.encode_unsigned_int(value),
+        }
+    }
+
+    pub fn encode_int_value(&mut self, value: &IntValue) -> Result<()> {
+        match value {
+            IntValue::Signed(value) => self.encode_signed_int_value(value),
+            IntValue::Unsigned(value) => self.encode_unsigned_int_value(value),
+        }
     }
 }
