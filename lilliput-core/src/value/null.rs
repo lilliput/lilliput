@@ -2,6 +2,12 @@
 #[derive(Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct NullValue(pub ());
 
+impl From<()> for NullValue {
+    fn from(value: ()) -> Self {
+        Self(value)
+    }
+}
+
 impl std::fmt::Debug for NullValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "null")
