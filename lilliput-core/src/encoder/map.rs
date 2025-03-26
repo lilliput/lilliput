@@ -2,8 +2,8 @@ use crate::{
     error::Result,
     header::{EncodeHeader as _, MapHeader},
     io::Write,
+    num::int::with_n_be_bytes,
     value::{Map, MapValue},
-    Profile,
 };
 
 use super::Encoder;
@@ -28,18 +28,20 @@ where
     }
 
     pub fn encode_map_start(&mut self, len: usize) -> Result<()> {
-        // Push the value's header:
-        let header = match self.profile {
-            Profile::Weak => MapHeader::optimal(len),
-            Profile::None => MapHeader::extended(8),
+        let header = if self.compact_ints {
+            MapHeader::optimal(len)
+        } else {
+            MapHeader::verbatim(len)
         };
+
+        // Push the value's header:
         self.push_bytes(&[header.encode()])?;
 
-        // Push the value's length extension:
-        if let MapHeader::Extended { len_width } = header {
-            let len_bytes = len.to_be_bytes();
-            let len_bytes_start = len_bytes.len() - len_width;
-            self.push_bytes(&len_bytes[len_bytes_start..])?;
+        if let Some(len_width) = header.extension_width() {
+            with_n_be_bytes(len, len_width, |len_bytes| {
+                // Push the value's length extension:
+                self.push_bytes(len_bytes)
+            })?;
         }
 
         Ok(())

@@ -1,4 +1,4 @@
-use crate::{error::Result, io::Write, value::Value, Profile};
+use crate::{error::Result, io::Write, value::Value};
 
 mod bool;
 mod bytes;
@@ -13,17 +13,21 @@ mod string;
 pub struct Encoder<W> {
     writer: W,
     pos: usize,
-    #[allow(dead_code)]
-    profile: Profile,
+    compact_ints: bool,
 }
 
 impl<W> Encoder<W> {
-    pub fn new(writer: W, profile: Profile) -> Self {
+    pub fn new(writer: W) -> Self {
         Encoder {
             writer,
             pos: 0,
-            profile,
+            compact_ints: false,
         }
+    }
+
+    pub fn compact_ints(mut self) -> Self {
+        self.compact_ints = true;
+        self
     }
 }
 
@@ -76,7 +80,7 @@ mod test {
     fn push_bytes() {
         let mut vec: Vec<u8> = Vec::new();
         let writer = VecWriter::new(&mut vec);
-        let mut encoder = Encoder::new(writer, Profile::None);
+        let mut encoder = Encoder::new(writer);
 
         encoder.push_bytes(&[]).unwrap();
         encoder.push_bytes(&[1]).unwrap();
@@ -89,7 +93,7 @@ mod test {
     fn existing() {
         let mut vec: Vec<u8> = Vec::new();
         let writer = StdIoWriter::new(&mut vec);
-        let mut encoder = Encoder::new(writer, Profile::None);
+        let mut encoder = Encoder::new(writer);
         assert_eq!(encoder.existing(), 0);
 
         encoder.push_bytes(&[42]).unwrap();
@@ -100,7 +104,7 @@ mod test {
     fn into_vec() {
         let mut vec: Vec<u8> = Vec::new();
         let writer = StdIoWriter::new(&mut vec);
-        let mut encoder = Encoder::new(writer, Profile::None);
+        let mut encoder = Encoder::new(writer);
         encoder.push_bytes(&[1, 2, 3]).unwrap();
 
         assert_eq!(vec, vec![1, 2, 3]);

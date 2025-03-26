@@ -1,6 +1,3 @@
-#[cfg(any(test, feature = "testing"))]
-use proptest::prelude::*;
-
 /// Represents a string.
 #[derive(Default, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct StringValue(pub String);
@@ -49,18 +46,13 @@ impl std::fmt::Display for StringValue {
     }
 }
 
-#[doc(hidden)]
-#[cfg(any(test, feature = "testing"))]
-#[derive(Default)]
-pub struct StringValueArbitraryParameters {}
-
 #[cfg(any(test, feature = "testing"))]
 impl proptest::arbitrary::Arbitrary for StringValue {
-    type Parameters = StringValueArbitraryParameters;
-    type Strategy = BoxedStrategy<Self>;
+    type Parameters = ();
+    type Strategy = proptest::strategy::BoxedStrategy<Self>;
 
-    fn arbitrary_with(args: Self::Parameters) -> Self::Strategy {
-        let StringValueArbitraryParameters {} = args;
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        use proptest::prelude::*;
 
         proptest::string::string_regex("[a-zA-Z]+")
             .unwrap()
@@ -78,7 +70,6 @@ mod tests {
         encoder::Encoder,
         io::{SliceReader, VecWriter},
         value::Value,
-        Profile,
     };
 
     use super::*;
@@ -107,20 +98,18 @@ mod tests {
     proptest! {
         #[test]
         fn encode_decode_roundtrip(value in StringValue::arbitrary()) {
-            let profile = Profile::None;
-
             let mut encoded: Vec<u8> = Vec::new();
             let writer = VecWriter::new(&mut encoded);
-            let mut encoder = Encoder::new(writer, profile);
+            let mut encoder = Encoder::new(writer);
             encoder.encode_str(value.as_str()).unwrap();
 
             let reader = SliceReader::new(&encoded);
-            let mut decoder = Decoder::new(reader, profile);
+            let mut decoder = Decoder::new(reader);
             let decoded = decoder.decode_string().unwrap();
             prop_assert_eq!(&decoded, value.as_str());
 
             let reader = SliceReader::new(&encoded);
-            let mut decoder = Decoder::new(reader, profile);
+            let mut decoder = Decoder::new(reader);
             let decoded = decoder.decode_any().unwrap();
             let Value::String(decoded) = decoded else {
                 panic!("expected string value");

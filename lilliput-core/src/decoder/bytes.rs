@@ -16,34 +16,17 @@ where
         scratch: &'s mut Vec<u8>,
     ) -> Result<Reference<'de, 's, [u8]>> {
         let header: BytesHeader = self.pull_header()?;
-        self.decode_bytes_headed_by(scratch, header)
-    }
 
-    pub fn decode_bytes_buf(&mut self) -> Result<Vec<u8>> {
-        let header: BytesHeader = self.pull_header()?;
-        self.decode_bytes_buf_headed_by(header)
-    }
-
-    pub fn decode_bytes_value(&mut self) -> Result<BytesValue> {
-        let header: BytesHeader = self.pull_header()?;
-        self.decode_bytes_buf_headed_by(header).map(From::from)
-    }
-
-    fn decode_bytes_headed_by<'s>(
-        &'s mut self,
-        scratch: &'s mut Vec<u8>,
-        header: BytesHeader,
-    ) -> Result<Reference<'de, 's, [u8]>> {
         let len_width = header.len_width();
         let len = self.pull_len_bytes(len_width)?;
 
         self.pull_bytes(len, scratch)
     }
 
-    fn decode_bytes_buf_headed_by(&mut self, header: BytesHeader) -> Result<Vec<u8>> {
+    pub fn decode_bytes_buf(&mut self) -> Result<Vec<u8>> {
         let mut buf = Vec::new();
 
-        match self.decode_bytes_headed_by(&mut buf, header)? {
+        match self.decode_bytes(&mut buf)? {
             Reference::Borrowed(slice) => {
                 debug_assert_eq!(buf.len(), 0);
                 buf.extend_from_slice(slice);
@@ -56,10 +39,7 @@ where
         Ok(buf)
     }
 
-    pub(super) fn decode_bytes_value_headed_by(
-        &mut self,
-        header: BytesHeader,
-    ) -> Result<BytesValue> {
-        self.decode_bytes_buf_headed_by(header).map(From::from)
+    pub fn decode_bytes_value(&mut self) -> Result<BytesValue> {
+        self.decode_bytes_buf().map(From::from)
     }
 }

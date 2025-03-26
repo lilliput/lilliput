@@ -66,7 +66,6 @@ mod tests {
         encoder::Encoder,
         io::{SliceReader, VecWriter},
         value::Value,
-        Profile,
     };
 
     use super::*;
@@ -95,20 +94,18 @@ mod tests {
     proptest! {
         #[test]
         fn encode_decode_roundtrip(value in BytesValue::arbitrary()) {
-            let profile = Profile::None;
-
             let mut encoded: Vec<u8> = Vec::new();
             let writer = VecWriter::new(&mut encoded);
-            let mut encoder = Encoder::new(writer, profile);
+            let mut encoder = Encoder::new(writer).compact_ints();
             encoder.encode_bytes(value.as_slice()).unwrap();
 
             let reader = SliceReader::new(&encoded);
-            let mut decoder = Decoder::new(reader, profile);
+            let mut decoder = Decoder::new(reader);
             let decoded = decoder.decode_bytes_buf().unwrap();
             prop_assert_eq!(&decoded, value.as_slice());
 
             let reader = SliceReader::new(&encoded);
-            let mut decoder = Decoder::new(reader, profile);
+            let mut decoder = Decoder::new(reader);
             let decoded = decoder.decode_any().unwrap();
             let Value::Bytes(decoded) = decoded else {
                 panic!("expected bytes value");

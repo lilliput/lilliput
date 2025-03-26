@@ -1,7 +1,4 @@
-#[cfg(any(test, feature = "testing"))]
-use proptest::prelude::*;
-
-use crate::binary::{trailing_non_zero_bytes, Byte};
+use crate::{binary::Byte, num::int::CompactWidth as _};
 
 use super::{DecodeHeader, EncodeHeader, Expectation, Marker};
 
@@ -40,9 +37,15 @@ use super::{DecodeHeader, EncodeHeader, Expectation, Marker};
 ///   └─ Map type
 /// ```
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
-pub enum MapHeader {
-    Compact { len: usize },
-    Extended { len_width: usize },
+#[repr(transparent)]
+pub struct MapHeader {
+    repr: MapHeaderRepr,
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+pub enum MapHeaderRepr {
+    Compact { len: u8 },
+    Extended { len_width: u8 },
 }
 
 impl MapHeader {
@@ -57,28 +60,66 @@ impl MapHeader {
     #[inline]
     pub fn optimal(len: usize) -> Self {
         if Self::can_be_compact(len) {
-            Self::Compact { len }
+            Self::compact(len as u8)
         } else {
             Self::extended(len)
         }
     }
 
     #[inline]
-    pub fn compact(len: usize) -> Self {
-        assert!(Self::can_be_compact(len));
+    pub fn verbatim(_len: usize) -> Self {
+        Self::from_repr(MapHeaderRepr::Extended { len_width: 8_u8 })
+    }
 
-        Self::Compact { len }
+    #[inline]
+    pub fn repr(&self) -> MapHeaderRepr {
+        self.repr
+    }
+
+    #[inline]
+    pub fn extension_width(self) -> Option<usize> {
+        match self.repr {
+            MapHeaderRepr::Compact { .. } => None,
+            MapHeaderRepr::Extended { len_width } => Some(len_width.into()),
+        }
+    }
+
+    #[inline]
+    pub(crate) fn from_repr(repr: MapHeaderRepr) -> Self {
+        Self::debug_assert_repr_valid(repr);
+
+        Self { repr }
+    }
+
+    #[inline]
+    fn compact(len: u8) -> Self {
+        let len = Byte::assert_masked_by(len, Self::COMPACT_LEN_BITS);
+
+        Self::from_repr(MapHeaderRepr::Compact { len })
     }
 
     #[inline]
     pub fn extended(len: usize) -> Self {
-        Self::Extended {
-            len_width: trailing_non_zero_bytes(len).max(1),
-        }
+        Self::from_repr(MapHeaderRepr::Extended {
+            len_width: len.compact_width(),
+        })
     }
 
+    #[inline]
     fn can_be_compact(len: usize) -> bool {
         len <= (Self::COMPACT_LEN_BITS as usize)
+    }
+
+    #[inline(always)]
+    fn debug_assert_repr_valid(repr: MapHeaderRepr) {
+        match repr {
+            MapHeaderRepr::Compact { len } => {
+                debug_assert!(len <= Self::COMPACT_LEN_BITS);
+            }
+            MapHeaderRepr::Extended { len_width } => {
+                debug_assert!(len_width <= Self::EXTENDED_LEN_WIDTH_BITS);
+            }
+        }
     }
 }
 
@@ -88,15 +129,19 @@ impl DecodeHeader for MapHeader {
 
         let byte = Byte(byte);
 
-        if byte.contains_bits(Self::VARIANT_BIT) {
+        let repr = if byte.contains_bits(Self::VARIANT_BIT) {
             let len = byte.masked_bits(Self::COMPACT_LEN_BITS);
-            Ok(Self::Compact { len: len.into() })
+            MapHeaderRepr::Compact { len }
         } else {
-            let len_width = byte.masked_bits(Self::EXTENDED_LEN_WIDTH_BITS) + 1;
-            Ok(Self::Extended {
-                len_width: len_width.into(),
-            })
-        }
+            let len_width_bits = byte.masked_bits(Self::EXTENDED_LEN_WIDTH_BITS);
+            MapHeaderRepr::Extended {
+                len_width: (len_width_bits + 1),
+            }
+        };
+
+        Self::debug_assert_repr_valid(repr);
+
+        Ok(Self::from_repr(repr))
     }
 }
 
@@ -104,16 +149,15 @@ impl EncodeHeader for MapHeader {
     fn encode(self) -> u8 {
         let mut byte = Byte(Self::TYPE_BITS);
 
-        match self {
-            MapHeader::Compact { len } => {
-                byte.set_bits(Self::VARIANT_BIT);
+        Self::debug_assert_repr_valid(self.repr);
 
-                let len_bits = Self::COMPACT_LEN_BITS;
-                byte.set_bits_assert_masked_by(len as u8, len_bits);
+        match self.repr {
+            MapHeaderRepr::Compact { len } => {
+                byte.set_bits(Self::VARIANT_BIT);
+                byte.set_bits_assert_masked_by(len, Self::COMPACT_LEN_BITS);
             }
-            MapHeader::Extended { len_width } => {
-                let len_width_bits = Self::EXTENDED_LEN_WIDTH_BITS;
-                byte.set_bits_assert_masked_by(len_width as u8 - 1, len_width_bits);
+            MapHeaderRepr::Extended { len_width } => {
+                byte.set_bits_assert_masked_by(len_width - 1, Self::EXTENDED_LEN_WIDTH_BITS);
             }
         }
 
@@ -124,15 +168,32 @@ impl EncodeHeader for MapHeader {
 #[cfg(any(test, feature = "testing"))]
 impl proptest::arbitrary::Arbitrary for MapHeader {
     type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
+    type Strategy = proptest::strategy::BoxedStrategy<Self>;
 
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         use proptest::strategy::Strategy;
 
         proptest::prop_oneof![
-            (0..=7_usize).prop_map(Self::compact),
+            (0..=7_u8).prop_map(Self::compact),
             (0..=100_usize).prop_map(Self::extended)
         ]
         .boxed()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use proptest::prelude::*;
+
+    use super::*;
+
+    proptest! {
+        #[test]
+        fn encode_decode_roundtrip(header in MapHeader::arbitrary()) {
+            let encoded = header.encode();
+            let decoded = MapHeader::decode(encoded).unwrap();
+
+            prop_assert_eq!(&decoded, &header);
+        }
     }
 }

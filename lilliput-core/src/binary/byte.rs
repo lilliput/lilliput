@@ -55,19 +55,19 @@ impl Byte {
     /// Conditionally sets bits (branch-less).
     #[inline(always)]
     pub(crate) fn set_bits_if(&mut self, mask: u8, condition: bool) {
-        self.set_bits(Self::mask_if(mask, condition));
+        self.set_bits(Self::masked_if(mask, condition));
     }
 
     /// Conditionally clears bits (branch-less).
     #[inline(always)]
     pub(crate) fn clear_bits_if(&mut self, mask: u8, condition: bool) {
-        self.clear_bits(Self::mask_if(mask, condition));
+        self.clear_bits(Self::masked_if(mask, condition));
     }
 
     /// Performs a logical `self \= mask`, setting all bits found in `mask`.
     #[inline(always)]
     pub(crate) fn set_bits_masked_by(&mut self, bits: u8, mask: u8) {
-        self.set_bits(Self::mask_by(bits, mask));
+        self.set_bits(Self::masked_by(bits, mask));
     }
 
     /// Performs a logical `self \= mask`, setting all bits found in `mask`.
@@ -75,20 +75,31 @@ impl Byte {
     pub(crate) fn set_bits_assert_masked_by(&mut self, bits: u8, mask: u8) {
         debug_assert!(
             bits & !mask == 0b0,
-            "`bits` ({bits:08b}) contains bits not covered by `mask`  ({mask:08b})"
+            "`bits` ({bits:08b}) contains bits not covered by `mask` ({mask:08b})"
         );
 
         self.set_bits_masked_by(bits, mask);
     }
 
+    /// Performs a logical `self \= mask`, setting all bits found in `mask`.
+    #[inline(always)]
+    pub(crate) fn assert_masked_by(bits: u8, mask: u8) -> u8 {
+        debug_assert!(
+            bits & !mask == 0b0,
+            "`self` ({bits:08b}) contains bits not covered by `mask` ({mask:08b})"
+        );
+
+        Self::masked_by(bits, mask)
+    }
+
     /// Returns `bits`, masked by `mask`.
     #[inline(always)]
-    fn mask_by(bits: u8, mask: u8) -> u8 {
+    pub fn masked_by(bits: u8, mask: u8) -> u8 {
         bits & mask
     }
 
     #[inline(always)]
-    fn mask_if(mask: u8, condition: bool) -> u8 {
+    pub fn masked_if(mask: u8, condition: bool) -> u8 {
         mask & Self::mask_all_if(condition)
     }
 

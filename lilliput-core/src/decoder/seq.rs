@@ -1,6 +1,6 @@
 use crate::{
     error::Result,
-    header::SeqHeader,
+    header::{SeqHeader, SeqHeaderRepr},
     io::Read,
     value::{SeqValue, Value},
 };
@@ -12,22 +12,7 @@ where
     R: Read<'de>,
 {
     pub fn decode_seq(&mut self) -> Result<Vec<Value>> {
-        let header: SeqHeader = self.pull_header()?;
-        self.decode_seq_headed_by(header)
-    }
-
-    pub fn decode_seq_start(&mut self) -> Result<usize> {
-        let header: SeqHeader = self.pull_header()?;
-        self.decode_seq_start_headed_by(header)
-    }
-
-    pub fn decode_seq_value(&mut self) -> Result<SeqValue> {
-        let header: SeqHeader = self.pull_header()?;
-        self.decode_seq_value_headed_by(header)
-    }
-
-    fn decode_seq_headed_by(&mut self, header: SeqHeader) -> Result<Vec<Value>> {
-        let len = self.decode_seq_start_headed_by(header)?;
+        let len = self.decode_seq_start()?;
         let mut vec = Vec::with_capacity(len);
 
         for _ in 0..len {
@@ -35,25 +20,21 @@ where
             vec.push(value);
         }
 
-        self.decode_seq_end()?;
-
         Ok(vec)
     }
 
-    pub(super) fn decode_seq_value_headed_by(&mut self, header: SeqHeader) -> Result<SeqValue> {
-        self.decode_seq_headed_by(header).map(From::from)
-    }
+    pub fn decode_seq_start(&mut self) -> Result<usize> {
+        let header: SeqHeader = self.pull_header()?;
 
-    fn decode_seq_start_headed_by(&mut self, header: SeqHeader) -> Result<usize> {
-        let len = match header {
-            SeqHeader::Compact { len } => len,
-            SeqHeader::Extended { len_width } => self.pull_len_bytes(len_width)?,
+        let len: usize = match header.repr() {
+            SeqHeaderRepr::Compact { len } => len.into(),
+            SeqHeaderRepr::Extended { len_width } => self.pull_len_bytes(len_width)?,
         };
 
         Ok(len)
     }
 
-    pub fn decode_seq_end(&mut self) -> Result<()> {
-        Ok(())
+    pub fn decode_seq_value(&mut self) -> Result<SeqValue> {
+        self.decode_seq().map(From::from)
     }
 }

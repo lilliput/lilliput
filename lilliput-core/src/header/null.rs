@@ -44,3 +44,20 @@ impl proptest::prelude::Arbitrary for NullHeader {
         Just(NullHeader).boxed()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use proptest::prelude::*;
+
+    use super::*;
+
+    proptest! {
+        #[test]
+        fn encode_decode_roundtrip(header in NullHeader::arbitrary()) {
+            let encoded = header.encode();
+            let decoded = NullHeader::decode(encoded).unwrap();
+
+            prop_assert_eq!(&decoded, &header);
+        }
+    }
+}

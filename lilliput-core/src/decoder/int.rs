@@ -1,11 +1,12 @@
 use core::num::TryFromIntError;
+use std::ops::Range;
 
 use num_traits::{Signed, Unsigned};
 
 use crate::{
     error::{Error, Result},
-    header::IntHeader,
-    num::FromZigZag,
+    header::{IntHeader, IntHeaderRepr},
+    num::zigzag::FromZigZag,
     value::{IntValue, SignedIntValue, UnsignedIntValue},
 };
 
@@ -16,129 +17,113 @@ where
     R: Read<'de>,
 {
     pub fn decode_u8(&mut self) -> Result<u8> {
-        let header: IntHeader = self.pull_header()?;
-        self.decode_unsigned_headed_by(header)
+        self.decode_unsigned_int()
     }
 
     pub fn decode_u16(&mut self) -> Result<u16> {
-        let header: IntHeader = self.pull_header()?;
-        self.decode_unsigned_headed_by(header)
+        self.decode_unsigned_int()
     }
 
     pub fn decode_u32(&mut self) -> Result<u32> {
-        let header: IntHeader = self.pull_header()?;
-        self.decode_unsigned_headed_by(header)
+        self.decode_unsigned_int()
     }
 
     pub fn decode_u64(&mut self) -> Result<u64> {
-        let header: IntHeader = self.pull_header()?;
-        self.decode_unsigned_headed_by(header)
+        self.decode_unsigned_int()
     }
 
     pub fn decode_i8(&mut self) -> Result<i8> {
-        let header: IntHeader = self.pull_header()?;
-        self.decode_signed_headed_by(header)
+        self.decode_signed_int()
     }
 
     pub fn decode_i16(&mut self) -> Result<i16> {
-        let header: IntHeader = self.pull_header()?;
-        self.decode_signed_headed_by(header)
+        self.decode_signed_int()
     }
 
     pub fn decode_i32(&mut self) -> Result<i32> {
-        let header: IntHeader = self.pull_header()?;
-        self.decode_signed_headed_by(header)
+        self.decode_signed_int()
     }
 
     pub fn decode_i64(&mut self) -> Result<i64> {
-        let header: IntHeader = self.pull_header()?;
-        self.decode_signed_headed_by(header)
+        self.decode_signed_int()
     }
 
-    pub fn decode_signed_int_value(&mut self) -> Result<SignedIntValue> {
-        let header: IntHeader = self.pull_header()?;
-        self.decode_signed_int_value_headed_by(header)
-    }
-
-    pub fn decode_unsigned_int_value(&mut self) -> Result<UnsignedIntValue> {
-        let header: IntHeader = self.pull_header()?;
-        self.decode_unsigned_int_value_headed_by(header)
-    }
-
-    pub fn decode_int_value(&mut self) -> Result<IntValue> {
-        let header: IntHeader = self.pull_header()?;
-        self.decode_int_value_headed_by(header)
-    }
-
-    fn decode_signed_headed_by<T>(&mut self, header: IntHeader) -> Result<T>
+    pub fn decode_signed_int<T>(&mut self) -> Result<T>
     where
         T: Signed + TryFrom<SignedIntValue, Error = TryFromIntError>,
     {
-        let pos = self.pos;
+        let (value, range) = self.decode_int_value_and_range()?;
 
-        let value = self.decode_int_value_headed_by(header)?;
         let signed = value
             .to_signed()
             .and_then(|value| value.try_into())
-            .map_err(|_| Error::number_out_of_range(Some(pos)))?;
+            .map_err(|_| Error::number_out_of_range(Some(range.start)))?;
 
         Ok(signed)
     }
 
-    fn decode_unsigned_headed_by<T>(&mut self, header: IntHeader) -> Result<T>
+    pub fn decode_unsigned_int<T>(&mut self) -> Result<T>
     where
         T: Unsigned + TryFrom<UnsignedIntValue, Error = TryFromIntError>,
     {
-        let pos = self.pos;
+        let (value, range) = self.decode_int_value_and_range()?;
 
-        let value = self.decode_int_value_headed_by(header)?;
         let unsigned = value
             .to_unsigned()
             .and_then(|value| value.try_into())
-            .map_err(|_| Error::number_out_of_range(Some(pos)))?;
+            .map_err(|_| Error::number_out_of_range(Some(range.start)))?;
 
         Ok(unsigned)
     }
 
-    fn decode_signed_int_value_headed_by(&mut self, header: IntHeader) -> Result<SignedIntValue> {
-        let pos = self.pos;
+    pub fn decode_signed_int_value(&mut self) -> Result<SignedIntValue> {
+        let (value, range) = self.decode_int_value_and_range()?;
 
-        let value = self.decode_int_value_headed_by(header)?;
         let signed = value
             .to_signed()
-            .map_err(|_| Error::number_out_of_range(Some(pos)))?;
+            .map_err(|_| Error::number_out_of_range(Some(range.start)))?;
 
         Ok(signed)
     }
 
-    fn decode_unsigned_int_value_headed_by(
-        &mut self,
-        header: IntHeader,
-    ) -> Result<UnsignedIntValue> {
-        let pos = self.pos;
+    pub fn decode_unsigned_int_value(&mut self) -> Result<UnsignedIntValue> {
+        let (value, range) = self.decode_int_value_and_range()?;
 
-        let value = self.decode_int_value_headed_by(header)?;
         let unsigned = value
             .to_unsigned()
-            .map_err(|_| Error::number_out_of_range(Some(pos)))?;
+            .map_err(|_| Error::number_out_of_range(Some(range.start)))?;
 
         Ok(unsigned)
     }
 
-    pub(super) fn decode_int_value_headed_by(&mut self, header: IntHeader) -> Result<IntValue> {
-        match header {
-            IntHeader::CompactSigned { value } => Ok(IntValue::Signed(SignedIntValue::I8(value))),
-            IntHeader::CompactUnsigned { value } => {
-                Ok(IntValue::Unsigned(UnsignedIntValue::U8(value)))
+    pub fn decode_int_value(&mut self) -> Result<IntValue> {
+        let (value, _) = self.decode_int_value_and_range()?;
+
+        Ok(value)
+    }
+
+    pub(super) fn decode_int_value_and_range(&mut self) -> Result<(IntValue, Range<usize>)> {
+        let header: IntHeader = self.pull_header()?;
+
+        let pos = self.pos;
+
+        match header.repr() {
+            IntHeaderRepr::Compact { is_signed, bits } => {
+                let int_value = if is_signed {
+                    IntValue::Signed(SignedIntValue::I8(i8::from_zig_zag(bits)))
+                } else {
+                    IntValue::Unsigned(UnsignedIntValue::U8(bits))
+                };
+                Ok((int_value, pos..(pos + 1)))
             }
-            IntHeader::Extended { is_signed, width } => {
-                debug_assert!(width <= 8);
-                self.pull_extended_value(width, is_signed)
+            IntHeaderRepr::Extended { is_signed, width } => {
+                let int_value = self.pull_extended_value(width, is_signed)?;
+                Ok((int_value, pos..(pos + usize::from(width))))
             }
         }
     }
 
-    fn pull_extended_value(&mut self, width: usize, is_signed: bool) -> Result<IntValue> {
+    fn pull_extended_value(&mut self, width: u8, is_signed: bool) -> Result<IntValue> {
         if is_signed {
             self.pull_signed_extended_value(width).map(IntValue::Signed)
         } else {
@@ -147,7 +132,9 @@ where
         }
     }
 
-    pub(super) fn pull_signed_extended_value(&mut self, width: usize) -> Result<SignedIntValue> {
+    pub(super) fn pull_signed_extended_value(&mut self, width: u8) -> Result<SignedIntValue> {
+        let width: usize = width.into();
+
         const MAX_WIDTH: usize = 8;
         debug_assert!(width <= MAX_WIDTH);
 
@@ -175,10 +162,9 @@ where
         Ok(signed)
     }
 
-    pub(super) fn pull_unsigned_extended_value(
-        &mut self,
-        width: usize,
-    ) -> Result<UnsignedIntValue> {
+    pub(super) fn pull_unsigned_extended_value(&mut self, width: u8) -> Result<UnsignedIntValue> {
+        let width: usize = width.into();
+
         const MAX_WIDTH: usize = 8;
         debug_assert!(width <= MAX_WIDTH);
 

@@ -2,8 +2,8 @@ use crate::{
     error::Result,
     header::{EncodeHeader as _, StringHeader},
     io::Write,
+    num::int::with_n_be_bytes,
     value::StringValue,
-    Profile,
 };
 
 use super::Encoder;
@@ -19,8 +19,7 @@ where
         self.encode_str_start(len)?;
 
         // Push the value's actual bytes:
-        let tail_bytes = value.as_bytes();
-        self.push_bytes(tail_bytes)?;
+        self.push_bytes(value.as_bytes())?;
 
         Ok(())
     }
@@ -32,18 +31,20 @@ where
     }
 
     pub fn encode_str_start(&mut self, len: usize) -> Result<()> {
-        // Push the value's header:
-        let header = match self.profile {
-            Profile::Weak => StringHeader::optimal(len),
-            Profile::None => StringHeader::extended(8),
+        let header = if self.compact_ints {
+            StringHeader::optimal(len)
+        } else {
+            StringHeader::verbatim(len)
         };
+
+        // Push the value's header:
         self.push_bytes(&[header.encode()])?;
 
-        // Push the value's length extension:
-        if let StringHeader::Extended { len_width } = header {
-            let len_bytes = len.to_be_bytes();
-            let len_bytes_start = len_bytes.len() - len_width;
-            self.push_bytes(&len_bytes[len_bytes_start..])?;
+        if let Some(len_width) = header.extension_width() {
+            with_n_be_bytes(len, len_width, |len_bytes| {
+                // Push the value's length extension:
+                self.push_bytes(len_bytes)
+            })?;
         }
 
         Ok(())

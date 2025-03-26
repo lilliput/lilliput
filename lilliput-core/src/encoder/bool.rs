@@ -14,6 +14,7 @@ where
     pub fn encode_bool(&mut self, value: bool) -> Result<()> {
         let header = BoolHeader::new(value);
 
+        // Push the value's header:
         self.push_bytes(&[header.encode()])?;
 
         Ok(())

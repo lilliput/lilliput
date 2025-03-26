@@ -1,7 +1,7 @@
 use crate::{
     error::{Error, Result},
     header::FloatHeader,
-    num::{FromFloat, IntoFloat as _},
+    num::float::{FromFloat, IntoFloat as _},
     value::FloatValue,
 };
 
@@ -12,31 +12,37 @@ where
     R: Read<'de>,
 {
     pub fn decode_f32(&mut self) -> Result<f32> {
-        let header: FloatHeader = self.pull_header()?;
-        self.decode_float_headed_by(header)
+        self.decode_float()
     }
 
     pub fn decode_f64(&mut self) -> Result<f64> {
-        let header: FloatHeader = self.pull_header()?;
-        self.decode_float_headed_by(header)
+        self.decode_float()
     }
 
     pub fn decode_float_value(&mut self) -> Result<FloatValue> {
         let header: FloatHeader = self.pull_header()?;
-        self.decode_float_value_headed_by(header)
+        let width = header.width();
+
+        match width {
+            4 => self.decode_float_value_bytes(width).map(FloatValue::F32),
+            8 => self.decode_float_value_bytes(width).map(FloatValue::F64),
+            _ => unreachable!(),
+        }
     }
 
-    fn decode_float_headed_by<T>(&mut self, header: FloatHeader) -> Result<T>
+    fn decode_float<T>(&mut self) -> Result<T>
     where
         T: FromFloat<f32> + FromFloat<f64>,
     {
+        let header: FloatHeader = self.pull_header()?;
+
         let width = header.width();
 
         self.decode_float_value_bytes(width)
     }
 
     #[inline(always)]
-    fn decode_float_value_bytes<T>(&mut self, width: usize) -> Result<T>
+    fn decode_float_value_bytes<T>(&mut self, width: u8) -> Result<T>
     where
         T: FromFloat<f32> + FromFloat<f64>,
     {
@@ -57,19 +63,6 @@ where
 
                 Ok(f64::from_be_bytes(bytes).into_float())
             }
-            _ => unreachable!(),
-        }
-    }
-
-    pub(super) fn decode_float_value_headed_by(
-        &mut self,
-        header: FloatHeader,
-    ) -> Result<FloatValue> {
-        let width = header.width();
-
-        match width {
-            1..=4 => self.decode_float_headed_by(header).map(FloatValue::F32),
-            5..=8 => self.decode_float_headed_by(header).map(FloatValue::F64),
             _ => unreachable!(),
         }
     }

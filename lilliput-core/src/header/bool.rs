@@ -13,7 +13,7 @@ use super::{DecodeHeader, EncodeHeader, Marker};
 /// ```
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct BoolHeader {
-    pub value: bool,
+    value: bool,
 }
 
 impl BoolHeader {
@@ -61,5 +61,22 @@ impl proptest::prelude::Arbitrary for BoolHeader {
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         use proptest::prelude::Strategy as _;
         proptest::bool::ANY.prop_map(Self::new).boxed()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use proptest::prelude::*;
+
+    use super::*;
+
+    proptest! {
+        #[test]
+        fn encode_decode_roundtrip(header in BoolHeader::arbitrary()) {
+            let encoded = header.encode();
+            let decoded = BoolHeader::decode(encoded).unwrap();
+
+            prop_assert_eq!(&decoded, &header);
+        }
     }
 }
