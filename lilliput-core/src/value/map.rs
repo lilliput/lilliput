@@ -1,6 +1,3 @@
-#[cfg(any(test, feature = "testing"))]
-use proptest::{prelude::*, sample::SizeRange};
-
 use super::Value;
 
 #[cfg(feature = "preserve_order")]
@@ -37,34 +34,15 @@ impl std::fmt::Debug for MapValue {
     }
 }
 
-#[doc(hidden)]
-#[cfg(any(test, feature = "testing"))]
-pub struct MapValueArbitraryParameters {
-    pub keys: BoxedStrategy<Value>,
-    pub values: BoxedStrategy<Value>,
-    pub size: SizeRange,
-}
-
-#[cfg(any(test, feature = "testing"))]
-impl Default for MapValueArbitraryParameters {
-    fn default() -> Self {
-        Self {
-            keys: Value::arbitrary(),
-            values: Value::arbitrary(),
-            size: (0..10).into(),
-        }
-    }
-}
-
 #[cfg(any(test, feature = "testing"))]
 impl proptest::arbitrary::Arbitrary for MapValue {
-    type Parameters = MapValueArbitraryParameters;
-    type Strategy = BoxedStrategy<Self>;
+    type Parameters = ();
+    type Strategy = proptest::strategy::BoxedStrategy<Self>;
 
-    fn arbitrary_with(args: Self::Parameters) -> Self::Strategy {
-        let MapValueArbitraryParameters { keys, values, size } = args;
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        use proptest::prelude::*;
 
-        proptest::collection::hash_map(keys, values, size)
+        proptest::collection::hash_map(Value::arbitrary(), Value::arbitrary(), 0..10)
             .prop_map(|hash_map| MapValue(Map::from_iter(hash_map)))
             .boxed()
     }
@@ -79,7 +57,6 @@ mod tests {
         encoder::Encoder,
         io::{SliceReader, VecWriter},
         value::{NullValue, Value},
-        Profile,
     };
 
     use super::*;
@@ -103,20 +80,18 @@ mod tests {
     proptest! {
         #[test]
         fn encode_decode_roundtrip(value in MapValue::arbitrary()) {
-            let profile = Profile::None;
-
             let mut encoded: Vec<u8> = Vec::new();
             let writer = VecWriter::new(&mut encoded);
-            let mut encoder = Encoder::new(writer, profile);
+            let mut encoder = Encoder::new(writer).compact_ints();
             encoder.encode_map(&value.0).unwrap();
 
             let reader = SliceReader::new(&encoded);
-            let mut decoder = Decoder::new(reader, profile);
+            let mut decoder = Decoder::new(reader);
             let decoded = decoder.decode_map().unwrap();
             prop_assert_eq!(&decoded, &value.0);
 
             let reader = SliceReader::new(&encoded);
-            let mut decoder = Decoder::new(reader, profile);
+            let mut decoder = Decoder::new(reader);
             let decoded = decoder.decode_any().unwrap();
             let Value::Map(decoded) = decoded else {
                 panic!("expected map value");

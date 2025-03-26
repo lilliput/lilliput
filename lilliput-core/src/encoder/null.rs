@@ -14,6 +14,7 @@ where
     pub fn encode_null(&mut self) -> Result<()> {
         let header = NullHeader;
 
+        // Push the value's header:
         self.push_bytes(&[header.encode()])?;
 
         Ok(())

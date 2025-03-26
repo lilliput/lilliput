@@ -1,9 +1,8 @@
 use crate::{
     error::{Error, Result},
-    header::{DecodeHeader, Header},
+    header::{DecodeHeader, Header, Marker},
     io::{Read, Reference},
     value::Value,
-    Profile,
 };
 
 mod bool;
@@ -20,17 +19,14 @@ pub struct Decoder<R> {
     reader: R,
     pos: usize,
     peeked: Option<u8>,
-    #[allow(dead_code)]
-    profile: Profile,
 }
 
 impl<R> Decoder<R> {
-    pub fn new(reader: R, profile: Profile) -> Self {
+    pub fn new(reader: R) -> Self {
         Decoder {
             reader,
             pos: 0,
             peeked: None,
-            profile,
         }
     }
 
@@ -45,16 +41,20 @@ where
 {
     // MARK: - Any Values
 
+    pub fn peek_marker(&mut self) -> Result<Marker> {
+        Ok(self.peek_header::<Header>()?.marker())
+    }
+
     pub fn decode_any(&mut self) -> Result<Value> {
-        match self.pull_header()? {
-            Header::Int(header) => self.decode_int_value_headed_by(header).map(From::from),
-            Header::String(header) => self.decode_string_value_headed_by(header).map(From::from),
-            Header::Seq(header) => self.decode_seq_value_headed_by(header).map(From::from),
-            Header::Map(header) => self.decode_map_value_headed_by(header).map(From::from),
-            Header::Float(header) => self.decode_float_value_headed_by(header).map(From::from),
-            Header::Bytes(header) => self.decode_bytes_value_headed_by(header).map(From::from),
-            Header::Bool(header) => self.decode_bool_value_headed_by(header).map(From::from),
-            Header::Null(header) => self.decode_null_value_headed_by(header).map(From::from),
+        match self.peek_header()? {
+            Header::Int(_) => self.decode_int_value().map(From::from),
+            Header::String(_) => self.decode_string_value().map(From::from),
+            Header::Seq(_) => self.decode_seq_value().map(From::from),
+            Header::Map(_) => self.decode_map_value().map(From::from),
+            Header::Float(_) => self.decode_float_value().map(From::from),
+            Header::Bytes(_) => self.decode_bytes_value().map(From::from),
+            Header::Bool(_) => self.decode_bool_value().map(From::from),
+            Header::Null(_) => self.decode_null_value().map(From::from),
         }
     }
 
@@ -156,7 +156,7 @@ where
     }
 
     #[inline(always)]
-    fn pull_len_bytes(&mut self, len_width: usize) -> Result<usize> {
+    fn pull_len_bytes(&mut self, len_width: u8) -> Result<usize> {
         let pos = self.pos;
 
         self.pull_unsigned_extended_value(len_width)?
@@ -176,15 +176,14 @@ mod test {
     #[test]
     fn new() {
         let bytes = SliceReader::new(&[1, 2, 3]);
-        let decoder = Decoder::new(&bytes, Profile::None);
+        let decoder = Decoder::new(&bytes);
         assert_eq!(decoder.pos, 0);
-        assert_eq!(decoder.profile, Profile::None);
     }
 
     #[test]
     fn pull_bytes_into() {
         let bytes = SliceReader::new(&[1, 2, 3]);
-        let mut decoder = Decoder::new(bytes, Profile::None);
+        let mut decoder = Decoder::new(bytes);
         assert_eq!(decoder.pos, 0);
 
         let mut buf = vec![];

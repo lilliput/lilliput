@@ -10,8 +10,14 @@ mod string;
 use crate::error::Expectation;
 
 pub use self::{
-    bool::BoolHeader, bytes::BytesHeader, float::FloatHeader, int::IntHeader, map::MapHeader,
-    null::NullHeader, seq::SeqHeader, string::StringHeader,
+    bool::BoolHeader,
+    bytes::BytesHeader,
+    float::FloatHeader,
+    int::{IntHeader, IntHeaderRepr},
+    map::{MapHeader, MapHeaderRepr},
+    null::NullHeader,
+    seq::{SeqHeader, SeqHeaderRepr},
+    string::{StringHeader, StringHeaderRepr},
 };
 
 pub trait DecodeHeader: Sized {
@@ -214,6 +220,21 @@ impl DecodeHeader for Header {
             Marker::Bool => Ok(Header::Bool(BoolHeader::decode(byte)?)),
             Marker::Null => Ok(Header::Null(NullHeader::decode(byte)?)),
             Marker::Reserved => unimplemented!(),
+        }
+    }
+}
+
+impl Header {
+    pub fn marker(&self) -> Marker {
+        match self {
+            Header::Int(_) => Marker::Int,
+            Header::String(_) => Marker::String,
+            Header::Seq(_) => Marker::Seq,
+            Header::Map(_) => Marker::Map,
+            Header::Float(_) => Marker::Float,
+            Header::Bytes(_) => Marker::Bytes,
+            Header::Bool(_) => Marker::Bool,
+            Header::Null(_) => Marker::Null,
         }
     }
 }

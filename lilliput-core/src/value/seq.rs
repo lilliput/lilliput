@@ -79,7 +79,6 @@ mod tests {
         encoder::Encoder,
         io::{SliceReader, VecWriter},
         value::{NullValue, Value},
-        Profile,
     };
 
     use super::*;
@@ -106,20 +105,18 @@ mod tests {
     proptest! {
         #[test]
         fn encode_decode_roundtrip(value in SeqValue::arbitrary()) {
-            let profile = Profile::None;
-
             let mut encoded: Vec<u8> = Vec::new();
             let writer = VecWriter::new(&mut encoded);
-            let mut encoder = Encoder::new(writer, profile);
+            let mut encoder = Encoder::new(writer).compact_ints();
             encoder.encode_seq(&value.0).unwrap();
 
             let reader = SliceReader::new(&encoded);
-            let mut decoder = Decoder::new(reader, profile);
+            let mut decoder = Decoder::new(reader);
             let decoded = decoder.decode_seq().unwrap();
             prop_assert_eq!(&decoded, &value.0);
 
             let reader = SliceReader::new(&encoded);
-            let mut decoder = Decoder::new(reader, profile);
+            let mut decoder = Decoder::new(reader);
             let decoded = decoder.decode_any().unwrap();
             let Value::Seq(decoded) = decoded else {
                 panic!("expected seq value");

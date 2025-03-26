@@ -23,15 +23,18 @@ impl FloatHeader {
     const VALUE_WIDTH_BITS: u8 = 0b00000111;
 
     #[inline]
-    pub fn new(width: usize) -> Self {
+    pub fn new(width: u8) -> Self {
+        debug_assert!(width >= 1);
         debug_assert!(width <= 8);
 
-        Self { width: width as u8 }
+        let width = Byte::assert_masked_by(width - 1, Self::VALUE_WIDTH_BITS) + 1;
+
+        Self { width }
     }
 
     #[inline]
-    pub fn width(&self) -> usize {
-        self.width.into()
+    pub fn width(&self) -> u8 {
+        self.width
     }
 }
 
@@ -41,9 +44,11 @@ impl DecodeHeader for FloatHeader {
 
         let byte = Byte(byte);
 
-        let width = byte.masked_bits(Self::VALUE_WIDTH_BITS) + 1;
+        let width_bits = byte.masked_bits(Self::VALUE_WIDTH_BITS);
 
-        Ok(Self { width })
+        Ok(Self {
+            width: width_bits + 1,
+        })
     }
 }
 
@@ -51,8 +56,10 @@ impl EncodeHeader for FloatHeader {
     fn encode(self) -> u8 {
         let mut byte = Byte(Self::TYPE_BITS);
 
+        debug_assert!(self.width >= 1);
         debug_assert!(self.width <= 8);
-        byte.set_bits(self.width - 1);
+
+        byte.set_bits_assert_masked_by(self.width - 1, Self::VALUE_WIDTH_BITS);
 
         byte.0
     }
@@ -66,6 +73,23 @@ impl proptest::prelude::Arbitrary for FloatHeader {
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         use proptest::strategy::Strategy;
 
-        (1..=8_usize).prop_map(Self::new).boxed()
+        (1..=8_u8).prop_map(Self::new).boxed()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use proptest::prelude::*;
+
+    use super::*;
+
+    proptest! {
+        #[test]
+        fn encode_decode_roundtrip(header in FloatHeader::arbitrary()) {
+            let encoded = header.encode();
+            let decoded = FloatHeader::decode(encoded).unwrap();
+
+            prop_assert_eq!(&decoded, &header);
+        }
     }
 }

@@ -12,14 +12,11 @@ pub mod value;
 
 mod binary;
 mod num;
+mod sealed;
 
 #[derive(Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub enum Profile {
     None = 0,
     #[default]
     Weak = 1,
-}
-
-mod sealed {
-    pub trait Sealed {}
 }

@@ -5,7 +5,6 @@ use crate::{
     header::{EncodeHeader, FloatHeader},
     io::Write,
     value::FloatValue,
-    Profile,
 };
 
 use super::Encoder;
@@ -33,37 +32,16 @@ where
     where
         T: FloatCore + ToBytes<Bytes = [u8; N]>,
     {
-        let profile = self.profile;
+        let width = N as u8;
 
-        let width = match profile {
-            Profile::Weak | Profile::None => N,
-        };
+        let header = FloatHeader::new(width);
 
         // Push the value's header:
-        let header = FloatHeader::new(width);
         self.push_bytes(&[header.encode()])?;
 
         // Push the value's actual bytes:
-        match profile {
-            Profile::Weak => self.push_value_bytes_variable(value, width),
-            Profile::None => self.push_value_bytes_fixed(value, width),
-        }
-    }
-
-    fn push_value_bytes_variable<T, const N: usize>(&mut self, value: T, width: usize) -> Result<()>
-    where
-        T: FloatCore + ToBytes<Bytes = [u8; N]>,
-    {
-        // FIXME: replace with proper variable encoding logic!
-        self.push_value_bytes_fixed(value, width)
-    }
-
-    fn push_value_bytes_fixed<T, const N: usize>(&mut self, value: T, width: usize) -> Result<()>
-    where
-        T: FloatCore + ToBytes<Bytes = [u8; N]>,
-    {
-        let bytes = value.to_be_bytes();
-        assert_eq!(bytes.len(), width);
-        self.push_bytes(&value.to_be_bytes())
+        let be_bytes = value.to_be_bytes();
+        debug_assert_eq!(be_bytes.len(), width as usize);
+        self.push_bytes(&be_bytes)
     }
 }

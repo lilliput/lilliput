@@ -1,13 +1,14 @@
-use num_traits::{PrimInt, Signed, ToBytes, Unsigned};
+use num_traits::{Signed, ToBytes, Unsigned};
 
 use crate::{
-    binary::trailing_non_zero_bytes,
     error::Result,
     header::{EncodeHeader as _, IntHeader},
     io::Write,
-    num::ToZigZag,
+    num::{
+        int::{with_n_be_bytes, CompactWidth},
+        zigzag::ToZigZag,
+    },
     value::{IntValue, SignedIntValue, UnsignedIntValue},
-    Profile,
 };
 
 use super::Encoder;
@@ -51,55 +52,51 @@ where
     pub fn encode_signed_int<S, U, const N: usize>(&mut self, value: S) -> Result<()>
     where
         S: Signed + ToZigZag<ZigZag = U>,
-        U: PrimInt + ToBytes<Bytes = [u8; N]>,
+        U: Copy + Unsigned + CompactWidth + PartialOrd + From<u8> + ToBytes<Bytes = [u8; N]>,
     {
-        let value = value.to_zig_zag();
+        let unsigned = value.to_zig_zag();
+
+        let is_signed = true;
+
+        let header = if self.compact_ints {
+            IntHeader::optimal(is_signed, unsigned)
+        } else {
+            IntHeader::verbatim(is_signed, unsigned)
+        };
 
         // Push the value's header:
-        let header = match self.profile {
-            Profile::Weak => IntHeader::Extended {
-                is_signed: true,
-                width: trailing_non_zero_bytes(value).max(1),
-            },
-            Profile::None => IntHeader::Extended {
-                is_signed: true,
-                width: N,
-            },
-        };
         self.push_bytes(&[header.encode()])?;
 
-        // Push the value's extension:
-        if let IntHeader::Extended { width, .. } = header {
-            let bytes = value.to_be_bytes();
-            let bytes_start = bytes.len() - width;
-            self.push_bytes(&bytes[bytes_start..])?;
+        if let Some(len_width) = header.extension_width() {
+            with_n_be_bytes(unsigned, len_width, |len_bytes| {
+                // Push the value's extension:
+                self.push_bytes(len_bytes)
+            })?;
         }
 
         Ok(())
     }
 
-    pub fn encode_unsigned_int<T, const N: usize>(&mut self, value: T) -> Result<()>
+    pub fn encode_unsigned_int<T, const N: usize>(&mut self, unsigned: T) -> Result<()>
     where
-        T: Unsigned + PrimInt + ToBytes<Bytes = [u8; N]>,
+        T: Copy + Unsigned + CompactWidth + PartialOrd + From<u8> + ToBytes<Bytes = [u8; N]>,
     {
-        // Push the value's header:
-        let header = match self.profile {
-            Profile::Weak => IntHeader::Extended {
-                is_signed: false,
-                width: trailing_non_zero_bytes(value).max(1),
-            },
-            Profile::None => IntHeader::Extended {
-                is_signed: false,
-                width: N,
-            },
+        let is_signed = false;
+
+        let header = if self.compact_ints {
+            IntHeader::optimal(is_signed, unsigned)
+        } else {
+            IntHeader::verbatim(is_signed, unsigned)
         };
+
+        // Push the value's header:
         self.push_bytes(&[header.encode()])?;
 
-        // Push the value's extension:
-        if let IntHeader::Extended { width, .. } = header {
-            let bytes = value.to_be_bytes();
-            let bytes_start = bytes.len() - width;
-            self.push_bytes(&bytes[bytes_start..])?;
+        if let Some(len_width) = header.extension_width() {
+            with_n_be_bytes(unsigned, len_width, |len_bytes| {
+                // Push the value's extension:
+                self.push_bytes(len_bytes)
+            })?;
         }
 
         Ok(())

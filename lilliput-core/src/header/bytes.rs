@@ -1,7 +1,4 @@
-use crate::{
-    binary::{trailing_non_zero_bytes, Byte},
-    error::Expectation,
-};
+use crate::{binary::Byte, error::Expectation, num::int::CompactWidth as _};
 
 use super::{DecodeHeader, EncodeHeader, Marker};
 
@@ -23,7 +20,7 @@ use super::{DecodeHeader, EncodeHeader, Marker};
 /// ```
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct BytesHeader {
-    len_width_exponent: usize,
+    len_width_exponent: u8,
 }
 
 impl BytesHeader {
@@ -32,15 +29,16 @@ impl BytesHeader {
     const LEN_WIDTH_EXPONENT_BITS: u8 = 0b00000011;
 
     #[inline]
-    pub fn new(len_width_exponent: usize) -> Self {
-        debug_assert!(len_width_exponent <= Self::LEN_WIDTH_EXPONENT_BITS as usize);
+    pub fn new(len_width_exponent: u8) -> Self {
+        let len_width_exponent =
+            Byte::assert_masked_by(len_width_exponent, Self::LEN_WIDTH_EXPONENT_BITS);
 
         Self { len_width_exponent }
     }
 
     #[inline]
     pub fn optimal(len: usize) -> Self {
-        let len_width = match trailing_non_zero_bytes(len).max(1) {
+        let len_width: u8 = match len.compact_width() {
             1 => 1,
             2 => 2,
             3..=4 => 4,
@@ -60,11 +58,11 @@ impl BytesHeader {
     }
 
     #[inline]
-    pub fn len_width(&self) -> usize {
-        1usize << self.len_width_exponent
+    pub fn len_width(&self) -> u8 {
+        1u8 << self.len_width_exponent
     }
 
-    fn len_width_exponent(len_width: usize) -> usize {
+    fn len_width_exponent(len_width: u8) -> u8 {
         debug_assert!(len_width <= 8);
         match len_width {
             1 => 0,
@@ -82,7 +80,7 @@ impl DecodeHeader for BytesHeader {
 
         let byte = Byte(byte);
 
-        let len_width_exponent = byte.masked_bits(Self::LEN_WIDTH_EXPONENT_BITS) as usize;
+        let len_width_exponent = byte.masked_bits(Self::LEN_WIDTH_EXPONENT_BITS);
 
         Ok(Self { len_width_exponent })
     }
@@ -92,10 +90,7 @@ impl EncodeHeader for BytesHeader {
     fn encode(self) -> u8 {
         let mut byte = Byte(Self::TYPE_BITS);
 
-        byte.set_bits_assert_masked_by(
-            self.len_width_exponent as u8,
-            Self::LEN_WIDTH_EXPONENT_BITS,
-        );
+        byte.set_bits_assert_masked_by(self.len_width_exponent, Self::LEN_WIDTH_EXPONENT_BITS);
 
         byte.0
     }
@@ -108,6 +103,23 @@ impl proptest::prelude::Arbitrary for BytesHeader {
 
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         use proptest::prelude::Strategy as _;
-        (0..=8_usize).prop_map(Self::new).boxed()
+        (0..=3_u8).prop_map(Self::new).boxed()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use proptest::prelude::*;
+
+    use super::*;
+
+    proptest! {
+        #[test]
+        fn encode_decode_roundtrip(header in BytesHeader::arbitrary()) {
+            let encoded = header.encode();
+            let decoded = BytesHeader::decode(encoded).unwrap();
+
+            prop_assert_eq!(&decoded, &header);
+        }
     }
 }
