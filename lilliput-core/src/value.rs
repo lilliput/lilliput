@@ -7,8 +7,6 @@ mod null;
 mod seq;
 mod string;
 
-use crate::header::Marker;
-
 pub use self::{
     bool::BoolValue,
     bytes::BytesValue,
@@ -19,51 +17,6 @@ pub use self::{
     seq::SeqValue,
     string::StringValue,
 };
-
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
-pub enum ValueType {
-    Int,
-    String,
-    Seq,
-    Map,
-    Float,
-    Bytes,
-    Bool,
-    Null,
-    Reserved,
-}
-
-impl ValueType {
-    pub fn of(value: &Value) -> Self {
-        match value {
-            Value::Int(_) => ValueType::Int,
-            Value::String(_) => ValueType::String,
-            Value::Seq(_) => ValueType::Seq,
-            Value::Map(_) => ValueType::Map,
-            Value::Float(_) => ValueType::Float,
-            Value::Bytes(_) => ValueType::Bytes,
-            Value::Bool(_) => ValueType::Bool,
-            Value::Null(_) => ValueType::Null,
-        }
-    }
-}
-
-impl From<Marker> for ValueType {
-    fn from(value: Marker) -> Self {
-        match value {
-            Marker::Int => Self::Int,
-            Marker::String => Self::String,
-            Marker::Seq => Self::Seq,
-            Marker::Map => Self::Map,
-            Marker::Float => Self::Float,
-            Marker::Bytes => Self::Bytes,
-            Marker::Bool => Self::Bool,
-            Marker::Null => Self::Null,
-            Marker::Reserved => Self::Reserved,
-        }
-    }
-}
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum Value {
