@@ -61,11 +61,6 @@ where
 
         Ok(())
     }
-
-    #[allow(dead_code)]
-    fn existing(&self) -> usize {
-        self.pos
-    }
 }
 
 // MARK: - Tests
@@ -87,17 +82,6 @@ mod test {
         encoder.push_bytes(&[2, 3]).unwrap();
 
         assert_eq!(vec, vec![1, 2, 3]);
-    }
-
-    #[test]
-    fn existing() {
-        let mut vec: Vec<u8> = Vec::new();
-        let writer = StdIoWriter::new(&mut vec);
-        let mut encoder = Encoder::new(writer);
-        assert_eq!(encoder.existing(), 0);
-
-        encoder.push_bytes(&[42]).unwrap();
-        assert_eq!(encoder.existing(), 1);
     }
 
     #[test]
