@@ -8,6 +8,7 @@ pub mod encoder;
 pub mod error;
 pub mod header;
 pub mod io;
+pub mod marker;
 pub mod value;
 
 mod binary;
