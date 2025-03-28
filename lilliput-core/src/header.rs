@@ -78,6 +78,7 @@ impl Marker {
         }
     }
 
+    #[inline]
     pub fn detect(byte: u8) -> Self {
         match byte.leading_zeros() {
             // 0b10000000
@@ -101,6 +102,7 @@ impl Marker {
         }
     }
 
+    #[inline]
     fn validate(self, byte: u8) -> Result<(), Expectation<Self>> {
         let detected = Marker::detect(byte);
         let is_valid = detected == self;
