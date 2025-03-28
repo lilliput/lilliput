@@ -1,7 +1,8 @@
 use crate::{
     error::{Error, Result},
-    header::{DecodeHeader, Header, Marker},
+    header::{DecodeHeader, Header},
     io::{Read, Reference},
+    marker::Marker,
     value::Value,
 };
 
