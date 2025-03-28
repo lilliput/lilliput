@@ -108,7 +108,7 @@ impl StringHeader {
         len <= (Self::COMPACT_LEN_BITS as usize)
     }
 
-    #[inline(always)]
+    #[inline]
     fn debug_assert_repr_valid(repr: StringHeaderRepr) {
         match repr {
             StringHeaderRepr::Compact { len } => {

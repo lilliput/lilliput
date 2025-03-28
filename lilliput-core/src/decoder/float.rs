@@ -41,7 +41,7 @@ where
         self.decode_float_value_bytes(width)
     }
 
-    #[inline(always)]
+    #[inline]
     fn decode_float_value_bytes<T>(&mut self, width: u8) -> Result<T>
     where
         T: FromFloat<f32> + FromFloat<f64>,

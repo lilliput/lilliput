@@ -154,54 +154,63 @@ pub enum Header {
 }
 
 impl Default for Header {
+    #[inline]
     fn default() -> Self {
         Self::Null(NullHeader)
     }
 }
 
 impl From<IntHeader> for Header {
+    #[inline]
     fn from(value: IntHeader) -> Self {
         Self::Int(value)
     }
 }
 
 impl From<StringHeader> for Header {
+    #[inline]
     fn from(value: StringHeader) -> Self {
         Self::String(value)
     }
 }
 
 impl From<SeqHeader> for Header {
+    #[inline]
     fn from(value: SeqHeader) -> Self {
         Self::Seq(value)
     }
 }
 
 impl From<MapHeader> for Header {
+    #[inline]
     fn from(value: MapHeader) -> Self {
         Self::Map(value)
     }
 }
 
 impl From<FloatHeader> for Header {
+    #[inline]
     fn from(value: FloatHeader) -> Self {
         Self::Float(value)
     }
 }
 
 impl From<BytesHeader> for Header {
+    #[inline]
     fn from(value: BytesHeader) -> Self {
         Self::Bytes(value)
     }
 }
 
 impl From<BoolHeader> for Header {
+    #[inline]
     fn from(value: BoolHeader) -> Self {
         Self::Bool(value)
     }
 }
 
 impl From<NullHeader> for Header {
+    #[inline]
     fn from(value: NullHeader) -> Self {
         Self::Null(value)
     }

@@ -107,7 +107,7 @@ impl SeqHeader {
         })
     }
 
-    #[inline(always)]
+    #[inline]
     fn debug_assert_repr_valid(repr: SeqHeaderRepr) {
         match repr {
             SeqHeaderRepr::Compact { len } => {

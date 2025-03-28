@@ -19,7 +19,7 @@ where
     T: PrimInt,
     U: PrimInt + TryFromInt<T>,
 {
-    #[inline(always)]
+    #[inline]
     fn try_into_int(self) -> Result<U, core::num::TryFromIntError> {
         U::try_from_int(self)
     }
@@ -36,7 +36,7 @@ macro_rules! impl_try_from_int {
             where
                 $t: TryFrom<$i, Error = core::convert::Infallible>
             {
-                #[inline(always)]
+                #[inline]
                 fn try_from_int(int: $i) -> Result<$t, core::num::TryFromIntError> {
                     Ok(int.try_into().unwrap())
                 }
@@ -46,7 +46,7 @@ macro_rules! impl_try_from_int {
     ($t:ty, fallible: [$($f:ty),* $(,)?]) => {
         $(
             impl TryFromInt<$f> for $t {
-                #[inline(always)]
+                #[inline]
                 fn try_from_int(int: $f) -> Result<Self, core::num::TryFromIntError> {
                     int.try_into()
                 }
@@ -78,7 +78,7 @@ pub trait CompactWidth: Sealed {
 macro_rules! impl_compact_width {
     ($t:ty) => {
         impl CompactWidth for $t {
-            #[inline(always)]
+            #[inline]
             fn compact_width(self) -> u8 {
                 let bytes = (Self::BITS / u8::BITS) as u8;
                 let leading_zero_bytes = (self.leading_zeros() / u8::BITS) as u8;

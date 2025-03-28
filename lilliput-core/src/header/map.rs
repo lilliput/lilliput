@@ -110,7 +110,7 @@ impl MapHeader {
         len <= (Self::COMPACT_LEN_BITS as usize)
     }
 
-    #[inline(always)]
+    #[inline]
     fn debug_assert_repr_valid(repr: MapHeaderRepr) {
         match repr {
             MapHeaderRepr::Compact { len } => {

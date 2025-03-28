@@ -123,7 +123,7 @@ where
         Ok(bytes)
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn peek_header<T>(&mut self) -> Result<T>
     where
         T: DecodeHeader,
@@ -134,7 +134,7 @@ where
         Self::decode_header(byte, Some(pos))
     }
 
-    #[inline(always)]
+    #[inline]
     fn pull_header<T>(&mut self) -> Result<T>
     where
         T: DecodeHeader,
@@ -145,7 +145,7 @@ where
         Self::decode_header(byte, Some(pos))
     }
 
-    #[inline(always)]
+    #[inline]
     fn decode_header<T>(byte: u8, pos: Option<usize>) -> Result<T>
     where
         T: DecodeHeader,
@@ -155,7 +155,7 @@ where
         })
     }
 
-    #[inline(always)]
+    #[inline]
     fn pull_len_bytes(&mut self, len_width: u8) -> Result<usize> {
         let pos = self.pos;
 
