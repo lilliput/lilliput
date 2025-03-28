@@ -1,6 +1,7 @@
 use crate::error::Expectation;
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+#[repr(u8)]
 pub enum Marker {
     Int = 0b10000000,
     String = 0b01000000,
@@ -38,43 +39,29 @@ impl serde::de::Expected for Marker {
 
 impl Marker {
     #[inline]
-    fn from_repr(repr: u8) -> Self {
-        match repr {
-            0b10000000 => Self::Int,
-            0b01000000 => Self::String,
-            0b00100000 => Self::Seq,
-            0b00010000 => Self::Map,
-            0b00001000 => Self::Float,
-            0b00000100 => Self::Bytes,
-            0b00000010 => Self::Bool,
-            0b00000001 => Self::Null,
-            0b00000000 => Self::Reserved,
-            _ => unreachable!(),
-        }
+    pub fn detect(byte: u8) -> Self {
+        // Safety: The following is safe because:
+        // - the value returned by `Self::repr_for(byte)` is
+        //   guaranteed to contain at most a single non-zero bit.
+        // - `Marker` is `#[repr(u8)]`, and covers each possible `repr`.
+        //
+        // This unsafe cast directly from the repr provided
+        // a 14% performance boost compared to a safe match:
+        //
+        // ```
+        // match byte.leading_zeros() {
+        //     0 => Self::Int,
+        //     // ...
+        //     8 => Self::Reserved,
+        // }
+        // ```
+        unsafe { std::mem::transmute_copy(&Self::repr_for(byte)) }
     }
 
     #[inline]
-    pub fn detect(byte: u8) -> Self {
-        match byte.leading_zeros() {
-            // 0b10000000
-            0 => Self::Int,
-            // 0b01000000
-            1 => Self::String,
-            // 0b00100000
-            2 => Self::Seq,
-            // 0b00010000
-            3 => Self::Map,
-            // 0b00001000
-            4 => Self::Float,
-            // 0b00000100
-            5 => Self::Bytes,
-            // 0b00000010
-            6 => Self::Bool,
-            // 0b00000001
-            7 => Self::Null,
-            // 0b00000000
-            _ => Self::Reserved,
-        }
+    fn repr_for(byte: u8) -> u8 {
+        let leading_zeros = byte.leading_zeros();
+        0b10000000_u8.checked_shr(leading_zeros).unwrap_or_default()
     }
 
     #[inline]
