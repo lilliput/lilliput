@@ -117,7 +117,7 @@ impl MapHeader {
                 debug_assert!(len <= Self::COMPACT_LEN_BITS);
             }
             MapHeaderRepr::Extended { len_width } => {
-                debug_assert!(len_width <= Self::EXTENDED_LEN_WIDTH_BITS);
+                debug_assert!(len_width - 1 <= Self::EXTENDED_LEN_WIDTH_BITS);
             }
         }
     }
