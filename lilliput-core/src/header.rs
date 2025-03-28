@@ -28,7 +28,6 @@ pub trait EncodeHeader: Sized {
     fn encode(self) -> u8;
 }
 
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub enum Marker {
     Int = 0b10000000,
