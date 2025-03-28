@@ -130,7 +130,7 @@ impl IntHeader {
         Self::from_repr(IntHeaderRepr::Extended { is_signed, width })
     }
 
-    #[inline(always)]
+    #[inline]
     fn debug_assert_repr_valid(repr: IntHeaderRepr) {
         match repr {
             IntHeaderRepr::Compact { bits, .. } => {

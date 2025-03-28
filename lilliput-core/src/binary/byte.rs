@@ -17,61 +17,61 @@ impl Byte {
     #![allow(dead_code)]
 
     /// Returns `true`, if `self` contains only bits from `mask`, otherwise `false`.
-    #[inline(always)]
+    #[inline]
     pub(crate) fn is_masked_by(self, mask: u8) -> bool {
         self.0 & !mask == 0b0
     }
 
     /// Returns `true`, if `self` contains all bits from `mask`, or `mask` itself is empty, otherwise `false`.
-    #[inline(always)]
+    #[inline]
     pub(crate) fn contains_bits(self, mask: u8) -> bool {
         (self.0 & mask == mask) || mask == 0b0
     }
 
     /// Returns a logical `self & mask`.
-    #[inline(always)]
+    #[inline]
     pub(crate) fn masked_bits(self, mask: u8) -> u8 {
         self.0 & mask
     }
 
     /// Performs a logical `self &= mask`, clearing all bits not found in `mask`.
-    #[inline(always)]
+    #[inline]
     pub(crate) fn mask_bits(&mut self, mask: u8) {
         self.0 &= mask;
     }
 
     /// Performs a logical `self \= mask`, setting all bits found in `mask`.
-    #[inline(always)]
+    #[inline]
     pub(crate) fn set_bits(&mut self, mask: u8) {
         self.0 |= mask;
     }
 
     /// Performs a logical `self &= !mask`, clearing all bits found in `mask`.
-    #[inline(always)]
+    #[inline]
     pub(crate) fn clear_bits(&mut self, mask: u8) {
         self.0 &= !mask;
     }
 
     /// Conditionally sets bits (branch-less).
-    #[inline(always)]
+    #[inline]
     pub(crate) fn set_bits_if(&mut self, mask: u8, condition: bool) {
         self.set_bits(Self::masked_if(mask, condition));
     }
 
     /// Conditionally clears bits (branch-less).
-    #[inline(always)]
+    #[inline]
     pub(crate) fn clear_bits_if(&mut self, mask: u8, condition: bool) {
         self.clear_bits(Self::masked_if(mask, condition));
     }
 
     /// Performs a logical `self \= mask`, setting all bits found in `mask`.
-    #[inline(always)]
+    #[inline]
     pub(crate) fn set_bits_masked_by(&mut self, bits: u8, mask: u8) {
         self.set_bits(Self::masked_by(bits, mask));
     }
 
     /// Performs a logical `self \= mask`, setting all bits found in `mask`.
-    #[inline(always)]
+    #[inline]
     pub(crate) fn set_bits_assert_masked_by(&mut self, bits: u8, mask: u8) {
         debug_assert!(
             bits & !mask == 0b0,
@@ -82,7 +82,7 @@ impl Byte {
     }
 
     /// Performs a logical `self \= mask`, setting all bits found in `mask`.
-    #[inline(always)]
+    #[inline]
     pub(crate) fn assert_masked_by(bits: u8, mask: u8) -> u8 {
         debug_assert!(
             bits & !mask == 0b0,
@@ -93,17 +93,17 @@ impl Byte {
     }
 
     /// Returns `bits`, masked by `mask`.
-    #[inline(always)]
+    #[inline]
     pub fn masked_by(bits: u8, mask: u8) -> u8 {
         bits & mask
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn masked_if(mask: u8, condition: bool) -> u8 {
         mask & Self::mask_all_if(condition)
     }
 
-    #[inline(always)]
+    #[inline]
     fn mask_all_if(condition: bool) -> u8 {
         !(condition as u8).wrapping_sub(1)
     }
