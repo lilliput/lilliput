@@ -91,3 +91,49 @@ impl Marker {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::ops::RangeInclusive;
+
+    use super::*;
+
+    const MARKERS: [Marker; 9] = [
+        Marker::Reserved,
+        Marker::Null,
+        Marker::Bool,
+        Marker::Bytes,
+        Marker::Float,
+        Marker::Map,
+        Marker::Seq,
+        Marker::String,
+        Marker::Int,
+    ];
+
+    fn bytes_for_marker(marker: Marker) -> RangeInclusive<u8> {
+        // A byte with only the repr bit set:
+        let min_byte = marker as u8;
+        // A byte with all bits lower than the repr bit set, too:
+        let max_byte = min_byte | min_byte.saturating_sub(1);
+        min_byte..=max_byte
+    }
+
+    #[test]
+    fn detect() {
+        for expected in MARKERS {
+            for byte in bytes_for_marker(expected) {
+                let actual = Marker::detect(byte);
+                assert_eq!(actual, expected);
+            }
+        }
+    }
+
+    #[test]
+    fn validate() {
+        for expected in MARKERS {
+            for byte in bytes_for_marker(expected) {
+                expected.validate(byte).unwrap();
+            }
+        }
+    }
+}
