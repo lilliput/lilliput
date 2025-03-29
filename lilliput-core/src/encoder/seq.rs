@@ -13,7 +13,7 @@ where
     W: Write,
 {
     pub fn encode_seq(&mut self, value: &[Value]) -> Result<()> {
-        self.encode_seq_start(value.len())?;
+        self.encode_seq_header(value.len())?;
 
         for value in value {
             self.encode_any(value)?;
@@ -26,7 +26,7 @@ where
         self.encode_seq(&value.0)
     }
 
-    pub fn encode_seq_start(&mut self, len: usize) -> Result<()> {
+    pub fn encode_seq_header(&mut self, len: usize) -> Result<()> {
         let header = if self.config.compact_ints {
             SeqHeader::optimal(len)
         } else {

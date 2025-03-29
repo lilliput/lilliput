@@ -13,7 +13,7 @@ where
     W: Write,
 {
     pub fn encode_map(&mut self, value: &Map) -> Result<()> {
-        self.encode_map_start(value.len())?;
+        self.encode_map_header(value.len())?;
 
         for (key, value) in value {
             self.encode_any(key)?;
@@ -27,7 +27,7 @@ where
         self.encode_map(&value.0)
     }
 
-    pub fn encode_map_start(&mut self, len: usize) -> Result<()> {
+    pub fn encode_map_header(&mut self, len: usize) -> Result<()> {
         let header = if self.config.compact_ints {
             MapHeader::optimal(len)
         } else {

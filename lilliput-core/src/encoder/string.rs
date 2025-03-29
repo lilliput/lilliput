@@ -16,7 +16,7 @@ where
         let len = value.len();
 
         // Push the value's header and length:
-        self.encode_str_start(len)?;
+        self.encode_str_header(len)?;
 
         // Push the value's actual bytes:
         self.push_bytes(value.as_bytes())?;
@@ -30,7 +30,7 @@ where
         Ok(())
     }
 
-    pub fn encode_str_start(&mut self, len: usize) -> Result<()> {
+    pub fn encode_str_header(&mut self, len: usize) -> Result<()> {
         let header = if self.config.compact_ints {
             StringHeader::optimal(len)
         } else {

@@ -156,9 +156,9 @@ fn bench_string(c: &mut Criterion, label: &str, config: EncoderConfig) {
         sampling_values_iter::<u32>(SAMPLES).map(|len| len as usize)
     }
 
-    g.bench_function(format!("encode_str_start @ {label}"), |b| {
+    g.bench_function(format!("encode_str_header @ {label}"), |b| {
         bench_sampled(b, config, lengths, |encoder, len| {
-            black_box(encoder.encode_str_start(black_box(len))).unwrap();
+            black_box(encoder.encode_str_header(black_box(len))).unwrap();
         });
     });
 
@@ -175,9 +175,9 @@ fn bench_seq(c: &mut Criterion, label: &str, config: EncoderConfig) {
         sampling_values_iter::<u32>(SAMPLES).map(|len| len as usize)
     }
 
-    g.bench_function(format!("encode_seq_start @ {label}"), |b| {
+    g.bench_function(format!("encode_seq_header @ {label}"), |b| {
         bench_sampled(b, config, lengths, |encoder, len| {
-            black_box(encoder.encode_seq_start(black_box(len))).unwrap();
+            black_box(encoder.encode_seq_header(black_box(len))).unwrap();
         });
     });
 
@@ -194,9 +194,9 @@ fn bench_map(c: &mut Criterion, label: &str, config: EncoderConfig) {
         sampling_values_iter::<u32>(SAMPLES).map(|len| len as usize)
     }
 
-    g.bench_function(format!("encode_map_start @ {label}"), |b| {
+    g.bench_function(format!("encode_map_header @ {label}"), |b| {
         bench_sampled(b, config, lengths, |encoder, len| {
-            black_box(encoder.encode_map_start(black_box(len))).unwrap();
+            black_box(encoder.encode_map_header(black_box(len))).unwrap();
         });
     });
 
@@ -238,9 +238,9 @@ fn bench_bytes(c: &mut Criterion, label: &str, config: EncoderConfig) {
 
     let mut g = c.benchmark_group("bytes");
 
-    g.bench_function(format!("encode_bytes_start @ {label}"), |b| {
+    g.bench_function(format!("encode_bytes_header @ {label}"), |b| {
         bench_sampled(b, config, lengths, |encoder, len| {
-            black_box(encoder.encode_bytes_start(black_box(len))).unwrap();
+            black_box(encoder.encode_bytes_header(black_box(len))).unwrap();
         });
     });
 
