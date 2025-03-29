@@ -10,7 +10,10 @@ use rand::{
 };
 use rand_xorshift::XorShiftRng;
 
-use lilliput_core::{encoder::Encoder, io::Write};
+use lilliput_core::{
+    encoder::{Encoder, EncoderConfig},
+    io::Write,
+};
 
 const LENGTHS: &[usize] = &[1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024];
 
@@ -32,10 +35,6 @@ impl Write for PlaceboWriter {
 
 const RNG_SEED: u64 = 42;
 
-fn placebo_encoder() -> Encoder<PlaceboWriter> {
-    Encoder::new(PlaceboWriter).compact_ints()
-}
-
 fn sampling_values_iter<T>(samples: usize) -> impl Iterator<Item = T>
 where
     StandardUniform: Distribution<T>,
@@ -45,14 +44,16 @@ where
         .take(samples)
 }
 
-fn bench_sampled<T, W, I, Fe, Fi, F>(bencher: &mut Bencher<'_>, encoder: Fe, values: Fi, mut f: F)
-where
+fn bench_sampled<T, I, Fi, F>(
+    bencher: &mut Bencher<'_>,
+    config: EncoderConfig,
+    values: Fi,
+    mut f: F,
+) where
     T: Copy,
-    W: Write,
-    Fe: Fn() -> Encoder<W>,
     Fi: Fn() -> I,
     I: Iterator<Item = T>,
-    F: FnMut(&mut Encoder<W>, T),
+    F: FnMut(&mut Encoder<PlaceboWriter>, T),
 {
     bencher.iter_custom(|iters| {
         let mut total_duration = Duration::ZERO;
@@ -78,12 +79,10 @@ where
     })
 }
 
-fn bench_int(c: &mut Criterion) {
+fn bench_int(c: &mut Criterion, config: EncoderConfig) {
     let mut group = c.benchmark_group("int");
 
     const SAMPLES: usize = 65_536;
-
-    let encoder = placebo_encoder;
 
     fn values<T>() -> impl Iterator<Item = T>
     where
@@ -93,49 +92,49 @@ fn bench_int(c: &mut Criterion) {
     }
 
     group.bench_function("u8", |b| {
-        bench_sampled(b, encoder, values, |encoder, value| {
+        bench_sampled(b, config, values, |encoder, value| {
             encoder.encode_u8(value).unwrap();
         });
     });
 
     group.bench_function("i8", |b| {
-        bench_sampled(b, encoder, values, |encoder, value| {
+        bench_sampled(b, config, values, |encoder, value| {
             encoder.encode_i8(value).unwrap();
         });
     });
 
     group.bench_function("u16", |b| {
-        bench_sampled(b, encoder, values, |encoder, value| {
+        bench_sampled(b, config, values, |encoder, value| {
             encoder.encode_u16(value).unwrap();
         });
     });
 
     group.bench_function("i16", |b| {
-        bench_sampled(b, encoder, values, |encoder, value| {
+        bench_sampled(b, config, values, |encoder, value| {
             encoder.encode_i16(value).unwrap();
         });
     });
 
     group.bench_function("u32", |b| {
-        bench_sampled(b, encoder, values, |encoder, value| {
+        bench_sampled(b, config, values, |encoder, value| {
             encoder.encode_u32(value).unwrap();
         });
     });
 
     group.bench_function("i32", |b| {
-        bench_sampled(b, encoder, values, |encoder, value| {
+        bench_sampled(b, config, values, |encoder, value| {
             encoder.encode_i32(value).unwrap();
         });
     });
 
     group.bench_function("u64", |b| {
-        bench_sampled(b, encoder, values, |encoder, value| {
+        bench_sampled(b, config, values, |encoder, value| {
             encoder.encode_u64(value).unwrap();
         });
     });
 
     group.bench_function("i64", |b| {
-        bench_sampled(b, encoder, values, |encoder, value| {
+        bench_sampled(b, config, values, |encoder, value| {
             encoder.encode_i64(value).unwrap();
         });
     });
@@ -143,7 +142,7 @@ fn bench_int(c: &mut Criterion) {
     group.finish();
 }
 
-fn bench_string(c: &mut Criterion) {
+fn bench_string(c: &mut Criterion, config: EncoderConfig) {
     const SAMPLES: usize = 256;
 
     let mut group = c.benchmark_group("string");
@@ -155,7 +154,7 @@ fn bench_string(c: &mut Criterion) {
             let lengths: &[usize] = LENGTHS;
 
             for _ in 0..iters {
-                let mut encoder = placebo_encoder();
+                let mut encoder = Encoder::new(PlaceboWriter, config);
 
                 let start = Instant::now();
                 for &len in lengths {
@@ -183,7 +182,7 @@ fn bench_string(c: &mut Criterion) {
                 .collect();
 
             for _ in 0..iters {
-                let mut encoder = placebo_encoder();
+                let mut encoder = Encoder::new(PlaceboWriter, config);
 
                 let start = Instant::now();
                 for input in &inputs {
@@ -198,7 +197,7 @@ fn bench_string(c: &mut Criterion) {
     });
 }
 
-fn bench_seq(c: &mut Criterion) {
+fn bench_seq(c: &mut Criterion, config: EncoderConfig) {
     const SAMPLES: usize = 65_536;
 
     let mut group = c.benchmark_group("seq");
@@ -210,7 +209,7 @@ fn bench_seq(c: &mut Criterion) {
             let lengths: &[usize] = LENGTHS;
 
             for _ in 0..iters {
-                let mut encoder = placebo_encoder();
+                let mut encoder = Encoder::new(PlaceboWriter, config);
 
                 let start = Instant::now();
                 for &len in lengths {
@@ -225,7 +224,7 @@ fn bench_seq(c: &mut Criterion) {
     });
 }
 
-fn bench_map(c: &mut Criterion) {
+fn bench_map(c: &mut Criterion, config: EncoderConfig) {
     const SAMPLES: usize = 65_536;
 
     let mut group = c.benchmark_group("map");
@@ -237,7 +236,7 @@ fn bench_map(c: &mut Criterion) {
             let lengths = LENGTHS;
 
             for _ in 0..iters {
-                let mut encoder = placebo_encoder();
+                let mut encoder = Encoder::new(PlaceboWriter, config);
 
                 let start = Instant::now();
                 for &len in lengths {
@@ -252,7 +251,7 @@ fn bench_map(c: &mut Criterion) {
     });
 }
 
-fn bench_float(c: &mut Criterion) {
+fn bench_float(c: &mut Criterion, config: EncoderConfig) {
     let mut group = c.benchmark_group("float");
 
     const SAMPLES: usize = 65_536;
@@ -269,7 +268,7 @@ fn bench_float(c: &mut Criterion) {
 
             for input in inputs {
                 for _ in 0..iters {
-                    let mut encoder = placebo_encoder();
+                    let mut encoder = Encoder::new(PlaceboWriter, config);
 
                     let start = Instant::now();
                     encoder.encode_f32(black_box(input)).unwrap();
@@ -294,7 +293,7 @@ fn bench_float(c: &mut Criterion) {
 
             for input in inputs {
                 for _ in 0..iters {
-                    let mut encoder = placebo_encoder();
+                    let mut encoder = Encoder::new(PlaceboWriter, config);
 
                     let start = Instant::now();
                     encoder.encode_f64(black_box(input)).unwrap();
@@ -310,7 +309,7 @@ fn bench_float(c: &mut Criterion) {
     group.finish();
 }
 
-fn bench_bytes(c: &mut Criterion) {
+fn bench_bytes(c: &mut Criterion, config: EncoderConfig) {
     let mut group = c.benchmark_group("bytes");
 
     group.bench_function("head-only", |b| {
@@ -320,7 +319,7 @@ fn bench_bytes(c: &mut Criterion) {
             let lengths: &[usize] = LENGTHS;
 
             for _ in 0..iters {
-                let mut encoder = placebo_encoder();
+                let mut encoder = Encoder::new(PlaceboWriter, config);
 
                 let start = Instant::now();
                 for &len in lengths {
@@ -342,7 +341,7 @@ fn bench_bytes(c: &mut Criterion) {
             let inputs: Vec<Vec<u8>> = lengths.into_iter().map(|&len| vec![0; len]).collect();
 
             for _ in 0..iters {
-                let mut encoder = placebo_encoder();
+                let mut encoder = Encoder::new(PlaceboWriter, config);
 
                 let start = Instant::now();
                 for input in &inputs {
@@ -357,7 +356,7 @@ fn bench_bytes(c: &mut Criterion) {
     });
 }
 
-fn bench_bool(c: &mut Criterion) {
+fn bench_bool(c: &mut Criterion, config: EncoderConfig) {
     const SAMPLES: usize = 2;
 
     c.bench_function("bool", |b| {
@@ -367,7 +366,7 @@ fn bench_bool(c: &mut Criterion) {
             let inputs: Vec<bool> = (0..SAMPLES).map(|i| i % 2 == 0).collect();
 
             for _ in 0..iters {
-                let mut encoder = placebo_encoder();
+                let mut encoder = Encoder::new(PlaceboWriter, config);
 
                 let start = Instant::now();
                 for &input in &inputs {
@@ -382,13 +381,13 @@ fn bench_bool(c: &mut Criterion) {
     });
 }
 
-fn bench_null(c: &mut Criterion) {
+fn bench_null(c: &mut Criterion, config: EncoderConfig) {
     c.bench_function("null", |b| {
         b.iter_custom(|iters| {
             let mut duration = Duration::ZERO;
 
             for _ in 0..iters {
-                let mut encoder = placebo_encoder();
+                let mut encoder = Encoder::new(PlaceboWriter, config);
 
                 let start = Instant::now();
                 encoder.encode_null().unwrap();
@@ -400,16 +399,31 @@ fn bench_null(c: &mut Criterion) {
     });
 }
 
-fn criterion_benchmark(c: &mut Criterion) {
-    bench_int(c);
-    bench_string(c);
-    bench_seq(c);
-    bench_map(c);
-    bench_float(c);
-    bench_bytes(c);
-    bench_bool(c);
-    bench_null(c);
+fn criterion_benchmark(c: &mut Criterion, config: EncoderConfig) {
+    bench_int(c, config);
+    bench_string(c, config);
+    bench_seq(c, config);
+    bench_map(c, config);
+    bench_float(c, config);
+    bench_bytes(c, config);
+    bench_bool(c, config);
+    bench_null(c, config);
 }
 
-criterion_group!(benches, criterion_benchmark);
-criterion_main!(benches);
+fn criterion_benchmark_verbatim(c: &mut Criterion) {
+    criterion_benchmark(
+        c,
+        EncoderConfig {
+            compact_ints: false,
+        },
+    );
+}
+
+fn criterion_benchmark_compact(c: &mut Criterion) {
+    criterion_benchmark(c, EncoderConfig { compact_ints: true });
+}
+
+criterion_group!(verbatim, criterion_benchmark_verbatim);
+criterion_group!(compact, criterion_benchmark_compact);
+
+criterion_main!(verbatim, compact);

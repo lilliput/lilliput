@@ -58,7 +58,7 @@ where
 
         let is_signed = true;
 
-        let header = if self.compact_ints {
+        let header = if self.config.compact_ints {
             IntHeader::optimal(is_signed, unsigned)
         } else {
             IntHeader::verbatim(is_signed, unsigned)
@@ -83,7 +83,7 @@ where
     {
         let is_signed = false;
 
-        let header = if self.compact_ints {
+        let header = if self.config.compact_ints {
             IntHeader::optimal(is_signed, unsigned)
         } else {
             IntHeader::verbatim(is_signed, unsigned)

@@ -31,7 +31,7 @@ where
     }
 
     pub fn encode_str_start(&mut self, len: usize) -> Result<()> {
-        let header = if self.compact_ints {
+        let header = if self.config.compact_ints {
             StringHeader::optimal(len)
         } else {
             StringHeader::verbatim(len)

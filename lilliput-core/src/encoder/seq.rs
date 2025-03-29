@@ -27,7 +27,7 @@ where
     }
 
     pub fn encode_seq_start(&mut self, len: usize) -> Result<()> {
-        let header = if self.compact_ints {
+        let header = if self.config.compact_ints {
             SeqHeader::optimal(len)
         } else {
             SeqHeader::verbatim(len)

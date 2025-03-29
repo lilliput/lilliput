@@ -134,7 +134,7 @@ mod tests {
 
     use crate::{
         decoder::Decoder,
-        encoder::Encoder,
+        encoder::{Encoder, EncoderConfig},
         io::{SliceReader, VecWriter},
         value::Value,
     };
@@ -158,10 +158,10 @@ mod tests {
 
     proptest! {
         #[test]
-        fn encode_decode_roundtrip(value in FloatValue::arbitrary()) {
+        fn encode_decode_roundtrip(value in FloatValue::arbitrary(), config in EncoderConfig::arbitrary()) {
             let mut encoded: Vec<u8> = Vec::new();
             let writer = VecWriter::new(&mut encoded);
-            let mut encoder = Encoder::new(writer).compact_ints();
+            let mut encoder = Encoder::new(writer, config);
             encoder.encode_float_value(&value).unwrap();
 
             let reader = SliceReader::new(&encoded);

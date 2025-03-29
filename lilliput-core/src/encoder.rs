@@ -9,25 +9,33 @@ mod null;
 mod seq;
 mod string;
 
+#[cfg_attr(any(test, feature = "testing"), derive(proptest_derive::Arbitrary))]
+#[derive(Default, Copy, Clone, Eq, PartialEq, Hash, Debug)]
+pub struct EncoderConfig {
+    pub compact_ints: bool,
+}
+
+impl EncoderConfig {
+    pub fn compact_ints(mut self, compact: bool) -> Self {
+        self.compact_ints = compact;
+        self
+    }
+}
+
 #[derive(Debug)]
 pub struct Encoder<W> {
     writer: W,
     pos: usize,
-    compact_ints: bool,
+    config: EncoderConfig,
 }
 
 impl<W> Encoder<W> {
-    pub fn new(writer: W) -> Self {
+    pub fn new(writer: W, config: EncoderConfig) -> Self {
         Encoder {
             writer,
             pos: 0,
-            compact_ints: false,
+            config,
         }
-    }
-
-    pub fn compact_ints(mut self) -> Self {
-        self.compact_ints = true;
-        self
     }
 }
 
@@ -75,7 +83,7 @@ mod test {
     fn push_bytes() {
         let mut vec: Vec<u8> = Vec::new();
         let writer = VecWriter::new(&mut vec);
-        let mut encoder = Encoder::new(writer);
+        let mut encoder = Encoder::new(writer, EncoderConfig::default());
 
         encoder.push_bytes(&[]).unwrap();
         encoder.push_bytes(&[1]).unwrap();
@@ -88,7 +96,7 @@ mod test {
     fn into_vec() {
         let mut vec: Vec<u8> = Vec::new();
         let writer = StdIoWriter::new(&mut vec);
-        let mut encoder = Encoder::new(writer);
+        let mut encoder = Encoder::new(writer, EncoderConfig::default());
         encoder.push_bytes(&[1, 2, 3]).unwrap();
 
         assert_eq!(vec, vec![1, 2, 3]);
