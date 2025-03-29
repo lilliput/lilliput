@@ -30,10 +30,6 @@ where
         Ok(map)
     }
 
-    pub fn decode_map_value(&mut self) -> Result<MapValue> {
-        self.decode_map().map(From::from)
-    }
-
     pub fn decode_map_header(&mut self) -> Result<usize> {
         let header: MapHeader = self.pull_header()?;
 
@@ -43,5 +39,9 @@ where
         };
 
         Ok(len)
+    }
+
+    pub fn decode_map_value(&mut self) -> Result<MapValue> {
+        self.decode_map().map(From::from)
     }
 }
