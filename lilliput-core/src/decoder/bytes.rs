@@ -15,10 +15,7 @@ where
         &'s mut self,
         scratch: &'s mut Vec<u8>,
     ) -> Result<Reference<'de, 's, [u8]>> {
-        let header: BytesHeader = self.pull_header()?;
-
-        let len_width = header.len_width();
-        let len = self.pull_len_bytes(len_width)?;
+        let len = self.decode_bytes_header()?;
 
         self.pull_bytes(len, scratch)
     }
@@ -37,6 +34,13 @@ where
         }
 
         Ok(buf)
+    }
+
+    pub fn decode_bytes_header(&mut self) -> Result<usize> {
+        let header: BytesHeader = self.pull_header()?;
+
+        let len_width = header.len_width();
+        self.pull_len_bytes(len_width)
     }
 
     pub fn decode_bytes_value(&mut self) -> Result<BytesValue> {

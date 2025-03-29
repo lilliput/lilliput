@@ -80,12 +80,7 @@ where
         &'s mut self,
         scratch: &'s mut Vec<u8>,
     ) -> Result<(Reference<'de, 's, [u8]>, Range<usize>)> {
-        let header: StringHeader = self.pull_header()?;
-
-        let len: usize = match header.repr() {
-            StringHeaderRepr::Compact { len } => len.into(),
-            StringHeaderRepr::Extended { len_width } => self.pull_len_bytes(len_width)?,
-        };
+        let len = self.decode_str_header()?;
 
         scratch.clear();
 
@@ -94,5 +89,16 @@ where
         let range = start..(start + bytes.len());
 
         Ok((bytes, range))
+    }
+
+    fn decode_str_header(&mut self) -> Result<usize> {
+        let header: StringHeader = self.pull_header()?;
+
+        let len: usize = match header.repr() {
+            StringHeaderRepr::Compact { len } => len.into(),
+            StringHeaderRepr::Extended { len_width } => self.pull_len_bytes(len_width)?,
+        };
+
+        Ok(len)
     }
 }
