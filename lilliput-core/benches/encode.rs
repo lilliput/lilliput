@@ -12,10 +12,9 @@ use rand_xorshift::XorShiftRng;
 
 use lilliput_core::{
     encoder::{Encoder, EncoderConfig},
+    error::Result,
     io::Write,
 };
-
-const LENGTHS: &[usize] = &[1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024];
 
 struct PlaceboWriter;
 
@@ -23,25 +22,28 @@ impl Write for PlaceboWriter {
     type Error = Infallible;
 
     #[inline(never)]
-    fn write(&mut self, buf: &[u8]) -> lilliput_core::error::Result<usize> {
+    fn write(&mut self, buf: &[u8]) -> Result<usize> {
         black_box(Ok(buf.len()))
     }
 
     #[inline(never)]
-    fn flush(&mut self) -> lilliput_core::error::Result<()> {
+    fn flush(&mut self) -> Result<()> {
         Ok(())
     }
 }
 
+const SAMPLES: usize = 65_536;
 const RNG_SEED: u64 = 42;
+
+fn seeded_rng() -> XorShiftRng {
+    XorShiftRng::seed_from_u64(RNG_SEED)
+}
 
 fn sampling_values_iter<T>(samples: usize) -> impl Iterator<Item = T>
 where
     StandardUniform: Distribution<T>,
 {
-    XorShiftRng::seed_from_u64(RNG_SEED)
-        .random_iter()
-        .take(samples)
+    seeded_rng().random_iter().take(samples)
 }
 
 fn bench_sampled<T, I, Fi, F>(
@@ -59,30 +61,150 @@ fn bench_sampled<T, I, Fi, F>(
         let mut total_duration = Duration::ZERO;
 
         for _ in 0..iters {
-            let mut iter_duration = Duration::ZERO;
-
             let mut samples: u32 = 0;
-            let mut encoder = encoder();
 
+            let writer = PlaceboWriter;
+            let mut encoder = Encoder::new(writer, config);
+
+            // The actual operation we're measuring is faster than we can reasonably measure
+            // without significant bias from the overhead of computing `Instant`/`Duration`,
+            // so rather than measure a single operation we measure a batch of operations,
+            // based on randomized input bytes:
             let start = Instant::now();
             for value in values() {
                 f(black_box(&mut encoder), black_box(value));
                 samples += 1;
             }
-            iter_duration += start.elapsed();
+            let duration = start.elapsed();
 
             // Calculate mean duration over sampled values:
-            total_duration += iter_duration.checked_div(samples).unwrap();
+            total_duration += duration.checked_div(samples).unwrap();
         }
 
         total_duration
     })
 }
 
-fn bench_int(c: &mut Criterion, config: EncoderConfig) {
-    let mut group = c.benchmark_group("int");
+fn bench_int(c: &mut Criterion, label: &str, config: EncoderConfig) {
+    fn values<T>() -> impl Iterator<Item = T>
+    where
+        StandardUniform: Distribution<T>,
+    {
+        sampling_values_iter(SAMPLES)
+    }
 
-    const SAMPLES: usize = 65_536;
+    let mut g = c.benchmark_group("int");
+
+    g.bench_function(format!("encode_u8 @ {label}"), |b| {
+        bench_sampled(b, config, values, |encoder, value| {
+            black_box(encoder.encode_u8(black_box(value))).unwrap();
+        });
+    });
+
+    g.bench_function(format!("encode_i8 @ {label}"), |b| {
+        bench_sampled(b, config, values, |encoder, value| {
+            black_box(encoder.encode_i8(black_box(value))).unwrap();
+        });
+    });
+
+    g.bench_function(format!("encode_u16 @ {label}"), |b| {
+        bench_sampled(b, config, values, |encoder, value| {
+            black_box(encoder.encode_u16(black_box(value))).unwrap();
+        });
+    });
+
+    g.bench_function(format!("encode_i16 @ {label}"), |b| {
+        bench_sampled(b, config, values, |encoder, value| {
+            black_box(encoder.encode_i16(black_box(value))).unwrap();
+        });
+    });
+
+    g.bench_function(format!("encode_u32 @ {label}"), |b| {
+        bench_sampled(b, config, values, |encoder, value| {
+            black_box(encoder.encode_u32(black_box(value))).unwrap();
+        });
+    });
+
+    g.bench_function(format!("encode_i32 @ {label}"), |b| {
+        bench_sampled(b, config, values, |encoder, value| {
+            black_box(encoder.encode_i32(black_box(value))).unwrap();
+        });
+    });
+
+    g.bench_function(format!("encode_u64 @ {label}"), |b| {
+        bench_sampled(b, config, values, |encoder, value| {
+            black_box(encoder.encode_u64(black_box(value))).unwrap();
+        });
+    });
+
+    g.bench_function(format!("encode_i64 @ {label}"), |b| {
+        bench_sampled(b, config, values, |encoder, value| {
+            black_box(encoder.encode_i64(black_box(value))).unwrap();
+        });
+    });
+
+    g.finish();
+}
+
+fn bench_string(c: &mut Criterion, label: &str, config: EncoderConfig) {
+    let mut g = c.benchmark_group("string");
+
+    fn lengths() -> impl Iterator<Item = usize>
+    where
+        StandardUniform: Distribution<u32>,
+    {
+        sampling_values_iter::<u32>(SAMPLES).map(|len| len as usize)
+    }
+
+    g.bench_function(format!("encode_str_start @ {label}"), |b| {
+        bench_sampled(b, config, lengths, |encoder, len| {
+            black_box(encoder.encode_str_start(black_box(len))).unwrap();
+        });
+    });
+
+    g.finish();
+}
+
+fn bench_seq(c: &mut Criterion, label: &str, config: EncoderConfig) {
+    let mut g = c.benchmark_group("seq");
+
+    fn lengths() -> impl Iterator<Item = usize>
+    where
+        StandardUniform: Distribution<u32>,
+    {
+        sampling_values_iter::<u32>(SAMPLES).map(|len| len as usize)
+    }
+
+    g.bench_function(format!("encode_seq_start @ {label}"), |b| {
+        bench_sampled(b, config, lengths, |encoder, len| {
+            black_box(encoder.encode_seq_start(black_box(len))).unwrap();
+        });
+    });
+
+    g.finish();
+}
+
+fn bench_map(c: &mut Criterion, label: &str, config: EncoderConfig) {
+    let mut g = c.benchmark_group("map");
+
+    fn lengths() -> impl Iterator<Item = usize>
+    where
+        StandardUniform: Distribution<u32>,
+    {
+        sampling_values_iter::<u32>(SAMPLES).map(|len| len as usize)
+    }
+
+    g.bench_function(format!("encode_map_start @ {label}"), |b| {
+        bench_sampled(b, config, lengths, |encoder, len| {
+            black_box(encoder.encode_map_start(black_box(len))).unwrap();
+        });
+    });
+
+    g.finish();
+}
+
+fn bench_float(c: &mut Criterion, label: &str, config: EncoderConfig) {
+    let mut g = c.benchmark_group("float");
 
     fn values<T>() -> impl Iterator<Item = T>
     where
@@ -91,339 +213,90 @@ fn bench_int(c: &mut Criterion, config: EncoderConfig) {
         sampling_values_iter(SAMPLES)
     }
 
-    group.bench_function("u8", |b| {
+    g.bench_function(format!("encode_f32 @ {label}"), |b| {
         bench_sampled(b, config, values, |encoder, value| {
-            encoder.encode_u8(value).unwrap();
+            black_box(encoder.encode_f32(value)).unwrap();
         });
     });
 
-    group.bench_function("i8", |b| {
+    g.bench_function(format!("encode_f64 @ {label}"), |b| {
         bench_sampled(b, config, values, |encoder, value| {
-            encoder.encode_i8(value).unwrap();
+            black_box(encoder.encode_f64(value)).unwrap();
         });
     });
 
-    group.bench_function("u16", |b| {
-        bench_sampled(b, config, values, |encoder, value| {
-            encoder.encode_u16(value).unwrap();
+    g.finish();
+}
+
+fn bench_bytes(c: &mut Criterion, label: &str, config: EncoderConfig) {
+    fn lengths() -> impl Iterator<Item = usize>
+    where
+        StandardUniform: Distribution<u32>,
+    {
+        sampling_values_iter::<u32>(SAMPLES).map(|len| len as usize)
+    }
+
+    let mut g = c.benchmark_group("bytes");
+
+    g.bench_function(format!("encode_bytes_start @ {label}"), |b| {
+        bench_sampled(b, config, lengths, |encoder, len| {
+            black_box(encoder.encode_bytes_start(black_box(len))).unwrap();
         });
     });
 
-    group.bench_function("i16", |b| {
-        bench_sampled(b, config, values, |encoder, value| {
-            encoder.encode_i16(value).unwrap();
+    g.finish();
+}
+
+fn bench_bool(c: &mut Criterion, label: &str, config: EncoderConfig) {
+    fn flags() -> impl Iterator<Item = bool>
+    where
+        StandardUniform: Distribution<bool>,
+    {
+        sampling_values_iter(SAMPLES)
+    }
+
+    let mut g = c.benchmark_group("bool");
+
+    g.bench_function(format!("encode_bool @ {label}"), |b| {
+        bench_sampled(b, config, flags, |encoder, flag| {
+            black_box(encoder.encode_bool(black_box(flag))).unwrap();
         });
     });
 
-    group.bench_function("u32", |b| {
-        bench_sampled(b, config, values, |encoder, value| {
-            encoder.encode_u32(value).unwrap();
+    g.finish();
+}
+
+fn bench_null(c: &mut Criterion, label: &str, config: EncoderConfig) {
+    fn units() -> impl Iterator<Item = ()> {
+        std::iter::repeat_n((), SAMPLES)
+    }
+
+    let mut g = c.benchmark_group("null");
+
+    g.bench_function(format!("encode_null @ {label}"), |b| {
+        bench_sampled(b, config, units, |encoder, ()| {
+            black_box(encoder.encode_null()).unwrap();
         });
     });
 
-    group.bench_function("i32", |b| {
-        bench_sampled(b, config, values, |encoder, value| {
-            encoder.encode_i32(value).unwrap();
-        });
-    });
-
-    group.bench_function("u64", |b| {
-        bench_sampled(b, config, values, |encoder, value| {
-            encoder.encode_u64(value).unwrap();
-        });
-    });
-
-    group.bench_function("i64", |b| {
-        bench_sampled(b, config, values, |encoder, value| {
-            encoder.encode_i64(value).unwrap();
-        });
-    });
-
-    group.finish();
+    g.finish();
 }
 
-fn bench_string(c: &mut Criterion, config: EncoderConfig) {
-    const SAMPLES: usize = 256;
-
-    let mut group = c.benchmark_group("string");
-
-    group.bench_function("head-only", |b| {
-        b.iter_custom(|iters| {
-            let mut duration = Duration::ZERO;
-
-            let lengths: &[usize] = LENGTHS;
-
-            for _ in 0..iters {
-                let mut encoder = Encoder::new(PlaceboWriter, config);
-
-                let start = Instant::now();
-                for &len in lengths {
-                    encoder.encode_str_start(black_box(len)).unwrap();
-                }
-                duration += start.elapsed();
-            }
-
-            // Calculate mean duration over inputs:
-            duration.checked_div(SAMPLES as u32).unwrap()
-        })
-    });
-
-    group.bench_function("full", |b| {
-        b.iter_custom(|iters| {
-            let mut duration = Duration::ZERO;
-
-            let inputs: Vec<String> = LENGTHS
-                .into_iter()
-                .map(|&len| {
-                    (1..=len)
-                        .map(|i| char::from_u32(i as u32).unwrap())
-                        .collect()
-                })
-                .collect();
-
-            for _ in 0..iters {
-                let mut encoder = Encoder::new(PlaceboWriter, config);
-
-                let start = Instant::now();
-                for input in &inputs {
-                    encoder.encode_str(black_box(&input)).unwrap();
-                }
-                duration += start.elapsed();
-            }
-
-            // Calculate mean duration over inputs:
-            duration.checked_div(SAMPLES as u32).unwrap()
-        })
-    });
+fn benchmark_with_config(c: &mut Criterion, label: &str, config: EncoderConfig) {
+    bench_int(c, label, config);
+    bench_string(c, label, config);
+    bench_seq(c, label, config);
+    bench_map(c, label, config);
+    bench_float(c, label, config);
+    bench_bytes(c, label, config);
+    bench_bool(c, label, config);
+    bench_null(c, label, config);
 }
 
-fn bench_seq(c: &mut Criterion, config: EncoderConfig) {
-    const SAMPLES: usize = 65_536;
-
-    let mut group = c.benchmark_group("seq");
-
-    group.bench_function("head-only", |b| {
-        b.iter_custom(|iters| {
-            let mut duration = Duration::ZERO;
-
-            let lengths: &[usize] = LENGTHS;
-
-            for _ in 0..iters {
-                let mut encoder = Encoder::new(PlaceboWriter, config);
-
-                let start = Instant::now();
-                for &len in lengths {
-                    encoder.encode_seq_start(black_box(len)).unwrap();
-                }
-                duration += start.elapsed();
-            }
-
-            // Calculate mean duration over inputs:
-            duration.checked_div(SAMPLES as u32).unwrap()
-        })
-    });
+fn benchmark_default_config(c: &mut Criterion) {
+    benchmark_with_config(c, "default", EncoderConfig::default());
 }
 
-fn bench_map(c: &mut Criterion, config: EncoderConfig) {
-    const SAMPLES: usize = 65_536;
+criterion_group!(default_config, benchmark_default_config);
 
-    let mut group = c.benchmark_group("map");
-
-    group.bench_function("head-only", |b| {
-        b.iter_custom(|iters| {
-            let mut duration = Duration::ZERO;
-
-            let lengths = LENGTHS;
-
-            for _ in 0..iters {
-                let mut encoder = Encoder::new(PlaceboWriter, config);
-
-                let start = Instant::now();
-                for &len in lengths {
-                    encoder.encode_map_start(black_box(len)).unwrap();
-                }
-                duration += start.elapsed();
-            }
-
-            // Calculate mean duration over inputs:
-            duration.checked_div(SAMPLES as u32).unwrap()
-        })
-    });
-}
-
-fn bench_float(c: &mut Criterion, config: EncoderConfig) {
-    let mut group = c.benchmark_group("float");
-
-    const SAMPLES: usize = 65_536;
-
-    group.bench_function("f32", |b| {
-        b.iter_custom(|iters| {
-            let mut duration = Duration::ZERO;
-
-            let samples: u32 = SAMPLES as u32;
-
-            let inputs: Vec<f32> = (0..samples)
-                .map(|sample| f32::from_bits((u32::MAX / samples) * sample))
-                .collect();
-
-            for input in inputs {
-                for _ in 0..iters {
-                    let mut encoder = Encoder::new(PlaceboWriter, config);
-
-                    let start = Instant::now();
-                    encoder.encode_f32(black_box(input)).unwrap();
-                    duration += start.elapsed();
-                }
-            }
-
-            // Calculate mean duration over inputs:
-            duration.checked_div(samples as u32).unwrap()
-        })
-    });
-
-    group.bench_function("f64", |b| {
-        b.iter_custom(|iters| {
-            let mut duration = Duration::ZERO;
-
-            let samples: u64 = SAMPLES as u64;
-
-            let inputs: Vec<f64> = (0..samples)
-                .map(|sample| f64::from_bits((u64::MAX / samples) * sample))
-                .collect();
-
-            for input in inputs {
-                for _ in 0..iters {
-                    let mut encoder = Encoder::new(PlaceboWriter, config);
-
-                    let start = Instant::now();
-                    encoder.encode_f64(black_box(input)).unwrap();
-                    duration += start.elapsed();
-                }
-            }
-
-            // Calculate mean duration over inputs:
-            duration.checked_div(samples as u32).unwrap()
-        })
-    });
-
-    group.finish();
-}
-
-fn bench_bytes(c: &mut Criterion, config: EncoderConfig) {
-    let mut group = c.benchmark_group("bytes");
-
-    group.bench_function("head-only", |b| {
-        b.iter_custom(|iters| {
-            let mut duration = Duration::ZERO;
-
-            let lengths: &[usize] = LENGTHS;
-
-            for _ in 0..iters {
-                let mut encoder = Encoder::new(PlaceboWriter, config);
-
-                let start = Instant::now();
-                for &len in lengths {
-                    encoder.encode_bytes_start(black_box(len)).unwrap();
-                }
-                duration += start.elapsed();
-            }
-
-            // Calculate mean duration over inputs:
-            duration.checked_div(lengths.len() as u32).unwrap()
-        })
-    });
-
-    group.bench_function("full", |b| {
-        b.iter_custom(|iters| {
-            let mut duration = Duration::ZERO;
-
-            let lengths = LENGTHS;
-            let inputs: Vec<Vec<u8>> = lengths.into_iter().map(|&len| vec![0; len]).collect();
-
-            for _ in 0..iters {
-                let mut encoder = Encoder::new(PlaceboWriter, config);
-
-                let start = Instant::now();
-                for input in &inputs {
-                    encoder.encode_bytes(black_box(&input)).unwrap();
-                }
-                duration += start.elapsed();
-            }
-
-            // Calculate mean duration over inputs:
-            duration.checked_div(lengths.len() as u32).unwrap()
-        })
-    });
-}
-
-fn bench_bool(c: &mut Criterion, config: EncoderConfig) {
-    const SAMPLES: usize = 2;
-
-    c.bench_function("bool", |b| {
-        b.iter_custom(|iters| {
-            let mut duration = Duration::ZERO;
-
-            let inputs: Vec<bool> = (0..SAMPLES).map(|i| i % 2 == 0).collect();
-
-            for _ in 0..iters {
-                let mut encoder = Encoder::new(PlaceboWriter, config);
-
-                let start = Instant::now();
-                for &input in &inputs {
-                    encoder.encode_bool(black_box(input)).unwrap();
-                }
-                duration += start.elapsed();
-            }
-
-            // Calculate mean duration over inputs:
-            duration.checked_div(SAMPLES as u32).unwrap()
-        })
-    });
-}
-
-fn bench_null(c: &mut Criterion, config: EncoderConfig) {
-    c.bench_function("null", |b| {
-        b.iter_custom(|iters| {
-            let mut duration = Duration::ZERO;
-
-            for _ in 0..iters {
-                let mut encoder = Encoder::new(PlaceboWriter, config);
-
-                let start = Instant::now();
-                encoder.encode_null().unwrap();
-                duration += start.elapsed();
-            }
-
-            duration
-        })
-    });
-}
-
-fn criterion_benchmark(c: &mut Criterion, config: EncoderConfig) {
-    bench_int(c, config);
-    bench_string(c, config);
-    bench_seq(c, config);
-    bench_map(c, config);
-    bench_float(c, config);
-    bench_bytes(c, config);
-    bench_bool(c, config);
-    bench_null(c, config);
-}
-
-fn criterion_benchmark_verbatim(c: &mut Criterion) {
-    criterion_benchmark(
-        c,
-        EncoderConfig {
-            compact_ints: false,
-        },
-    );
-}
-
-fn criterion_benchmark_compact(c: &mut Criterion) {
-    criterion_benchmark(c, EncoderConfig { compact_ints: true });
-}
-
-criterion_group!(verbatim, criterion_benchmark_verbatim);
-criterion_group!(compact, criterion_benchmark_compact);
-
-criterion_main!(verbatim, compact);
+criterion_main!(default_config);
