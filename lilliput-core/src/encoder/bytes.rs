@@ -15,7 +15,7 @@ where
         let len = value.len();
 
         // Push the value's header and length:
-        self.encode_bytes_start(len)?;
+        self.encode_bytes_header(len)?;
 
         // Push the value's actual bytes:
         let tail_bytes = value;
@@ -28,7 +28,7 @@ where
         self.encode_bytes(&value.0)
     }
 
-    pub fn encode_bytes_start(&mut self, len: usize) -> Result<()> {
+    pub fn encode_bytes_header(&mut self, len: usize) -> Result<()> {
         let header = BytesHeader::optimal(len);
 
         // Push the value's header:
@@ -38,8 +38,8 @@ where
         const MAX_LEN_WIDTH: usize = 8;
         let len_bytes: [u8; 8] = len.to_be_bytes();
         let len_width: usize = header.len_width().into();
-        let len_bytes_start = MAX_LEN_WIDTH - len_width;
-        self.push_bytes(&len_bytes[len_bytes_start..])?;
+        let len_bytes_header = MAX_LEN_WIDTH - len_width;
+        self.push_bytes(&len_bytes[len_bytes_header..])?;
 
         Ok(())
     }

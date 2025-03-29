@@ -12,7 +12,7 @@ where
     R: Read<'de>,
 {
     pub fn decode_seq(&mut self) -> Result<Vec<Value>> {
-        let len = self.decode_seq_start()?;
+        let len = self.decode_seq_header()?;
         let mut vec = Vec::with_capacity(len);
 
         for _ in 0..len {
@@ -23,7 +23,7 @@ where
         Ok(vec)
     }
 
-    pub fn decode_seq_start(&mut self) -> Result<usize> {
+    pub fn decode_seq_header(&mut self) -> Result<usize> {
         let header: SeqHeader = self.pull_header()?;
 
         let len: usize = match header.repr() {

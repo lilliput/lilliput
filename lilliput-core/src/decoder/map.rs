@@ -11,7 +11,7 @@ where
     R: Read<'de>,
 {
     pub fn decode_map(&mut self) -> Result<Map> {
-        let len = self.decode_map_start()?;
+        let len = self.decode_map_header()?;
 
         #[cfg(feature = "preserve_order")]
         pub(crate) type Map = ordermap::OrderMap<Value, Value>;
@@ -34,7 +34,7 @@ where
         self.decode_map().map(From::from)
     }
 
-    pub fn decode_map_start(&mut self) -> Result<usize> {
+    pub fn decode_map_header(&mut self) -> Result<usize> {
         let header: MapHeader = self.pull_header()?;
 
         let len: usize = match header.repr() {
