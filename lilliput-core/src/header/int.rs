@@ -55,7 +55,7 @@ pub enum IntHeaderRepr {
 impl IntHeader {
     const TYPE_BITS: u8 = 0b10000000;
 
-    const VARIANT_BIT: u8 = 0b01000000;
+    const COMPACT_VARIANT_BIT: u8 = 0b01000000;
     const SIGNEDNESS_BIT: u8 = 0b00100000;
 
     const COMPACT_VALUE_BITS: u8 = 0b00011111;
@@ -159,7 +159,7 @@ impl DecodeHeader for IntHeader {
 
         let is_signed = byte.contains_bits(Self::SIGNEDNESS_BIT);
 
-        let repr = if byte.contains_bits(Self::VARIANT_BIT) {
+        let repr = if byte.contains_bits(Self::COMPACT_VARIANT_BIT) {
             let bits = byte.masked_bits(Self::COMPACT_VALUE_BITS);
             IntHeaderRepr::Compact { is_signed, bits }
         } else {
@@ -184,7 +184,7 @@ impl EncodeHeader for IntHeader {
 
         match self.repr {
             IntHeaderRepr::Compact { is_signed, bits } => {
-                byte.set_bits(Self::VARIANT_BIT);
+                byte.set_bits(Self::COMPACT_VARIANT_BIT);
                 byte.set_bits_if(Self::SIGNEDNESS_BIT, is_signed);
                 byte.set_bits_assert_masked_by(bits, Self::COMPACT_VALUE_BITS);
             }
