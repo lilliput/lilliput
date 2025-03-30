@@ -51,7 +51,7 @@ pub enum MapHeaderRepr {
 impl MapHeader {
     const TYPE_BITS: u8 = 0b00010000;
 
-    const VARIANT_BIT: u8 = 0b00001000;
+    const COMPACT_VARIANT_BIT: u8 = 0b00001000;
 
     const COMPACT_LEN_BITS: u8 = 0b00000111;
 
@@ -129,7 +129,7 @@ impl DecodeHeader for MapHeader {
 
         let byte = Byte(byte);
 
-        let repr = if byte.contains_bits(Self::VARIANT_BIT) {
+        let repr = if byte.contains_bits(Self::COMPACT_VARIANT_BIT) {
             let len = byte.masked_bits(Self::COMPACT_LEN_BITS);
             MapHeaderRepr::Compact { len }
         } else {
@@ -153,7 +153,7 @@ impl EncodeHeader for MapHeader {
 
         match self.repr {
             MapHeaderRepr::Compact { len } => {
-                byte.set_bits(Self::VARIANT_BIT);
+                byte.set_bits(Self::COMPACT_VARIANT_BIT);
                 byte.set_bits_assert_masked_by(len, Self::COMPACT_LEN_BITS);
             }
             MapHeaderRepr::Extended { len_width } => {

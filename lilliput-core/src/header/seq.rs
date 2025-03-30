@@ -55,7 +55,7 @@ pub enum SeqHeaderRepr {
 impl SeqHeader {
     const TYPE_BITS: u8 = 0b00100000;
 
-    const VARIANT_BIT: u8 = 0b00010000;
+    const COMPACT_VARIANT_BIT: u8 = 0b00010000;
     const COMPACT_LEN_BITS: u8 = 0b00000111;
     const EXTENDED_LEN_WIDTH_BITS: u8 = 0b00000111;
 
@@ -126,7 +126,7 @@ impl DecodeHeader for SeqHeader {
 
         let byte = Byte(byte);
 
-        let repr = if byte.contains_bits(Self::VARIANT_BIT) {
+        let repr = if byte.contains_bits(Self::COMPACT_VARIANT_BIT) {
             let len = byte.masked_bits(Self::COMPACT_LEN_BITS);
             SeqHeaderRepr::Compact { len }
         } else {
@@ -150,7 +150,7 @@ impl EncodeHeader for SeqHeader {
 
         match self.repr {
             SeqHeaderRepr::Compact { len } => {
-                byte.set_bits(Self::VARIANT_BIT);
+                byte.set_bits(Self::COMPACT_VARIANT_BIT);
                 byte.set_bits_assert_masked_by(len, Self::COMPACT_LEN_BITS);
             }
             SeqHeaderRepr::Extended { len_width } => {

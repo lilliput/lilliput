@@ -51,7 +51,7 @@ pub enum StringHeaderRepr {
 impl StringHeader {
     const TYPE_BITS: u8 = 0b01000000;
 
-    const VARIANT_BIT: u8 = 0b00100000;
+    const COMPACT_VARIANT_BIT: u8 = 0b00100000;
     const COMPACT_LEN_BITS: u8 = 0b00011111;
     const EXTENDED_LEN_WIDTH_BITS: u8 = 0b00000111;
 
@@ -127,7 +127,7 @@ impl DecodeHeader for StringHeader {
 
         let byte = Byte(byte);
 
-        let repr = if byte.contains_bits(Self::VARIANT_BIT) {
+        let repr = if byte.contains_bits(Self::COMPACT_VARIANT_BIT) {
             let len = byte.masked_bits(Self::COMPACT_LEN_BITS);
             StringHeaderRepr::Compact { len }
         } else {
@@ -151,7 +151,7 @@ impl EncodeHeader for StringHeader {
 
         match self.repr {
             StringHeaderRepr::Compact { len } => {
-                byte.set_bits(Self::VARIANT_BIT);
+                byte.set_bits(Self::COMPACT_VARIANT_BIT);
 
                 let len_bits = Self::COMPACT_LEN_BITS;
                 byte.set_bits_assert_masked_by(len, len_bits);
