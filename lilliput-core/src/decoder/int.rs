@@ -5,7 +5,8 @@ use num_traits::{Signed, Unsigned};
 
 use crate::{
     error::{Error, Result},
-    header::{IntHeader, IntHeaderRepr},
+    header::IntHeader,
+    marker::Marker,
     num::zigzag::FromZigZag,
     value::{IntValue, SignedIntValue, UnsignedIntValue},
 };
@@ -102,23 +103,38 @@ where
         Ok(value)
     }
 
+    pub fn decode_int_header(&mut self) -> Result<IntHeader> {
+        let header_byte = self.pull_byte_expecting(Marker::Int)?;
+
+        let is_compact = (header_byte & IntHeader::COMPACT_VARIANT_BIT) != 0b0;
+        let is_signed = (header_byte & IntHeader::SIGNEDNESS_BIT) != 0b0;
+
+        if is_compact {
+            let bits = header_byte & IntHeader::COMPACT_VALUE_BITS;
+            Ok(IntHeader::compact(is_signed, bits))
+        } else {
+            let width = 1 + (header_byte & IntHeader::EXTENDED_WIDTH_BITS);
+            Ok(IntHeader::extended(is_signed, width))
+        }
+    }
+
     pub(super) fn decode_int_value_and_range(&mut self) -> Result<(IntValue, Range<usize>)> {
-        let header: IntHeader = self.pull_header()?;
+        let header = self.decode_int_header()?;
 
         let pos = self.pos;
 
-        match header.repr() {
-            IntHeaderRepr::Compact { is_signed, bits } => {
-                let int_value = if is_signed {
-                    IntValue::Signed(SignedIntValue::I8(i8::from_zig_zag(bits)))
+        match header {
+            IntHeader::Compact(compact) => {
+                let int_value = if compact.is_signed() {
+                    IntValue::Signed(SignedIntValue::I8(i8::from_zig_zag(compact.bits())))
                 } else {
-                    IntValue::Unsigned(UnsignedIntValue::U8(bits))
+                    IntValue::Unsigned(UnsignedIntValue::U8(compact.bits()))
                 };
                 Ok((int_value, pos..(pos + 1)))
             }
-            IntHeaderRepr::Extended { is_signed, width } => {
-                let int_value = self.pull_extended_value(width, is_signed)?;
-                Ok((int_value, pos..(pos + usize::from(width))))
+            IntHeader::Extended(extended) => {
+                let int_value = self.pull_extended_value(extended.width(), extended.is_signed())?;
+                Ok((int_value, pos..(pos + usize::from(extended.width()))))
             }
         }
     }

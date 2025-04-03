@@ -11,8 +11,10 @@ use rand::{
 use rand_xorshift::XorShiftRng;
 
 use lilliput_core::{
-    encoder::{Encoder, EncoderConfig},
+    config::EncodingConfig,
+    encoder::Encoder,
     error::Result,
+    header::{BytesHeader, MapHeader, SeqHeader, StringHeader},
     io::Write,
 };
 
@@ -48,7 +50,7 @@ where
 
 fn bench_sampled<T, I, Fi, F>(
     bencher: &mut Bencher<'_>,
-    config: EncoderConfig,
+    config: EncodingConfig,
     values: Fi,
     mut f: F,
 ) where
@@ -85,7 +87,7 @@ fn bench_sampled<T, I, Fi, F>(
     })
 }
 
-fn bench_int(c: &mut Criterion, label: &str, config: EncoderConfig) {
+fn bench_int(c: &mut Criterion, label: &str, config: EncodingConfig) {
     fn values<T>() -> impl Iterator<Item = T>
     where
         StandardUniform: Distribution<T>,
@@ -146,7 +148,7 @@ fn bench_int(c: &mut Criterion, label: &str, config: EncoderConfig) {
     g.finish();
 }
 
-fn bench_string(c: &mut Criterion, label: &str, config: EncoderConfig) {
+fn bench_string(c: &mut Criterion, label: &str, config: EncodingConfig) {
     let mut g = c.benchmark_group("string");
 
     fn lengths() -> impl Iterator<Item = usize>
@@ -156,16 +158,17 @@ fn bench_string(c: &mut Criterion, label: &str, config: EncoderConfig) {
         sampling_values_iter::<u32>(SAMPLES).map(|len| len as usize)
     }
 
-    g.bench_function(format!("encode_str_header @ {label}"), |b| {
+    g.bench_function(format!("encode_string_header @ {label}"), |b| {
         bench_sampled(b, config, lengths, |encoder, len| {
-            black_box(encoder.encode_str_header(black_box(len))).unwrap();
+            let header = StringHeader::new(len, config.len_packing);
+            black_box(encoder.encode_string_header(black_box(&header))).unwrap();
         });
     });
 
     g.finish();
 }
 
-fn bench_seq(c: &mut Criterion, label: &str, config: EncoderConfig) {
+fn bench_seq(c: &mut Criterion, label: &str, config: EncodingConfig) {
     let mut g = c.benchmark_group("seq");
 
     fn lengths() -> impl Iterator<Item = usize>
@@ -177,14 +180,15 @@ fn bench_seq(c: &mut Criterion, label: &str, config: EncoderConfig) {
 
     g.bench_function(format!("encode_seq_header @ {label}"), |b| {
         bench_sampled(b, config, lengths, |encoder, len| {
-            black_box(encoder.encode_seq_header(black_box(len))).unwrap();
+            let header = SeqHeader::new(len, config.len_packing);
+            black_box(encoder.encode_seq_header(black_box(&header))).unwrap();
         });
     });
 
     g.finish();
 }
 
-fn bench_map(c: &mut Criterion, label: &str, config: EncoderConfig) {
+fn bench_map(c: &mut Criterion, label: &str, config: EncodingConfig) {
     let mut g = c.benchmark_group("map");
 
     fn lengths() -> impl Iterator<Item = usize>
@@ -196,14 +200,15 @@ fn bench_map(c: &mut Criterion, label: &str, config: EncoderConfig) {
 
     g.bench_function(format!("encode_map_header @ {label}"), |b| {
         bench_sampled(b, config, lengths, |encoder, len| {
-            black_box(encoder.encode_map_header(black_box(len))).unwrap();
+            let header = MapHeader::new(len, config.len_packing);
+            black_box(encoder.encode_map_header(black_box(&header))).unwrap();
         });
     });
 
     g.finish();
 }
 
-fn bench_float(c: &mut Criterion, label: &str, config: EncoderConfig) {
+fn bench_float(c: &mut Criterion, label: &str, config: EncodingConfig) {
     let mut g = c.benchmark_group("float");
 
     fn values<T>() -> impl Iterator<Item = T>
@@ -215,20 +220,20 @@ fn bench_float(c: &mut Criterion, label: &str, config: EncoderConfig) {
 
     g.bench_function(format!("encode_f32 @ {label}"), |b| {
         bench_sampled(b, config, values, |encoder, value| {
-            black_box(encoder.encode_f32(value)).unwrap();
+            black_box(encoder.encode_f32(black_box(value))).unwrap();
         });
     });
 
     g.bench_function(format!("encode_f64 @ {label}"), |b| {
         bench_sampled(b, config, values, |encoder, value| {
-            black_box(encoder.encode_f64(value)).unwrap();
+            black_box(encoder.encode_f64(black_box(value))).unwrap();
         });
     });
 
     g.finish();
 }
 
-fn bench_bytes(c: &mut Criterion, label: &str, config: EncoderConfig) {
+fn bench_bytes(c: &mut Criterion, label: &str, config: EncodingConfig) {
     fn lengths() -> impl Iterator<Item = usize>
     where
         StandardUniform: Distribution<u32>,
@@ -240,14 +245,15 @@ fn bench_bytes(c: &mut Criterion, label: &str, config: EncoderConfig) {
 
     g.bench_function(format!("encode_bytes_header @ {label}"), |b| {
         bench_sampled(b, config, lengths, |encoder, len| {
-            black_box(encoder.encode_bytes_header(black_box(len))).unwrap();
+            let header = BytesHeader::new(len);
+            black_box(encoder.encode_bytes_header(black_box(&header))).unwrap();
         });
     });
 
     g.finish();
 }
 
-fn bench_bool(c: &mut Criterion, label: &str, config: EncoderConfig) {
+fn bench_bool(c: &mut Criterion, label: &str, config: EncodingConfig) {
     fn flags() -> impl Iterator<Item = bool>
     where
         StandardUniform: Distribution<bool>,
@@ -266,7 +272,7 @@ fn bench_bool(c: &mut Criterion, label: &str, config: EncoderConfig) {
     g.finish();
 }
 
-fn bench_null(c: &mut Criterion, label: &str, config: EncoderConfig) {
+fn bench_null(c: &mut Criterion, label: &str, config: EncodingConfig) {
     fn units() -> impl Iterator<Item = ()> {
         std::iter::repeat_n((), SAMPLES)
     }
@@ -282,7 +288,7 @@ fn bench_null(c: &mut Criterion, label: &str, config: EncoderConfig) {
     g.finish();
 }
 
-fn benchmark_with_config(c: &mut Criterion, label: &str, config: EncoderConfig) {
+fn benchmark_with_config(c: &mut Criterion, label: &str, config: EncodingConfig) {
     bench_int(c, label, config);
     bench_string(c, label, config);
     bench_seq(c, label, config);
@@ -294,7 +300,7 @@ fn benchmark_with_config(c: &mut Criterion, label: &str, config: EncoderConfig) 
 }
 
 fn benchmark_default_config(c: &mut Criterion) {
-    benchmark_with_config(c, "default", EncoderConfig::default());
+    benchmark_with_config(c, "default", EncodingConfig::default());
 }
 
 criterion_group!(default_config, benchmark_default_config);

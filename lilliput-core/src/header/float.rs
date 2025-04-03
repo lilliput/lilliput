@@ -1,6 +1,4 @@
-use crate::binary::Byte;
-
-use super::{DecodeHeader, EncodeHeader, Expectation, Marker};
+use crate::value::FloatValue;
 
 /// Represents a floating-point number.
 ///
@@ -14,55 +12,25 @@ use super::{DecodeHeader, EncodeHeader, Expectation, Marker};
 /// ```
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct FloatHeader {
-    width: u8,
+    value: FloatValue,
 }
 
 impl FloatHeader {
-    const TYPE_BITS: u8 = 0b00001000;
-
-    const VALUE_WIDTH_BITS: u8 = 0b00000111;
-
     #[inline]
-    pub fn new(width: u8) -> Self {
-        debug_assert!(width >= 1);
-        debug_assert!(width <= 8);
-
-        let width = Byte::assert_masked_by(width - 1, Self::VALUE_WIDTH_BITS) + 1;
-
-        Self { width }
+    pub(crate) fn new(value: FloatValue) -> Self {
+        Self { value }
     }
 
     #[inline]
-    pub fn width(&self) -> u8 {
-        self.width
+    pub fn value(&self) -> FloatValue {
+        self.value
     }
 }
 
-impl DecodeHeader for FloatHeader {
-    fn decode(byte: u8) -> Result<Self, Expectation<Marker>> {
-        Marker::Float.validate(byte)?;
+impl FloatHeader {
+    pub(crate) const TYPE_BITS: u8 = 0b00001000;
 
-        let byte = Byte(byte);
-
-        let width_bits = byte.masked_bits(Self::VALUE_WIDTH_BITS);
-
-        Ok(Self {
-            width: width_bits + 1,
-        })
-    }
-}
-
-impl EncodeHeader for FloatHeader {
-    fn encode(self) -> u8 {
-        let mut byte = Byte(Self::TYPE_BITS);
-
-        debug_assert!(self.width >= 1);
-        debug_assert!(self.width <= 8);
-
-        byte.set_bits_assert_masked_by(self.width - 1, Self::VALUE_WIDTH_BITS);
-
-        byte.0
-    }
+    pub(crate) const VALUE_WIDTH_BITS: u8 = 0b00000111;
 }
 
 #[cfg(any(test, feature = "testing"))]
@@ -72,8 +40,11 @@ impl proptest::prelude::Arbitrary for FloatHeader {
 
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         use proptest::strategy::Strategy;
-
-        (1..=8_u8).prop_map(Self::new).boxed()
+        proptest::prop_oneof![
+            proptest::num::f32::ANY.prop_map(|f| Self::new(f.into())),
+            proptest::num::f64::ANY.prop_map(|f| Self::new(f.into())),
+        ]
+        .boxed()
     }
 }
 
@@ -81,14 +52,26 @@ impl proptest::prelude::Arbitrary for FloatHeader {
 mod tests {
     use proptest::prelude::*;
 
+    use crate::{
+        config::EncodingConfig,
+        decoder::Decoder,
+        encoder::Encoder,
+        io::{SliceReader, VecWriter},
+    };
+
     use super::*;
 
     proptest! {
         #[test]
-        fn encode_decode_roundtrip(header in FloatHeader::arbitrary()) {
-            let encoded = header.encode();
-            let decoded = FloatHeader::decode(encoded).unwrap();
+        fn encode_decode_roundtrip(header in FloatHeader::arbitrary(), config in EncodingConfig::arbitrary()) {
+            let mut encoded: Vec<u8> = Vec::new();
+            let writer = VecWriter::new(&mut encoded);
+            let mut encoder = Encoder::new(writer, config);
+            encoder.encode_float_header(&header).unwrap();
 
+            let reader = SliceReader::new(&encoded);
+            let mut decoder = Decoder::new(reader);
+            let decoded = decoder.decode_float_header().unwrap();
             prop_assert_eq!(&decoded, &header);
         }
     }

@@ -1,6 +1,4 @@
-use crate::{binary::Byte, num::int::CompactWidth as _};
-
-use super::{DecodeHeader, EncodeHeader, Expectation, Marker};
+use crate::config::PackingMode;
 
 /// Represents a string.
 ///
@@ -37,145 +35,107 @@ use super::{DecodeHeader, EncodeHeader, Expectation, Marker};
 ///   └─ String type
 /// ```
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
-#[repr(transparent)]
-pub struct StringHeader {
-    repr: StringHeaderRepr,
-}
-
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
-pub enum StringHeaderRepr {
-    Compact { len: u8 },
-    Extended { len_width: u8 },
+pub enum StringHeader {
+    Compact(CompactStringHeader),
+    Extended(ExtendedStringHeader),
 }
 
 impl StringHeader {
-    const TYPE_BITS: u8 = 0b01000000;
-
-    const COMPACT_VARIANT_BIT: u8 = 0b00100000;
-    const COMPACT_LEN_BITS: u8 = 0b00011111;
-    const EXTENDED_LEN_WIDTH_BITS: u8 = 0b00000111;
-
     #[inline]
-    pub fn optimal(len: usize) -> Self {
-        if Self::can_be_compact(len) {
-            Self::compact(len as u8)
+    pub fn new(len: usize, packing_mode: PackingMode) -> Self {
+        if let Some(len) = Self::as_compact(len, packing_mode) {
+            Self::compact(len)
         } else {
             Self::extended(len)
         }
     }
 
-    #[inline]
-    pub fn verbatim(_len: usize) -> Self {
-        Self::from_repr(StringHeaderRepr::Extended { len_width: 8_u8 })
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
-    #[inline]
-    pub fn repr(&self) -> StringHeaderRepr {
-        self.repr
-    }
-
-    #[inline]
-    pub fn extension_width(self) -> Option<usize> {
-        match self.repr {
-            StringHeaderRepr::Compact { .. } => None,
-            StringHeaderRepr::Extended { len_width } => Some(len_width.into()),
+    pub fn len(&self) -> usize {
+        match self {
+            Self::Compact(compact) => compact.len().into(),
+            Self::Extended(extended) => extended.len(),
         }
     }
 
     #[inline]
-    pub(crate) fn from_repr(repr: StringHeaderRepr) -> Self {
-        Self::debug_assert_repr_valid(repr);
-
-        Self { repr }
+    pub(crate) fn compact(len: u8) -> Self {
+        Self::Compact(CompactStringHeader { len })
     }
 
     #[inline]
-    fn compact(len: u8) -> Self {
-        let len = Byte::assert_masked_by(len, Self::COMPACT_LEN_BITS);
-
-        Self::from_repr(StringHeaderRepr::Compact { len })
+    pub(crate) fn extended(len: usize) -> Self {
+        Self::Extended(ExtendedStringHeader { len })
     }
 
-    #[inline]
-    fn extended(len: usize) -> Self {
-        Self::from_repr(StringHeaderRepr::Extended {
-            len_width: len.compact_width(),
-        })
-    }
-
-    #[inline]
-    fn can_be_compact(len: usize) -> bool {
-        len <= (Self::COMPACT_LEN_BITS as usize)
-    }
-
-    #[inline]
-    fn debug_assert_repr_valid(repr: StringHeaderRepr) {
-        match repr {
-            StringHeaderRepr::Compact { len } => {
-                debug_assert!(len <= Self::COMPACT_LEN_BITS);
-            }
-            StringHeaderRepr::Extended { len_width } => {
-                debug_assert!(len_width - 1 <= Self::EXTENDED_LEN_WIDTH_BITS);
-            }
-        }
-    }
-}
-
-impl DecodeHeader for StringHeader {
-    fn decode(byte: u8) -> Result<Self, Expectation<Marker>> {
-        Marker::String.validate(byte)?;
-
-        let byte = Byte(byte);
-
-        let repr = if byte.contains_bits(Self::COMPACT_VARIANT_BIT) {
-            let len = byte.masked_bits(Self::COMPACT_LEN_BITS);
-            StringHeaderRepr::Compact { len }
+    fn as_compact(len: usize, packing_mode: PackingMode) -> Option<u8> {
+        let allows_compact = packing_mode == PackingMode::Optimal;
+        let mask = StringHeader::COMPACT_LEN_BITS as usize;
+        let compact_len = len & mask;
+        if allows_compact && compact_len == len {
+            Some(compact_len as u8)
         } else {
-            let len_width_bits = byte.masked_bits(Self::EXTENDED_LEN_WIDTH_BITS);
-            StringHeaderRepr::Extended {
-                len_width: (len_width_bits + 1),
-            }
-        };
-
-        Self::debug_assert_repr_valid(repr);
-
-        Ok(Self::from_repr(repr))
+            None
+        }
     }
 }
 
-impl EncodeHeader for StringHeader {
-    fn encode(self) -> u8 {
-        let mut byte = Byte(Self::TYPE_BITS);
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[repr(transparent)]
+pub struct CompactStringHeader {
+    pub(crate) len: u8,
+}
 
-        Self::debug_assert_repr_valid(self.repr);
-
-        match self.repr {
-            StringHeaderRepr::Compact { len } => {
-                byte.set_bits(Self::COMPACT_VARIANT_BIT);
-
-                let len_bits = Self::COMPACT_LEN_BITS;
-                byte.set_bits_assert_masked_by(len, len_bits);
-            }
-            StringHeaderRepr::Extended { len_width } => {
-                let len_width_bits = Self::EXTENDED_LEN_WIDTH_BITS;
-                byte.set_bits_assert_masked_by(len_width - 1, len_width_bits);
-            }
-        }
-
-        byte.0
+impl CompactStringHeader {
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
+
+    pub fn len(&self) -> u8 {
+        self.len
+    }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[repr(transparent)]
+pub struct ExtendedStringHeader {
+    pub(crate) len: usize,
+}
+
+impl ExtendedStringHeader {
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    pub fn len(&self) -> usize {
+        self.len
+    }
+}
+
+impl StringHeader {
+    pub(crate) const TYPE_BITS: u8 = 0b01000000;
+
+    pub(crate) const COMPACT_VARIANT_BIT: u8 = 0b00100000;
+    pub(crate) const COMPACT_LEN_BITS: u8 = 0b00011111;
+    pub(crate) const EXTENDED_LEN_WIDTH_BITS: u8 = 0b00000111;
 }
 
 #[cfg(any(test, feature = "testing"))]
-impl proptest::arbitrary::Arbitrary for StringHeader {
+impl proptest::prelude::Arbitrary for StringHeader {
     type Parameters = ();
     type Strategy = proptest::strategy::BoxedStrategy<Self>;
 
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         use proptest::prelude::Strategy as _;
         proptest::prop_oneof![
-            (0..=7_u8).prop_map(Self::compact),
-            (0..=100_usize).prop_map(Self::extended)
+            (0..=Self::COMPACT_LEN_BITS).prop_map(Self::compact),
+            proptest::num::u8::ANY.prop_map(|len| Self::extended(len as usize)),
+            proptest::num::u16::ANY.prop_map(|len| Self::extended(len as usize)),
+            proptest::num::u32::ANY.prop_map(|len| Self::extended(len as usize)),
+            proptest::num::u64::ANY.prop_map(|len| Self::extended(len as usize)),
         ]
         .boxed()
     }
@@ -185,14 +145,26 @@ impl proptest::arbitrary::Arbitrary for StringHeader {
 mod tests {
     use proptest::prelude::*;
 
+    use crate::{
+        config::EncodingConfig,
+        decoder::Decoder,
+        encoder::Encoder,
+        io::{SliceReader, VecWriter},
+    };
+
     use super::*;
 
     proptest! {
         #[test]
-        fn encode_decode_roundtrip(header in StringHeader::arbitrary()) {
-            let encoded = header.encode();
-            let decoded = StringHeader::decode(encoded).unwrap();
+        fn encode_decode_roundtrip(header in StringHeader::arbitrary(), config in EncodingConfig::arbitrary()) {
+            let mut encoded: Vec<u8> = Vec::new();
+            let writer = VecWriter::new(&mut encoded);
+            let mut encoder = Encoder::new(writer, config);
+            encoder.encode_string_header(&header).unwrap();
 
+            let reader = SliceReader::new(&encoded);
+            let mut decoder = Decoder::new(reader);
+            let decoded = decoder.decode_string_header().unwrap();
             prop_assert_eq!(&decoded, &header);
         }
     }

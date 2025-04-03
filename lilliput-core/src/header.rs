@@ -7,26 +7,18 @@ mod null;
 mod seq;
 mod string;
 
-use crate::{error::Expectation, marker::Marker};
+use crate::marker::Marker;
 
 pub use self::{
     bool::BoolHeader,
     bytes::BytesHeader,
     float::FloatHeader,
-    int::{IntHeader, IntHeaderRepr},
-    map::{MapHeader, MapHeaderRepr},
+    int::{CompactIntHeader, ExtendedIntHeader, IntHeader},
+    map::{CompactMapHeader, ExtendedMapHeader, MapHeader},
     null::NullHeader,
-    seq::{SeqHeader, SeqHeaderRepr},
-    string::{StringHeader, StringHeaderRepr},
+    seq::{CompactSeqHeader, ExtendedSeqHeader, SeqHeader},
+    string::{CompactStringHeader, ExtendedStringHeader, StringHeader},
 };
-
-pub trait DecodeHeader: Sized {
-    fn decode(byte: u8) -> Result<Self, Expectation<Marker>>;
-}
-
-pub trait EncodeHeader: Sized {
-    fn encode(self) -> u8;
-}
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum Header {
@@ -119,22 +111,6 @@ impl From<NullHeader> for Header {
     #[inline]
     fn from(value: NullHeader) -> Self {
         Self::Null(value)
-    }
-}
-
-impl DecodeHeader for Header {
-    fn decode(byte: u8) -> Result<Self, Expectation<Marker>> {
-        match Marker::detect(byte) {
-            Marker::Int => Ok(Header::Int(IntHeader::decode(byte)?)),
-            Marker::String => Ok(Header::String(StringHeader::decode(byte)?)),
-            Marker::Seq => Ok(Header::Seq(SeqHeader::decode(byte)?)),
-            Marker::Map => Ok(Header::Map(MapHeader::decode(byte)?)),
-            Marker::Float => Ok(Header::Float(FloatHeader::decode(byte)?)),
-            Marker::Bytes => Ok(Header::Bytes(BytesHeader::decode(byte)?)),
-            Marker::Bool => Ok(Header::Bool(BoolHeader::decode(byte)?)),
-            Marker::Null => Ok(Header::Null(NullHeader::decode(byte)?)),
-            Marker::Reserved => unimplemented!(),
-        }
     }
 }
 

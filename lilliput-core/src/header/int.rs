@@ -1,8 +1,10 @@
-use num_traits::{ToBytes, Unsigned};
+use num_traits::{Signed, Unsigned};
 
-use crate::{binary::Byte, num::int::CompactWidth};
-
-use super::{DecodeHeader, EncodeHeader, Expectation, Marker};
+use crate::{
+    config::PackingMode,
+    num::WithPackedBeBytes,
+    value::{IntValue, SignedIntValue, UnsignedIntValue},
+};
 
 /// Represents an integer number.
 ///
@@ -41,161 +43,145 @@ use super::{DecodeHeader, EncodeHeader, Expectation, Marker};
 ///   └─ Integer type
 /// ```
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
-#[repr(transparent)]
-pub struct IntHeader {
-    repr: IntHeaderRepr,
-}
-
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
-pub enum IntHeaderRepr {
-    Compact { is_signed: bool, bits: u8 },
-    Extended { is_signed: bool, width: u8 },
+pub enum IntHeader {
+    Compact(CompactIntHeader),
+    Extended(ExtendedIntHeader),
 }
 
 impl IntHeader {
-    const TYPE_BITS: u8 = 0b10000000;
-
-    const COMPACT_VARIANT_BIT: u8 = 0b01000000;
-    const SIGNEDNESS_BIT: u8 = 0b00100000;
-
-    const COMPACT_VALUE_BITS: u8 = 0b00011111;
-
-    const EXTENDED_WIDTH_BITS: u8 = 0b00000111;
-
-    #[inline]
-    pub fn optimal<T, const N: usize>(is_signed: bool, bits: T) -> Self
+    pub fn signed<T>(value: T, packing_mode: PackingMode) -> Self
     where
-        T: Unsigned + CompactWidth + PartialOrd + From<u8> + ToBytes<Bytes = [u8; N]>,
+        T: Signed + WithPackedBeBytes,
     {
-        if bits <= T::from(Self::COMPACT_VALUE_BITS) {
-            let bytes: [u8; N] = bits.to_be_bytes();
-            let bits = bytes[N - 1] & Self::COMPACT_VALUE_BITS;
-            Self::compact(is_signed, bits)
-        } else {
-            Self::extended(is_signed, bits.compact_width())
-        }
+        let (header, _) = value.with_packed_be_bytes(packing_mode, |_, bytes| {
+            Self::be_bytes(true, bytes, packing_mode)
+        });
+
+        header
     }
 
-    #[inline]
-    pub fn verbatim<T, const N: usize>(is_signed: bool, _value: T) -> Self
+    pub fn unsigned<T>(value: T, packing_mode: PackingMode) -> Self
     where
-        T: ToBytes<Bytes = [u8; N]>,
+        T: Unsigned + WithPackedBeBytes,
     {
-        Self::from_repr(IntHeaderRepr::Extended {
-            is_signed,
-            width: N as u8,
-        })
+        let (header, _) = value.with_packed_be_bytes(packing_mode, |_, bytes| {
+            Self::be_bytes(false, bytes, packing_mode)
+        });
+
+        header
     }
 
     #[inline]
-    pub fn repr(&self) -> IntHeaderRepr {
-        self.repr
-    }
-
-    #[inline]
-    pub fn extension_width(self) -> Option<usize> {
-        match self.repr {
-            IntHeaderRepr::Compact { .. } => None,
-            IntHeaderRepr::Extended { width, .. } => Some(width.into()),
+    pub fn new(value: IntValue, packing_mode: PackingMode) -> Self {
+        match value {
+            IntValue::Signed(value) => match value {
+                SignedIntValue::I8(value) => Self::signed(value, packing_mode),
+                SignedIntValue::I16(value) => Self::signed(value, packing_mode),
+                SignedIntValue::I32(value) => Self::signed(value, packing_mode),
+                SignedIntValue::I64(value) => Self::signed(value, packing_mode),
+            },
+            IntValue::Unsigned(value) => match value {
+                UnsignedIntValue::U8(value) => Self::unsigned(value, packing_mode),
+                UnsignedIntValue::U16(value) => Self::unsigned(value, packing_mode),
+                UnsignedIntValue::U32(value) => Self::unsigned(value, packing_mode),
+                UnsignedIntValue::U64(value) => Self::unsigned(value, packing_mode),
+            },
         }
     }
 
     #[inline]
-    pub(crate) fn from_repr(repr: IntHeaderRepr) -> Self {
-        Self::debug_assert_repr_valid(repr);
+    pub(crate) fn be_bytes(
+        is_signed: bool,
+        be_bytes: &[u8],
+        packing_mode: PackingMode,
+    ) -> (Self, bool) {
+        debug_assert!(be_bytes.len() <= 8);
 
-        match repr {
-            IntHeaderRepr::Compact { bits, .. } => {
-                debug_assert!(bits <= Self::COMPACT_VALUE_BITS);
-            }
-            IntHeaderRepr::Extended { width, .. } => {
-                debug_assert!(width - 1 <= Self::EXTENDED_WIDTH_BITS);
-            }
-        }
+        if let Some(bits) = Self::as_compact(be_bytes, packing_mode) {
+            let header = Self::Compact(CompactIntHeader { is_signed, bits });
 
-        Self { repr }
-    }
-
-    #[inline]
-    fn compact(is_signed: bool, bits: u8) -> Self {
-        let bits = Byte::assert_masked_by(bits, Self::COMPACT_VALUE_BITS);
-
-        Self::from_repr(IntHeaderRepr::Compact { is_signed, bits })
-    }
-
-    #[inline]
-    fn extended(is_signed: bool, width: u8) -> Self {
-        let width = Byte::assert_masked_by(width - 1, Self::EXTENDED_WIDTH_BITS) + 1;
-
-        Self::from_repr(IntHeaderRepr::Extended { is_signed, width })
-    }
-
-    #[inline]
-    fn debug_assert_repr_valid(repr: IntHeaderRepr) {
-        match repr {
-            IntHeaderRepr::Compact { bits, .. } => {
-                debug_assert!(bits <= Self::COMPACT_VALUE_BITS);
-            }
-            IntHeaderRepr::Extended { width, .. } => {
-                debug_assert!(width - 1 <= Self::EXTENDED_WIDTH_BITS);
-            }
-        }
-    }
-
-    #[inline]
-    pub fn is_signed(self) -> bool {
-        match self.repr {
-            IntHeaderRepr::Compact { is_signed, .. } => is_signed,
-            IntHeaderRepr::Extended { is_signed, .. } => is_signed,
-        }
-    }
-}
-
-impl DecodeHeader for IntHeader {
-    fn decode(byte: u8) -> Result<Self, Expectation<Marker>> {
-        Marker::Int.validate(byte)?;
-
-        let byte = Byte(byte);
-
-        let is_signed = byte.contains_bits(Self::SIGNEDNESS_BIT);
-
-        let repr = if byte.contains_bits(Self::COMPACT_VARIANT_BIT) {
-            let bits = byte.masked_bits(Self::COMPACT_VALUE_BITS);
-            IntHeaderRepr::Compact { is_signed, bits }
+            (header, true)
         } else {
-            let width_bits = byte.masked_bits(Self::EXTENDED_WIDTH_BITS);
-            IntHeaderRepr::Extended {
+            let header = Self::Extended(ExtendedIntHeader {
                 is_signed,
-                width: width_bits + 1,
-            }
-        };
+                width: be_bytes.len() as u8,
+            });
 
-        Self::debug_assert_repr_valid(repr);
+            (header, false)
+        }
+    }
 
-        Ok(Self::from_repr(repr))
+    pub fn extended_value_width(&self) -> Option<u8> {
+        match self {
+            Self::Compact(_) => None,
+            Self::Extended(header) => Some(header.width),
+        }
+    }
+
+    pub(crate) fn compact(is_signed: bool, bits: u8) -> Self {
+        debug_assert!(bits <= IntHeader::COMPACT_VALUE_BITS);
+
+        Self::Compact(CompactIntHeader { is_signed, bits })
+    }
+
+    pub(crate) fn extended(is_signed: bool, width: u8) -> Self {
+        debug_assert!((width - 1) <= IntHeader::EXTENDED_WIDTH_BITS);
+
+        Self::Extended(ExtendedIntHeader { is_signed, width })
+    }
+
+    pub(crate) fn as_compact(be_bytes: &[u8], packing_mode: PackingMode) -> Option<u8> {
+        if packing_mode != PackingMode::Optimal {
+            return None;
+        }
+
+        match be_bytes {
+            &[bits] if bits <= IntHeader::COMPACT_VALUE_BITS => Some(bits),
+            _ => None,
+        }
     }
 }
 
-impl EncodeHeader for IntHeader {
-    fn encode(self) -> u8 {
-        let mut byte = Byte(Self::TYPE_BITS);
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+pub struct CompactIntHeader {
+    is_signed: bool,
+    bits: u8,
+}
 
-        Self::debug_assert_repr_valid(self.repr);
-
-        match self.repr {
-            IntHeaderRepr::Compact { is_signed, bits } => {
-                byte.set_bits(Self::COMPACT_VARIANT_BIT);
-                byte.set_bits_if(Self::SIGNEDNESS_BIT, is_signed);
-                byte.set_bits_assert_masked_by(bits, Self::COMPACT_VALUE_BITS);
-            }
-            IntHeaderRepr::Extended { is_signed, width } => {
-                byte.set_bits_if(Self::SIGNEDNESS_BIT, is_signed);
-                byte.set_bits_assert_masked_by(width - 1, Self::EXTENDED_WIDTH_BITS);
-            }
-        }
-
-        byte.0
+impl CompactIntHeader {
+    pub fn bits(&self) -> u8 {
+        self.bits
     }
+
+    pub fn is_signed(&self) -> bool {
+        self.is_signed
+    }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+pub struct ExtendedIntHeader {
+    is_signed: bool,
+    width: u8,
+}
+
+impl ExtendedIntHeader {
+    pub fn width(&self) -> u8 {
+        self.width
+    }
+
+    pub fn is_signed(&self) -> bool {
+        self.is_signed
+    }
+}
+
+impl IntHeader {
+    pub(crate) const TYPE_BITS: u8 = 0b10000000;
+    pub(crate) const SIGNEDNESS_BIT: u8 = 0b00100000;
+
+    pub(crate) const COMPACT_VARIANT_BIT: u8 = 0b01000000;
+    pub(crate) const COMPACT_VALUE_BITS: u8 = 0b00011111;
+
+    pub(crate) const EXTENDED_WIDTH_BITS: u8 = 0b00000111;
 }
 
 #[cfg(any(test, feature = "testing"))]
@@ -207,10 +193,10 @@ impl proptest::arbitrary::Arbitrary for IntHeader {
         use proptest::strategy::Strategy;
 
         proptest::prop_oneof![
-            (0..=31_u8).prop_map(|bits| Self::compact(true, bits)),
-            (0..=31_u8).prop_map(|bits| Self::compact(false, bits)),
-            (1..=8_u8).prop_map(|width| Self::extended(true, width)),
-            (1..=8_u8).prop_map(|width| Self::extended(false, width)),
+            (0..=Self::COMPACT_VALUE_BITS).prop_map(|bits| Self::compact(false, bits)),
+            (0..=Self::COMPACT_VALUE_BITS).prop_map(|bits| Self::compact(true, bits)),
+            (0..=Self::EXTENDED_WIDTH_BITS).prop_map(|bits| Self::extended(false, bits + 1)),
+            (0..=Self::EXTENDED_WIDTH_BITS).prop_map(|bits| Self::extended(true, bits + 1)),
         ]
         .boxed()
     }
@@ -220,14 +206,26 @@ impl proptest::arbitrary::Arbitrary for IntHeader {
 mod tests {
     use proptest::prelude::*;
 
+    use crate::{
+        config::EncodingConfig,
+        decoder::Decoder,
+        encoder::Encoder,
+        io::{SliceReader, VecWriter},
+    };
+
     use super::*;
 
     proptest! {
         #[test]
-        fn encode_decode_roundtrip(header in IntHeader::arbitrary()) {
-            let encoded = header.encode();
-            let decoded = IntHeader::decode(encoded).unwrap();
+        fn encode_decode_roundtrip(header in IntHeader::arbitrary(), config in EncodingConfig::arbitrary()) {
+            let mut encoded: Vec<u8> = Vec::new();
+            let writer = VecWriter::new(&mut encoded);
+            let mut encoder = Encoder::new(writer, config);
+            encoder.encode_int_header(&header).unwrap();
 
+            let reader = SliceReader::new(&encoded);
+            let mut decoder = Decoder::new(reader);
+            let decoded = decoder.decode_int_header().unwrap();
             prop_assert_eq!(&decoded, &header);
         }
     }

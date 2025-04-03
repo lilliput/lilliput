@@ -1,7 +1,3 @@
-use crate::{binary::Byte, error::Expectation};
-
-use super::{DecodeHeader, EncodeHeader, Marker};
-
 /// Represents a boolean.
 ///
 /// # Binary representation
@@ -17,9 +13,6 @@ pub struct BoolHeader {
 }
 
 impl BoolHeader {
-    const TYPE_BITS: u8 = 0b0000010;
-    const VALUE_BIT: u8 = 0b0000001;
-
     #[inline]
     pub fn new(value: bool) -> Self {
         Self { value }
@@ -31,26 +24,9 @@ impl BoolHeader {
     }
 }
 
-impl DecodeHeader for BoolHeader {
-    fn decode(byte: u8) -> Result<Self, Expectation<Marker>> {
-        Marker::Bool.validate(byte)?;
-
-        let byte = Byte(byte);
-
-        let value = byte.contains_bits(Self::VALUE_BIT);
-
-        Ok(Self { value })
-    }
-}
-
-impl EncodeHeader for BoolHeader {
-    fn encode(self) -> u8 {
-        let mut byte = Byte(Self::TYPE_BITS);
-
-        byte.set_bits_if(Self::VALUE_BIT, self.value);
-
-        byte.0
-    }
+impl BoolHeader {
+    pub(crate) const TYPE_BITS: u8 = 0b0000010;
+    pub(crate) const VALUE_BIT: u8 = 0b0000001;
 }
 
 #[cfg(any(test, feature = "testing"))]
@@ -68,14 +44,26 @@ impl proptest::prelude::Arbitrary for BoolHeader {
 mod tests {
     use proptest::prelude::*;
 
+    use crate::{
+        config::EncodingConfig,
+        decoder::Decoder,
+        encoder::Encoder,
+        io::{SliceReader, VecWriter},
+    };
+
     use super::*;
 
     proptest! {
         #[test]
-        fn encode_decode_roundtrip(header in BoolHeader::arbitrary()) {
-            let encoded = header.encode();
-            let decoded = BoolHeader::decode(encoded).unwrap();
+        fn encode_decode_roundtrip(header in BoolHeader::arbitrary(), config in EncodingConfig::arbitrary()) {
+            let mut encoded: Vec<u8> = Vec::new();
+            let writer = VecWriter::new(&mut encoded);
+            let mut encoder = Encoder::new(writer, config);
+            encoder.encode_bool_header(&header).unwrap();
 
+            let reader = SliceReader::new(&encoded);
+            let mut decoder = Decoder::new(reader);
+            let decoded = decoder.decode_bool_header().unwrap();
             prop_assert_eq!(&decoded, &header);
         }
     }

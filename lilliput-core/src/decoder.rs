@@ -1,6 +1,5 @@
 use crate::{
     error::{Error, Result},
-    header::{DecodeHeader, Header},
     io::{Read, Reference},
     marker::Marker,
     value::Value,
@@ -43,23 +42,22 @@ where
     // MARK: - Any Values
 
     pub fn peek_marker(&mut self) -> Result<Marker> {
-        Ok(self.peek_header::<Header>()?.marker())
+        self.peek_byte().map(Marker::detect)
     }
 
     pub fn decode_any(&mut self) -> Result<Value> {
-        match self.peek_header()? {
-            Header::Int(_) => self.decode_int_value().map(From::from),
-            Header::String(_) => self.decode_string_value().map(From::from),
-            Header::Seq(_) => self.decode_seq_value().map(From::from),
-            Header::Map(_) => self.decode_map_value().map(From::from),
-            Header::Float(_) => self.decode_float_value().map(From::from),
-            Header::Bytes(_) => self.decode_bytes_value().map(From::from),
-            Header::Bool(_) => self.decode_bool_value().map(From::from),
-            Header::Null(_) => self.decode_null_value().map(From::from),
+        match self.peek_marker()? {
+            Marker::Int => self.decode_int_value().map(From::from),
+            Marker::String => self.decode_string_value().map(From::from),
+            Marker::Seq => self.decode_seq_value().map(From::from),
+            Marker::Map => self.decode_map_value().map(From::from),
+            Marker::Float => self.decode_float_value().map(From::from),
+            Marker::Bytes => self.decode_bytes_value().map(From::from),
+            Marker::Bool => self.decode_bool_value().map(From::from),
+            Marker::Null => self.decode_null_value().map(From::from),
+            Marker::Reserved => unimplemented!(),
         }
     }
-
-    // MARK: - Int Values
 }
 
 // MARK: - Auxiliary Methods
@@ -68,6 +66,7 @@ impl<'de, R> Decoder<R>
 where
     R: Read<'de>,
 {
+    #[inline]
     fn peek_byte(&mut self) -> Result<u8> {
         if let Some(byte) = self.peeked {
             return Ok(byte);
@@ -80,6 +79,24 @@ where
         Ok(byte)
     }
 
+    #[inline]
+    fn pull_byte_expecting(&mut self, marker: Marker) -> Result<u8> {
+        let pos = self.pos;
+
+        let byte = self.pull_byte()?;
+
+        marker.validate(byte).map_err(|exp| {
+            Error::invalid_type(
+                exp.unexpected.to_string(),
+                exp.expected.to_string(),
+                Some(pos),
+            )
+        })?;
+
+        Ok(byte)
+    }
+
+    #[inline]
     fn pull_byte(&mut self) -> Result<u8> {
         let byte = match self.peeked {
             Some(byte) => byte,
@@ -92,6 +109,7 @@ where
         Ok(byte)
     }
 
+    #[inline]
     fn pull_bytes_into<'s>(&'s mut self, buf: &'s mut [u8]) -> Result<()> {
         let len = buf.len();
 
@@ -112,6 +130,7 @@ where
         Ok(())
     }
 
+    #[inline]
     fn pull_bytes<'s>(
         &'s mut self,
         len: usize,
@@ -122,38 +141,6 @@ where
         self.pos += bytes.len();
 
         Ok(bytes)
-    }
-
-    #[inline]
-    pub fn peek_header<T>(&mut self) -> Result<T>
-    where
-        T: DecodeHeader,
-    {
-        let pos = self.pos;
-        let byte = self.peek_byte()?;
-
-        Self::decode_header(byte, Some(pos))
-    }
-
-    #[inline]
-    fn pull_header<T>(&mut self) -> Result<T>
-    where
-        T: DecodeHeader,
-    {
-        let pos = self.pos;
-        let byte = self.pull_byte()?;
-
-        Self::decode_header(byte, Some(pos))
-    }
-
-    #[inline]
-    fn decode_header<T>(byte: u8, pos: Option<usize>) -> Result<T>
-    where
-        T: DecodeHeader,
-    {
-        T::decode(byte).map_err(|exp| {
-            Error::invalid_type(exp.unexpected.to_string(), exp.expected.to_string(), pos)
-        })
     }
 
     #[inline]
@@ -189,7 +176,7 @@ mod test {
 
         let mut buf = vec![];
         decoder.pull_bytes_into(&mut buf).unwrap();
-        assert_eq!(buf, &[]);
+        assert_eq!(buf.len(), 0);
         assert_eq!(decoder.pos, 0);
 
         let mut buf = vec![0];
