@@ -1,6 +1,7 @@
 use crate::{
     error::{Error, Result},
     header::FloatHeader,
+    marker::Marker,
     num::float::{FromFloat, IntoFloat as _},
     value::FloatValue,
 };
@@ -12,33 +13,42 @@ where
     R: Read<'de>,
 {
     pub fn decode_f32(&mut self) -> Result<f32> {
-        self.decode_float()
-    }
-
-    pub fn decode_f64(&mut self) -> Result<f64> {
-        self.decode_float()
-    }
-
-    pub fn decode_float_value(&mut self) -> Result<FloatValue> {
-        let header: FloatHeader = self.pull_header()?;
-        let width = header.width();
-
-        match width {
-            4 => self.decode_float_value_bytes(width).map(FloatValue::F32),
-            8 => self.decode_float_value_bytes(width).map(FloatValue::F64),
-            _ => unreachable!(),
+        match self.decode_float_value()? {
+            FloatValue::F32(value) => Ok(value),
+            FloatValue::F64(value) => {
+                // FIXME: add a strictness config?
+                Ok(value as f32)
+            }
         }
     }
 
-    fn decode_float<T>(&mut self) -> Result<T>
-    where
-        T: FromFloat<f32> + FromFloat<f64>,
-    {
-        let header: FloatHeader = self.pull_header()?;
+    pub fn decode_f64(&mut self) -> Result<f64> {
+        match self.decode_float_value()? {
+            FloatValue::F32(value) => {
+                // FIXME: add a strictness config?
+                Ok(value as f64)
+            }
+            FloatValue::F64(value) => Ok(value),
+        }
+    }
 
-        let width = header.width();
+    pub fn decode_float_value(&mut self) -> Result<FloatValue> {
+        self.decode_float_header().map(|header| header.value())
+    }
 
-        self.decode_float_value_bytes(width)
+    pub fn decode_float_header(&mut self) -> Result<FloatHeader> {
+        let header_byte = self.pull_byte_expecting(Marker::Float)?;
+
+        let width = 1 + (header_byte & FloatHeader::VALUE_WIDTH_BITS);
+
+        let value = match width {
+            width @ 4 => self.decode_float_value_bytes(width).map(FloatValue::F32),
+            width @ 8 => self.decode_float_value_bytes(width).map(FloatValue::F64),
+            // FIXME: add support for var-float:
+            _ => unreachable!(),
+        }?;
+
+        Ok(FloatHeader::new(value))
     }
 
     #[inline]

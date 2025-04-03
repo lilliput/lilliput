@@ -173,8 +173,9 @@ mod tests {
     use proptest::prelude::*;
 
     use crate::{
+        config::EncodingConfig,
         decoder::Decoder,
-        encoder::{Encoder, EncoderConfig},
+        encoder::Encoder,
         io::{SliceReader, VecWriter},
         value::{IntValue, Value},
     };
@@ -278,7 +279,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn encode_decode_roundtrip(value in SignedIntValue::arbitrary(), config in EncoderConfig::arbitrary()) {
+        fn encode_decode_roundtrip(value in SignedIntValue::arbitrary(), config in EncodingConfig::arbitrary()) {
             let mut encoded: Vec<u8> = Vec::new();
             let writer = VecWriter::new(&mut encoded);
             let mut encoder = Encoder::new(writer, config);

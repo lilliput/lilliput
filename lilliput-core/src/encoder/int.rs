@@ -1,13 +1,11 @@
-use num_traits::{Signed, ToBytes, Unsigned};
+use num_traits::{Signed, Unsigned};
 
 use crate::{
+    binary::bits_if,
     error::Result,
-    header::{EncodeHeader as _, IntHeader},
+    header::IntHeader,
     io::Write,
-    num::{
-        int::{with_n_be_bytes, CompactWidth},
-        zigzag::ToZigZag,
-    },
+    num::WithPackedBeBytes,
     value::{IntValue, SignedIntValue, UnsignedIntValue},
 };
 
@@ -49,74 +47,21 @@ where
         self.encode_unsigned_int(value)
     }
 
-    pub fn encode_signed_int<S, U, const N: usize>(&mut self, value: S) -> Result<()>
-    where
-        S: Signed + ToZigZag<ZigZag = U>,
-        U: Copy + Unsigned + CompactWidth + PartialOrd + From<u8> + ToBytes<Bytes = [u8; N]>,
-    {
-        let unsigned = value.to_zig_zag();
-
-        let is_signed = true;
-
-        let header = if self.config.compact_ints {
-            IntHeader::optimal(is_signed, unsigned)
-        } else {
-            IntHeader::verbatim(is_signed, unsigned)
-        };
-
-        // Push the value's header:
-        self.push_bytes(&[header.encode()])?;
-
-        if let Some(len_width) = header.extension_width() {
-            with_n_be_bytes(unsigned, len_width, |len_bytes| {
-                // Push the value's extension:
-                self.push_bytes(len_bytes)
-            })?;
-        }
-
-        Ok(())
-    }
-
-    pub fn encode_unsigned_int<T, const N: usize>(&mut self, unsigned: T) -> Result<()>
-    where
-        T: Copy + Unsigned + CompactWidth + PartialOrd + From<u8> + ToBytes<Bytes = [u8; N]>,
-    {
-        let is_signed = false;
-
-        let header = if self.config.compact_ints {
-            IntHeader::optimal(is_signed, unsigned)
-        } else {
-            IntHeader::verbatim(is_signed, unsigned)
-        };
-
-        // Push the value's header:
-        self.push_bytes(&[header.encode()])?;
-
-        if let Some(len_width) = header.extension_width() {
-            with_n_be_bytes(unsigned, len_width, |len_bytes| {
-                // Push the value's extension:
-                self.push_bytes(len_bytes)
-            })?;
-        }
-
-        Ok(())
-    }
-
     pub fn encode_signed_int_value(&mut self, value: &SignedIntValue) -> Result<()> {
-        match *value {
-            SignedIntValue::I8(value) => self.encode_signed_int(value),
-            SignedIntValue::I16(value) => self.encode_signed_int(value),
-            SignedIntValue::I32(value) => self.encode_signed_int(value),
-            SignedIntValue::I64(value) => self.encode_signed_int(value),
+        match value {
+            SignedIntValue::I8(value) => self.encode_signed_int(*value),
+            SignedIntValue::I16(value) => self.encode_signed_int(*value),
+            SignedIntValue::I32(value) => self.encode_signed_int(*value),
+            SignedIntValue::I64(value) => self.encode_signed_int(*value),
         }
     }
 
     pub fn encode_unsigned_int_value(&mut self, value: &UnsignedIntValue) -> Result<()> {
-        match *value {
-            UnsignedIntValue::U8(value) => self.encode_unsigned_int(value),
-            UnsignedIntValue::U16(value) => self.encode_unsigned_int(value),
-            UnsignedIntValue::U32(value) => self.encode_unsigned_int(value),
-            UnsignedIntValue::U64(value) => self.encode_unsigned_int(value),
+        match value {
+            UnsignedIntValue::U8(value) => self.encode_unsigned_int(*value),
+            UnsignedIntValue::U16(value) => self.encode_unsigned_int(*value),
+            UnsignedIntValue::U32(value) => self.encode_unsigned_int(*value),
+            UnsignedIntValue::U64(value) => self.encode_unsigned_int(*value),
         }
     }
 
@@ -125,5 +70,63 @@ where
             IntValue::Signed(value) => self.encode_signed_int_value(value),
             IntValue::Unsigned(value) => self.encode_unsigned_int_value(value),
         }
+    }
+
+    pub fn encode_int_header(&mut self, header: &IntHeader) -> Result<()> {
+        let mut header_byte = IntHeader::TYPE_BITS;
+
+        match header {
+            IntHeader::Compact(compact) => {
+                header_byte |= IntHeader::COMPACT_VARIANT_BIT;
+                header_byte |= bits_if(IntHeader::SIGNEDNESS_BIT, compact.is_signed());
+                header_byte |= compact.bits() & IntHeader::COMPACT_VALUE_BITS;
+            }
+            IntHeader::Extended(extended) => {
+                header_byte |= bits_if(IntHeader::SIGNEDNESS_BIT, extended.is_signed());
+                header_byte |= (extended.width() - 1) & IntHeader::EXTENDED_WIDTH_BITS;
+            }
+        }
+
+        self.push_byte(header_byte)
+    }
+
+    #[inline]
+    fn encode_signed_int<S>(&mut self, value: S) -> Result<()>
+    where
+        S: Signed + WithPackedBeBytes,
+    {
+        let packing_mode = self.config.int_packing;
+
+        value.with_packed_be_bytes(packing_mode, |_width, bytes| {
+            let (header, is_compact) = IntHeader::be_bytes(true, bytes, packing_mode);
+            self.encode_int_header(&header)?;
+
+            if is_compact {
+                return Ok(());
+            }
+
+            // Push the value' bytes:
+            self.push_bytes(bytes)
+        })
+    }
+
+    #[inline]
+    fn encode_unsigned_int<U>(&mut self, value: U) -> Result<()>
+    where
+        U: Unsigned + WithPackedBeBytes,
+    {
+        let packing_mode = self.config.int_packing;
+
+        value.with_packed_be_bytes(packing_mode, |_width, bytes| {
+            let (header, is_compact) = IntHeader::be_bytes(false, bytes, packing_mode);
+            self.encode_int_header(&header)?;
+
+            if is_compact {
+                return Ok(());
+            }
+
+            // Push the value' bytes:
+            self.push_bytes(bytes)
+        })
     }
 }

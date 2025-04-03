@@ -39,6 +39,7 @@ impl_zig_zag!(signed: i8, unsigned: u8);
 impl_zig_zag!(signed: i16, unsigned: u16);
 impl_zig_zag!(signed: i32, unsigned: u32);
 impl_zig_zag!(signed: i64, unsigned: u64);
+impl_zig_zag!(signed: isize, unsigned: usize);
 
 impl ToZigZag for SignedIntValue {
     type ZigZag = UnsignedIntValue;

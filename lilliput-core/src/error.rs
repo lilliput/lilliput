@@ -86,6 +86,12 @@ impl Error {
         Self::new(Box::new(ErrorKind::utf8(err)), pos)
     }
 
+    /// Reserved type.
+    #[cold]
+    pub fn reserved_type() -> Self {
+        Self::new(Box::new(ErrorKind::reserved_type()), None)
+    }
+
     #[cfg(feature = "std")]
     pub fn io(err: std::io::Error) -> Self {
         Self::new(Box::new(ErrorKind::io(err)), None)
@@ -138,6 +144,7 @@ impl std::error::Error for Error {
             ErrorKind::Uncategorized(_) => None,
             ErrorKind::DepthLimitExceeded => None,
             ErrorKind::Utf8(err) => Some(err),
+            ErrorKind::ReservedType => None,
             #[cfg(feature = "std")]
             ErrorKind::StdIo(err) => Some(err),
         }
@@ -204,6 +211,8 @@ pub enum ErrorCode {
     DepthLimitExceeded = 71,
     /// An encoded string could not be parsed as UTF-8.
     Utf8 = 81,
+    /// Reserved type
+    ReservedType = 91,
     #[cfg(feature = "std")]
     StdIo = 255,
 }
@@ -231,6 +240,8 @@ pub enum ErrorKind {
     DepthLimitExceeded,
     /// An encoded string could not be parsed as UTF-8.
     Utf8(core::str::Utf8Error),
+    /// ReservedType,
+    ReservedType,
     #[cfg(feature = "std")]
     StdIo(std::io::Error),
 }
@@ -292,6 +303,11 @@ impl ErrorKind {
         Self::Utf8(err)
     }
 
+    /// Reserved type.
+    fn reserved_type() -> Self {
+        Self::ReservedType
+    }
+
     #[cfg(feature = "std")]
     fn io(err: std::io::Error) -> Self {
         if err.kind() == std::io::ErrorKind::UnexpectedEof {
@@ -312,6 +328,7 @@ impl ErrorKind {
             ErrorKind::Uncategorized(_) => ErrorCode::Uncategorized,
             ErrorKind::DepthLimitExceeded => ErrorCode::DepthLimitExceeded,
             ErrorKind::Utf8(_) => ErrorCode::Utf8,
+            ErrorKind::ReservedType => ErrorCode::ReservedType,
             ErrorKind::StdIo(_) => ErrorCode::StdIo,
         }
     }
@@ -349,6 +366,7 @@ impl Display for ErrorKind {
                 f.write_str("a numeric cast failed due to an out-of-range error")
             }
             Self::Utf8(err) => Display::fmt(err, f),
+            Self::ReservedType => f.write_str("reserved type"),
             #[cfg(feature = "std")]
             Self::StdIo(err) => Display::fmt(err, f),
         }

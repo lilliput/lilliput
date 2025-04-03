@@ -1,8 +1,8 @@
 use crate::{
     error::Result,
-    header::{EncodeHeader as _, SeqHeader},
+    header::{CompactSeqHeader, ExtendedSeqHeader, SeqHeader},
     io::Write,
-    num::int::with_n_be_bytes,
+    num::WithPackedBeBytes as _,
     value::{SeqValue, Value},
 };
 
@@ -13,7 +13,9 @@ where
     W: Write,
 {
     pub fn encode_seq(&mut self, value: &[Value]) -> Result<()> {
-        self.encode_seq_header(value.len())?;
+        let packing_mode = self.config.len_packing;
+
+        self.encode_seq_header(&SeqHeader::new(value.len(), packing_mode))?;
 
         for value in value {
             self.encode_any(value)?;
@@ -26,23 +28,28 @@ where
         self.encode_seq(&value.0)
     }
 
-    pub fn encode_seq_header(&mut self, len: usize) -> Result<()> {
-        let header = if self.config.compact_ints {
-            SeqHeader::optimal(len)
-        } else {
-            SeqHeader::verbatim(len)
-        };
+    pub fn encode_seq_header(&mut self, header: &SeqHeader) -> Result<()> {
+        let mut header_byte = SeqHeader::TYPE_BITS;
 
-        // Push the value's header:
-        self.push_bytes(&[header.encode()])?;
+        match *header {
+            SeqHeader::Compact(CompactSeqHeader { len }) => {
+                header_byte |= SeqHeader::COMPACT_VARIANT_BIT;
+                header_byte |= len & SeqHeader::COMPACT_LEN_BITS;
 
-        if let Some(len_width) = header.extension_width() {
-            with_n_be_bytes(len, len_width, |len_bytes| {
-                // Push the value's length extension:
-                self.push_bytes(len_bytes)
-            })?;
+                // Push the value's header:
+                self.push_byte(header_byte)
+            }
+            SeqHeader::Extended(ExtendedSeqHeader { len }) => {
+                len.with_packed_be_bytes(self.config.len_packing, |width, bytes| {
+                    header_byte |= (width - 1) & SeqHeader::EXTENDED_LEN_WIDTH_BITS;
+
+                    // Push the value's header:
+                    self.push_byte(header_byte)?;
+
+                    // Push the value's length:
+                    self.push_bytes(bytes)
+                })
+            }
         }
-
-        Ok(())
     }
 }

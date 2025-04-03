@@ -2,8 +2,9 @@ use std::ops::Range;
 
 use crate::{
     error::{Error, Result},
-    header::{StringHeader, StringHeaderRepr},
+    header::StringHeader,
     io::{Read, Reference},
+    marker::Marker,
     value::StringValue,
 };
 
@@ -80,25 +81,29 @@ where
         &'s mut self,
         scratch: &'s mut Vec<u8>,
     ) -> Result<(Reference<'de, 's, [u8]>, Range<usize>)> {
-        let len = self.decode_str_header()?;
+        let header = self.decode_string_header()?;
 
         scratch.clear();
 
         let start = self.pos;
-        let bytes = self.pull_bytes(len, scratch)?;
+        let bytes = self.pull_bytes(header.len(), scratch)?;
         let range = start..(start + bytes.len());
 
         Ok((bytes, range))
     }
 
-    fn decode_str_header(&mut self) -> Result<usize> {
-        let header: StringHeader = self.pull_header()?;
+    pub fn decode_string_header(&mut self) -> Result<StringHeader> {
+        let header_byte = self.pull_byte_expecting(Marker::String)?;
 
-        let len: usize = match header.repr() {
-            StringHeaderRepr::Compact { len } => len.into(),
-            StringHeaderRepr::Extended { len_width } => self.pull_len_bytes(len_width)?,
-        };
+        let is_compact = (header_byte & StringHeader::COMPACT_VARIANT_BIT) != 0b0;
 
-        Ok(len)
+        if is_compact {
+            let len = header_byte & StringHeader::COMPACT_LEN_BITS;
+            Ok(StringHeader::compact(len))
+        } else {
+            let len_width = 1 + (header_byte & StringHeader::EXTENDED_LEN_WIDTH_BITS);
+            let len = self.pull_len_bytes(len_width)?;
+            Ok(StringHeader::extended(len))
+        }
     }
 }

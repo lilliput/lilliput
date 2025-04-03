@@ -1,9 +1,4 @@
-#[cfg(test)]
-use proptest::prelude::*;
-
-use crate::{binary::Byte, num::int::CompactWidth as _};
-
-use super::{DecodeHeader, EncodeHeader, Expectation, Marker};
+use crate::config::PackingMode;
 
 /// Represents a sequence of values.
 ///
@@ -41,137 +36,107 @@ use super::{DecodeHeader, EncodeHeader, Expectation, Marker};
 ///   └─ Seq type
 /// ```
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
-#[repr(transparent)]
-pub struct SeqHeader {
-    repr: SeqHeaderRepr,
-}
-
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
-pub enum SeqHeaderRepr {
-    Compact { len: u8 },
-    Extended { len_width: u8 },
+pub enum SeqHeader {
+    Compact(CompactSeqHeader),
+    Extended(ExtendedSeqHeader),
 }
 
 impl SeqHeader {
-    const TYPE_BITS: u8 = 0b00100000;
-
-    const COMPACT_VARIANT_BIT: u8 = 0b00010000;
-    const COMPACT_LEN_BITS: u8 = 0b00000111;
-    const EXTENDED_LEN_WIDTH_BITS: u8 = 0b00000111;
-
     #[inline]
-    pub fn optimal(len: usize) -> Self {
-        if len <= (Self::COMPACT_LEN_BITS as usize) {
-            Self::compact(len as u8)
+    pub fn new(len: usize, packing_mode: PackingMode) -> Self {
+        if let Some(len) = Self::as_compact(len, packing_mode) {
+            Self::compact(len)
         } else {
             Self::extended(len)
         }
     }
 
-    #[inline]
-    pub fn verbatim(_len: usize) -> Self {
-        Self::from_repr(SeqHeaderRepr::Extended { len_width: 8_u8 })
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
-    #[inline]
-    pub fn repr(&self) -> SeqHeaderRepr {
-        self.repr
-    }
-
-    #[inline]
-    pub fn extension_width(self) -> Option<usize> {
-        match self.repr {
-            SeqHeaderRepr::Compact { .. } => None,
-            SeqHeaderRepr::Extended { len_width } => Some(len_width.into()),
+    pub fn len(&self) -> usize {
+        match self {
+            Self::Compact(compact) => compact.len().into(),
+            Self::Extended(extended) => extended.len(),
         }
     }
 
     #[inline]
-    pub(crate) fn from_repr(repr: SeqHeaderRepr) -> Self {
-        Self::debug_assert_repr_valid(repr);
-
-        Self { repr }
+    pub(crate) fn compact(len: u8) -> Self {
+        Self::Compact(CompactSeqHeader { len })
     }
 
     #[inline]
-    fn compact(len: u8) -> Self {
-        let len = Byte::assert_masked_by(len, Self::COMPACT_LEN_BITS);
-
-        Self::from_repr(SeqHeaderRepr::Compact { len })
+    pub(crate) fn extended(len: usize) -> Self {
+        Self::Extended(ExtendedSeqHeader { len })
     }
 
-    #[inline]
-    pub fn extended(len: usize) -> Self {
-        Self::from_repr(SeqHeaderRepr::Extended {
-            len_width: len.compact_width(),
-        })
-    }
-
-    #[inline]
-    fn debug_assert_repr_valid(repr: SeqHeaderRepr) {
-        match repr {
-            SeqHeaderRepr::Compact { len } => {
-                debug_assert!(len <= Self::COMPACT_LEN_BITS);
-            }
-            SeqHeaderRepr::Extended { len_width } => {
-                debug_assert!(len_width - 1 <= Self::EXTENDED_LEN_WIDTH_BITS);
-            }
-        }
-    }
-}
-
-impl DecodeHeader for SeqHeader {
-    fn decode(byte: u8) -> Result<Self, Expectation<Marker>> {
-        Marker::Seq.validate(byte)?;
-
-        let byte = Byte(byte);
-
-        let repr = if byte.contains_bits(Self::COMPACT_VARIANT_BIT) {
-            let len = byte.masked_bits(Self::COMPACT_LEN_BITS);
-            SeqHeaderRepr::Compact { len }
+    fn as_compact(len: usize, packing_mode: PackingMode) -> Option<u8> {
+        let allows_compact = packing_mode == PackingMode::Optimal;
+        let mask = SeqHeader::COMPACT_LEN_BITS as usize;
+        let compact_len = len & mask;
+        if allows_compact && compact_len == len {
+            Some(compact_len as u8)
         } else {
-            let len_width_bits = byte.masked_bits(Self::EXTENDED_LEN_WIDTH_BITS);
-            SeqHeaderRepr::Extended {
-                len_width: (len_width_bits + 1),
-            }
-        };
-
-        Self::debug_assert_repr_valid(repr);
-
-        Ok(Self::from_repr(repr))
-    }
-}
-
-impl EncodeHeader for SeqHeader {
-    fn encode(self) -> u8 {
-        let mut byte = Byte(Self::TYPE_BITS);
-
-        Self::debug_assert_repr_valid(self.repr);
-
-        match self.repr {
-            SeqHeaderRepr::Compact { len } => {
-                byte.set_bits(Self::COMPACT_VARIANT_BIT);
-                byte.set_bits_assert_masked_by(len, Self::COMPACT_LEN_BITS);
-            }
-            SeqHeaderRepr::Extended { len_width } => {
-                byte.set_bits_assert_masked_by(len_width - 1, Self::EXTENDED_LEN_WIDTH_BITS);
-            }
+            None
         }
-
-        byte.0
     }
 }
 
-#[cfg(test)]
-impl Arbitrary for SeqHeader {
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[repr(transparent)]
+pub struct CompactSeqHeader {
+    pub(crate) len: u8,
+}
+
+impl CompactSeqHeader {
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    pub fn len(&self) -> u8 {
+        self.len
+    }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[repr(transparent)]
+pub struct ExtendedSeqHeader {
+    pub(crate) len: usize,
+}
+
+impl ExtendedSeqHeader {
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    pub fn len(&self) -> usize {
+        self.len
+    }
+}
+
+impl SeqHeader {
+    pub(crate) const TYPE_BITS: u8 = 0b00100000;
+
+    pub(crate) const COMPACT_VARIANT_BIT: u8 = 0b00010000;
+    pub(crate) const COMPACT_LEN_BITS: u8 = 0b00000111;
+    pub(crate) const EXTENDED_LEN_WIDTH_BITS: u8 = 0b00000111;
+}
+
+#[cfg(any(test, feature = "testing"))]
+impl proptest::prelude::Arbitrary for SeqHeader {
     type Parameters = ();
     type Strategy = proptest::strategy::BoxedStrategy<Self>;
 
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         use proptest::prelude::Strategy as _;
         proptest::prop_oneof![
-            (0..=7_u8).prop_map(Self::compact),
-            (0..=100_usize).prop_map(Self::extended)
+            (0..=Self::COMPACT_LEN_BITS).prop_map(Self::compact),
+            proptest::num::u8::ANY.prop_map(|len| Self::extended(len as usize)),
+            proptest::num::u16::ANY.prop_map(|len| Self::extended(len as usize)),
+            proptest::num::u32::ANY.prop_map(|len| Self::extended(len as usize)),
+            proptest::num::u64::ANY.prop_map(|len| Self::extended(len as usize)),
         ]
         .boxed()
     }
@@ -181,14 +146,26 @@ impl Arbitrary for SeqHeader {
 mod tests {
     use proptest::prelude::*;
 
+    use crate::{
+        config::EncodingConfig,
+        decoder::Decoder,
+        encoder::Encoder,
+        io::{SliceReader, VecWriter},
+    };
+
     use super::*;
 
     proptest! {
         #[test]
-        fn encode_decode_roundtrip(header in SeqHeader::arbitrary()) {
-            let encoded = header.encode();
-            let decoded = SeqHeader::decode(encoded).unwrap();
+        fn encode_decode_roundtrip(header in SeqHeader::arbitrary(), config in EncodingConfig::arbitrary()) {
+            let mut encoded: Vec<u8> = Vec::new();
+            let writer = VecWriter::new(&mut encoded);
+            let mut encoder = Encoder::new(writer, config);
+            encoder.encode_seq_header(&header).unwrap();
 
+            let reader = SliceReader::new(&encoded);
+            let mut decoder = Decoder::new(reader);
+            let decoded = decoder.decode_seq_header().unwrap();
             prop_assert_eq!(&decoded, &header);
         }
     }

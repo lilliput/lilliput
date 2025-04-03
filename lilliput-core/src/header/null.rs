@@ -1,7 +1,3 @@
-use crate::binary::Byte;
-
-use super::{DecodeHeader, EncodeHeader, Expectation, Marker};
-
 /// Represents a null value.
 ///
 /// # Binary representation
@@ -11,27 +7,18 @@ use super::{DecodeHeader, EncodeHeader, Expectation, Marker};
 ///   ├──────┘
 ///   └─ Null Type
 /// ```
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Default, Copy, Clone, Eq, PartialEq, Debug)]
 pub struct NullHeader;
 
 impl NullHeader {
-    const TYPE_BITS: u8 = 0b00000001;
-}
-
-impl DecodeHeader for NullHeader {
-    fn decode(byte: u8) -> Result<Self, Expectation<Marker>> {
-        Marker::Null.validate(byte)?;
-
-        Ok(Self)
+    #[inline]
+    pub fn new() -> Self {
+        Self
     }
 }
 
-impl EncodeHeader for NullHeader {
-    fn encode(self) -> u8 {
-        let byte = Byte(Self::TYPE_BITS);
-
-        byte.0
-    }
+impl NullHeader {
+    pub(crate) const TYPE_BITS: u8 = 0b00000001;
 }
 
 #[cfg(any(test, feature = "testing"))]
@@ -49,14 +36,26 @@ impl proptest::prelude::Arbitrary for NullHeader {
 mod tests {
     use proptest::prelude::*;
 
+    use crate::{
+        config::EncodingConfig,
+        decoder::Decoder,
+        encoder::Encoder,
+        io::{SliceReader, VecWriter},
+    };
+
     use super::*;
 
     proptest! {
         #[test]
-        fn encode_decode_roundtrip(header in NullHeader::arbitrary()) {
-            let encoded = header.encode();
-            let decoded = NullHeader::decode(encoded).unwrap();
+        fn encode_decode_roundtrip(header in NullHeader::arbitrary(), config in EncodingConfig::arbitrary()) {
+            let mut encoded: Vec<u8> = Vec::new();
+            let writer = VecWriter::new(&mut encoded);
+            let mut encoder = Encoder::new(writer, config);
+            encoder.encode_null_header(&header).unwrap();
 
+            let reader = SliceReader::new(&encoded);
+            let mut decoder = Decoder::new(reader);
+            let decoded = decoder.decode_null_header().unwrap();
             prop_assert_eq!(&decoded, &header);
         }
     }
