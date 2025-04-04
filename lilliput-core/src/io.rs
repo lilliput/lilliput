@@ -186,11 +186,9 @@ impl<'r> Read<'r> for SliceReader<'r> {
         }
 
         let range = self.pos..(self.pos + len);
-        let slice = &self.slice[range];
-
         self.pos += len;
 
-        Ok(Reference::Borrowed(slice))
+        Ok(Reference::Borrowed(&self.slice[range]))
     }
 
     fn read_into(&mut self, buf: &mut [u8]) -> Result<()> {
@@ -201,11 +199,9 @@ impl<'r> Read<'r> for SliceReader<'r> {
         }
 
         let range = self.pos..(self.pos + len);
-        let slice = &self.slice[range];
-
         self.pos += len;
 
-        buf.copy_from_slice(slice);
+        buf.copy_from_slice(&self.slice[range]);
 
         Ok(())
     }
