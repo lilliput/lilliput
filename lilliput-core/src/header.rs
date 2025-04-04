@@ -4,6 +4,7 @@ mod float;
 mod int;
 mod map;
 mod null;
+mod reserved;
 mod seq;
 mod string;
 
@@ -19,6 +20,8 @@ pub use self::{
     seq::{CompactSeqHeader, ExtendedSeqHeader, SeqHeader},
     string::{CompactStringHeader, ExtendedStringHeader, StringHeader},
 };
+
+pub(crate) use self::reserved::ReservedHeader;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum Header {
