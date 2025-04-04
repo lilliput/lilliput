@@ -49,30 +49,8 @@ pub enum IntHeader {
 }
 
 impl IntHeader {
-    pub fn signed<T>(value: T, packing_mode: PackingMode) -> Self
-    where
-        T: Signed + WithPackedBeBytes,
-    {
-        let (header, _) = value.with_packed_be_bytes(packing_mode, |_, bytes| {
-            Self::be_bytes(true, bytes, packing_mode)
-        });
-
-        header
-    }
-
-    pub fn unsigned<T>(value: T, packing_mode: PackingMode) -> Self
-    where
-        T: Unsigned + WithPackedBeBytes,
-    {
-        let (header, _) = value.with_packed_be_bytes(packing_mode, |_, bytes| {
-            Self::be_bytes(false, bytes, packing_mode)
-        });
-
-        header
-    }
-
     #[inline]
-    pub fn new(value: IntValue, packing_mode: PackingMode) -> Self {
+    pub fn packed(value: IntValue, packing_mode: PackingMode) -> Self {
         match value {
             IntValue::Signed(value) => match value {
                 SignedIntValue::I8(value) => Self::signed(value, packing_mode),
@@ -90,62 +68,53 @@ impl IntHeader {
     }
 
     #[inline]
-    pub(crate) fn be_bytes(
+    pub(crate) fn from_be_bytes(
         is_signed: bool,
         be_bytes: &[u8],
         packing_mode: PackingMode,
-    ) -> (Self, bool) {
-        debug_assert!(be_bytes.len() <= 8);
+    ) -> Self {
+        let width = be_bytes.len();
 
-        if let Some(bits) = Self::as_compact(be_bytes, packing_mode) {
-            let header = Self::Compact(CompactIntHeader { is_signed, bits });
+        let mut header = Self::Extended(ExtendedIntHeader {
+            is_signed,
+            width: width as u8,
+        });
 
-            (header, true)
-        } else {
-            let header = Self::Extended(ExtendedIntHeader {
-                is_signed,
-                width: be_bytes.len() as u8,
-            });
-
-            (header, false)
-        }
-    }
-
-    pub fn extended_value_width(&self) -> Option<u8> {
-        match self {
-            Self::Compact(_) => None,
-            Self::Extended(header) => Some(header.width),
-        }
-    }
-
-    pub(crate) fn compact(is_signed: bool, bits: u8) -> Self {
-        debug_assert!(bits <= IntHeader::COMPACT_VALUE_BITS);
-
-        Self::Compact(CompactIntHeader { is_signed, bits })
-    }
-
-    pub(crate) fn extended(is_signed: bool, width: u8) -> Self {
-        debug_assert!((width - 1) <= IntHeader::EXTENDED_WIDTH_BITS);
-
-        Self::Extended(ExtendedIntHeader { is_signed, width })
-    }
-
-    pub(crate) fn as_compact(be_bytes: &[u8], packing_mode: PackingMode) -> Option<u8> {
-        if packing_mode != PackingMode::Optimal {
-            return None;
+        if packing_mode == PackingMode::Optimal && width == 1 {
+            let bits = be_bytes[width - 1];
+            if bits <= Self::COMPACT_VALUE_BITS {
+                header = Self::Compact(CompactIntHeader { is_signed, bits });
+            }
         }
 
-        match be_bytes {
-            &[bits] if bits <= IntHeader::COMPACT_VALUE_BITS => Some(bits),
-            _ => None,
-        }
+        header
+    }
+
+    #[inline]
+    pub(crate) fn signed<T>(value: T, packing_mode: PackingMode) -> Self
+    where
+        T: Signed + WithPackedBeBytes,
+    {
+        value.with_packed_be_bytes(packing_mode, |be_bytes| {
+            Self::from_be_bytes(true, be_bytes, packing_mode)
+        })
+    }
+
+    #[inline]
+    pub(crate) fn unsigned<T>(value: T, packing_mode: PackingMode) -> Self
+    where
+        T: Unsigned + WithPackedBeBytes,
+    {
+        value.with_packed_be_bytes(packing_mode, |be_bytes| {
+            Self::from_be_bytes(true, be_bytes, packing_mode)
+        })
     }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct CompactIntHeader {
-    is_signed: bool,
-    bits: u8,
+    pub(crate) is_signed: bool,
+    pub(crate) bits: u8,
 }
 
 impl CompactIntHeader {
@@ -160,8 +129,8 @@ impl CompactIntHeader {
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct ExtendedIntHeader {
-    is_signed: bool,
-    width: u8,
+    pub(crate) is_signed: bool,
+    pub(crate) width: u8,
 }
 
 impl ExtendedIntHeader {
@@ -193,10 +162,9 @@ impl proptest::arbitrary::Arbitrary for IntHeader {
         use proptest::strategy::Strategy;
 
         proptest::prop_oneof![
-            (0..=Self::COMPACT_VALUE_BITS).prop_map(|bits| Self::compact(false, bits)),
-            (0..=Self::COMPACT_VALUE_BITS).prop_map(|bits| Self::compact(true, bits)),
-            (0..=Self::EXTENDED_WIDTH_BITS).prop_map(|bits| Self::extended(false, bits + 1)),
-            (0..=Self::EXTENDED_WIDTH_BITS).prop_map(|bits| Self::extended(true, bits + 1)),
+            IntValue::arbitrary().prop_map(|value| Self::packed(value, PackingMode::None)),
+            IntValue::arbitrary().prop_map(|value| Self::packed(value, PackingMode::Native)),
+            IntValue::arbitrary().prop_map(|value| Self::packed(value, PackingMode::Optimal)),
         ]
         .boxed()
     }

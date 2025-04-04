@@ -40,7 +40,9 @@ where
                 self.push_byte(header_byte)
             }
             SeqHeader::Extended(ExtendedSeqHeader { len }) => {
-                len.with_packed_be_bytes(self.config.len_packing, |width, bytes| {
+                len.with_packed_be_bytes(self.config.len_packing, |bytes| {
+                    let width = bytes.len() as u8;
+
                     header_byte |= (width - 1) & SeqHeader::EXTENDED_LEN_WIDTH_BITS;
 
                     // Push the value's header:
@@ -51,5 +53,9 @@ where
                 })
             }
         }
+    }
+
+    pub fn header_for_seq(&self, len: usize) -> SeqHeader {
+        SeqHeader::new(len, self.config.len_packing)
     }
 }

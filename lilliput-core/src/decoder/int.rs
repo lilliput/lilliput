@@ -1,11 +1,10 @@
 use core::num::TryFromIntError;
-use std::ops::Range;
 
 use num_traits::{Signed, Unsigned};
 
 use crate::{
     error::{Error, Result},
-    header::IntHeader,
+    header::{CompactIntHeader, ExtendedIntHeader, IntHeader},
     marker::Marker,
     num::zigzag::FromZigZag,
     value::{IntValue, SignedIntValue, UnsignedIntValue},
@@ -53,158 +52,141 @@ where
     where
         T: Signed + TryFrom<SignedIntValue, Error = TryFromIntError>,
     {
-        let (value, range) = self.decode_int_value_and_range()?;
+        let pos = self.pos;
 
-        let signed = value
-            .to_signed()
-            .and_then(|value| value.try_into())
-            .map_err(|_| Error::number_out_of_range(Some(range.start)))?;
-
-        Ok(signed)
+        self.decode_signed_int_value()?
+            .try_into()
+            .map_err(|_| Error::number_out_of_range(Some(pos)))
     }
 
     pub fn decode_unsigned_int<T>(&mut self) -> Result<T>
     where
         T: Unsigned + TryFrom<UnsignedIntValue, Error = TryFromIntError>,
     {
-        let (value, range) = self.decode_int_value_and_range()?;
+        let pos = self.pos;
 
-        let unsigned = value
-            .to_unsigned()
-            .and_then(|value| value.try_into())
-            .map_err(|_| Error::number_out_of_range(Some(range.start)))?;
-
-        Ok(unsigned)
+        self.decode_unsigned_int_value()?
+            .try_into()
+            .map_err(|_| Error::number_out_of_range(Some(pos)))
     }
 
     pub fn decode_signed_int_value(&mut self) -> Result<SignedIntValue> {
-        let (value, range) = self.decode_int_value_and_range()?;
+        let pos = self.pos;
 
-        let signed = value
+        self.decode_int_value()?
             .to_signed()
-            .map_err(|_| Error::number_out_of_range(Some(range.start)))?;
-
-        Ok(signed)
+            .map_err(|_| Error::number_out_of_range(Some(pos)))
     }
 
     pub fn decode_unsigned_int_value(&mut self) -> Result<UnsignedIntValue> {
-        let (value, range) = self.decode_int_value_and_range()?;
+        let pos = self.pos;
 
-        let unsigned = value
+        self.decode_int_value()?
             .to_unsigned()
-            .map_err(|_| Error::number_out_of_range(Some(range.start)))?;
-
-        Ok(unsigned)
+            .map_err(|_| Error::number_out_of_range(Some(pos)))
     }
 
     pub fn decode_int_value(&mut self) -> Result<IntValue> {
-        let (value, _) = self.decode_int_value_and_range()?;
-
-        Ok(value)
+        let header = self.decode_int_header()?;
+        self.decode_int_value_body(header)
     }
 
     pub fn decode_int_header(&mut self) -> Result<IntHeader> {
         let header_byte = self.pull_byte_expecting(Marker::Int)?;
 
-        let is_compact = (header_byte & IntHeader::COMPACT_VARIANT_BIT) != 0b0;
-        let is_signed = (header_byte & IntHeader::SIGNEDNESS_BIT) != 0b0;
-
-        if is_compact {
+        if (header_byte & IntHeader::COMPACT_VARIANT_BIT) != 0b0 {
+            let is_signed = (header_byte & IntHeader::SIGNEDNESS_BIT) != 0b0;
             let bits = header_byte & IntHeader::COMPACT_VALUE_BITS;
-            Ok(IntHeader::compact(is_signed, bits))
+
+            Ok(IntHeader::Compact(CompactIntHeader { is_signed, bits }))
         } else {
+            let is_signed = (header_byte & IntHeader::SIGNEDNESS_BIT) != 0b0;
             let width = 1 + (header_byte & IntHeader::EXTENDED_WIDTH_BITS);
-            Ok(IntHeader::extended(is_signed, width))
+
+            Ok(IntHeader::Extended(ExtendedIntHeader { is_signed, width }))
         }
     }
+}
 
-    pub(super) fn decode_int_value_and_range(&mut self) -> Result<(IntValue, Range<usize>)> {
-        let header = self.decode_int_header()?;
-
-        let pos = self.pos;
-
-        match header {
-            IntHeader::Compact(compact) => {
-                let int_value = if compact.is_signed() {
-                    IntValue::Signed(SignedIntValue::I8(i8::from_zig_zag(compact.bits())))
+impl<'de, R> Decoder<R>
+where
+    R: Read<'de>,
+{
+    fn decode_int_value_body(&mut self, header: IntHeader) -> Result<IntValue> {
+        let (is_signed, width): (bool, usize) = match header {
+            IntHeader::Compact(CompactIntHeader { is_signed, bits }) => {
+                if is_signed {
+                    return Ok(IntValue::Signed(SignedIntValue::I8(i8::from_zig_zag(bits))));
                 } else {
-                    IntValue::Unsigned(UnsignedIntValue::U8(compact.bits()))
-                };
-                Ok((int_value, pos..(pos + 1)))
+                    return Ok(IntValue::Unsigned(UnsignedIntValue::U8(bits)));
+                }
             }
-            IntHeader::Extended(extended) => {
-                let int_value = self.pull_extended_value(extended.width(), extended.is_signed())?;
-                Ok((int_value, pos..(pos + usize::from(extended.width()))))
+            IntHeader::Extended(ExtendedIntHeader { is_signed, width }) => {
+                (is_signed, width as usize)
             }
-        }
-    }
-
-    fn pull_extended_value(&mut self, width: u8, is_signed: bool) -> Result<IntValue> {
-        if is_signed {
-            self.pull_signed_extended_value(width).map(IntValue::Signed)
-        } else {
-            self.pull_unsigned_extended_value(width)
-                .map(IntValue::Unsigned)
-        }
-    }
-
-    pub(super) fn pull_signed_extended_value(&mut self, width: u8) -> Result<SignedIntValue> {
-        let width: usize = width.into();
-
-        const MAX_WIDTH: usize = 8;
-        debug_assert!(width <= MAX_WIDTH);
-
-        let mut padded_bytes: [u8; MAX_WIDTH] = [0; MAX_WIDTH];
-        let padding: usize = MAX_WIDTH - width;
-        let bytes = &mut padded_bytes[padding..];
-        self.pull_bytes_into(bytes)?;
-
-        let signed = match bytes.len() {
-            1..=1 => SignedIntValue::I8(i8::from_zig_zag(u8::from_be_bytes(
-                <[u8; 1]>::try_from(&padded_bytes[7..]).unwrap(),
-            ))),
-            2..=2 => SignedIntValue::I16(i16::from_zig_zag(u16::from_be_bytes(
-                <[u8; 2]>::try_from(&padded_bytes[6..]).unwrap(),
-            ))),
-            3..=4 => SignedIntValue::I32(i32::from_zig_zag(u32::from_be_bytes(
-                <[u8; 4]>::try_from(&padded_bytes[4..]).unwrap(),
-            ))),
-            5..=8 => SignedIntValue::I64(i64::from_zig_zag(u64::from_be_bytes(
-                <[u8; 8]>::try_from(&padded_bytes[0..]).unwrap(),
-            ))),
-            _ => unreachable!(),
         };
 
-        Ok(signed)
-    }
+        match width {
+            1..=1 => {
+                const MAX_WIDTH: usize = 1;
+                let mut padded_be_bytes: [u8; MAX_WIDTH] = [0b0; MAX_WIDTH];
+                self.pull_bytes_into(&mut padded_be_bytes[(MAX_WIDTH - width)..])?;
+                if is_signed {
+                    Ok(IntValue::Signed(SignedIntValue::I8(i8::from_zig_zag(
+                        u8::from_be_bytes(padded_be_bytes),
+                    ))))
+                } else {
+                    Ok(IntValue::Unsigned(UnsignedIntValue::U8(u8::from_be_bytes(
+                        padded_be_bytes,
+                    ))))
+                }
+            }
+            2..=2 => {
+                const MAX_WIDTH: usize = 2;
+                let mut padded_be_bytes: [u8; MAX_WIDTH] = [0b0; MAX_WIDTH];
+                self.pull_bytes_into(&mut padded_be_bytes[(MAX_WIDTH - width)..])?;
 
-    pub(super) fn pull_unsigned_extended_value(&mut self, width: u8) -> Result<UnsignedIntValue> {
-        let width: usize = width.into();
+                if is_signed {
+                    Ok(IntValue::Signed(SignedIntValue::I16(i16::from_zig_zag(
+                        u16::from_be_bytes(padded_be_bytes),
+                    ))))
+                } else {
+                    Ok(IntValue::Unsigned(UnsignedIntValue::U16(
+                        u16::from_be_bytes(padded_be_bytes),
+                    )))
+                }
+            }
+            3..=4 => {
+                const MAX_WIDTH: usize = 4;
+                let mut padded_be_bytes: [u8; MAX_WIDTH] = [0b0; MAX_WIDTH];
+                self.pull_bytes_into(&mut padded_be_bytes[(MAX_WIDTH - width)..])?;
 
-        const MAX_WIDTH: usize = 8;
-        debug_assert!(width <= MAX_WIDTH);
+                if is_signed {
+                    Ok(IntValue::Signed(SignedIntValue::I32(i32::from_zig_zag(
+                        u32::from_be_bytes(padded_be_bytes),
+                    ))))
+                } else {
+                    Ok(IntValue::Unsigned(UnsignedIntValue::U32(
+                        u32::from_be_bytes(padded_be_bytes),
+                    )))
+                }
+            }
+            5..=8 => {
+                const MAX_WIDTH: usize = 8;
+                let mut padded_be_bytes: [u8; MAX_WIDTH] = [0b0; MAX_WIDTH];
+                self.pull_bytes_into(&mut padded_be_bytes[(MAX_WIDTH - width)..])?;
 
-        let mut padded_bytes: [u8; MAX_WIDTH] = [0; MAX_WIDTH];
-        let padding: usize = MAX_WIDTH - width;
-        let bytes = &mut padded_bytes[padding..];
-        self.pull_bytes_into(bytes)?;
-
-        let unsigned = match bytes.len() {
-            1..=1 => UnsignedIntValue::U8(u8::from_be_bytes(
-                <[u8; 1]>::try_from(&padded_bytes[7..]).unwrap(),
-            )),
-            2..=2 => UnsignedIntValue::U16(u16::from_be_bytes(
-                <[u8; 2]>::try_from(&padded_bytes[6..]).unwrap(),
-            )),
-            3..=4 => UnsignedIntValue::U32(u32::from_be_bytes(
-                <[u8; 4]>::try_from(&padded_bytes[4..]).unwrap(),
-            )),
-            5..=8 => UnsignedIntValue::U64(u64::from_be_bytes(
-                <[u8; 8]>::try_from(&padded_bytes[0..]).unwrap(),
-            )),
+                if is_signed {
+                    Ok(IntValue::Signed(SignedIntValue::I64(i64::from_zig_zag(
+                        u64::from_be_bytes(padded_be_bytes),
+                    ))))
+                } else {
+                    Ok(IntValue::Unsigned(UnsignedIntValue::U64(
+                        u64::from_be_bytes(padded_be_bytes),
+                    )))
+                }
+            }
             _ => unreachable!(),
-        };
-
-        Ok(unsigned)
+        }
     }
 }
