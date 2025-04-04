@@ -1,3 +1,5 @@
+use num_traits::float::FloatCore;
+
 use crate::{
     error::Result, header::FloatHeader, io::Write, num::WithPackedBeBytes, value::FloatValue,
 };
@@ -9,13 +11,8 @@ where
     W: Write,
 {
     pub fn encode_f32(&mut self, value: f32) -> Result<()> {
-        value.with_packed_be_bytes(self.config.float_packing, |width, bytes| {
-            let mut header_byte = FloatHeader::TYPE_BITS;
-
-            header_byte |= (width - 1) & FloatHeader::VALUE_WIDTH_BITS;
-
-            // Push the value's header:
-            self.push_byte(header_byte)?;
+        value.with_packed_be_bytes(self.config.float_packing, |bytes| {
+            self.encode_float_header(&FloatHeader::new(bytes.len() as u8))?;
 
             // Push the value itself:
             self.push_bytes(bytes)
@@ -23,7 +20,12 @@ where
     }
 
     pub fn encode_f64(&mut self, value: f64) -> Result<()> {
-        self.encode_float_header(&FloatHeader::new(FloatValue::F64(value)))
+        value.with_packed_be_bytes(self.config.float_packing, |bytes| {
+            self.encode_float_header(&FloatHeader::new(bytes.len() as u8))?;
+
+            // Push the value itself:
+            self.push_bytes(bytes)
+        })
     }
 
     pub fn encode_float_value(&mut self, value: &FloatValue) -> Result<()> {
@@ -34,23 +36,22 @@ where
     }
 
     pub fn encode_float_header(&mut self, header: &FloatHeader) -> Result<()> {
-        let packing_mode = self.config.float_packing;
+        let width = header.width();
 
-        let encode_float = |width: u8, bytes: &[u8]| {
-            let mut header_byte = FloatHeader::TYPE_BITS;
+        let mut header_byte = FloatHeader::TYPE_BITS;
 
-            header_byte |= (width - 1) & FloatHeader::VALUE_WIDTH_BITS;
+        header_byte |= (width - 1) & FloatHeader::VALUE_WIDTH_BITS;
 
-            // Push the value's header:
-            self.push_byte(header_byte)?;
+        // Push the value's header:
+        self.push_byte(header_byte)
+    }
 
-            // Push the value itself:
-            self.push_bytes(bytes)
-        };
-
-        match header.value() {
-            FloatValue::F32(value) => value.with_packed_be_bytes(packing_mode, encode_float),
-            FloatValue::F64(value) => value.with_packed_be_bytes(packing_mode, encode_float),
-        }
+    pub fn header_for_float<T>(&self, value: f64) -> FloatHeader
+    where
+        T: FloatCore + WithPackedBeBytes,
+    {
+        value.with_packed_be_bytes(self.config.int_packing, |bytes| {
+            FloatHeader::new(bytes.len() as u8)
+        })
     }
 }

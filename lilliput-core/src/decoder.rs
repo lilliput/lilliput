@@ -144,10 +144,14 @@ where
     }
 
     #[inline]
-    fn pull_len_bytes(&mut self, len_width: u8) -> Result<usize> {
+    fn pull_len_bytes(&mut self, width: u8) -> Result<usize> {
         let pos = self.pos;
 
-        self.pull_unsigned_extended_value(len_width)?
+        const MAX_WIDTH: usize = 8;
+        let mut padded_be_bytes: [u8; MAX_WIDTH] = [0b0; MAX_WIDTH];
+        self.pull_bytes_into(&mut padded_be_bytes[(MAX_WIDTH - (width as usize))..])?;
+
+        u64::from_be_bytes(padded_be_bytes)
             .try_into()
             .map_err(|_| Error::number_out_of_range(Some(pos)))
     }

@@ -1,5 +1,3 @@
-use crate::value::FloatValue;
-
 /// Represents a floating-point number.
 ///
 /// # Binary representation
@@ -12,18 +10,18 @@ use crate::value::FloatValue;
 /// ```
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct FloatHeader {
-    value: FloatValue,
+    width: u8,
 }
 
 impl FloatHeader {
-    #[inline]
-    pub(crate) fn new(value: FloatValue) -> Self {
-        Self { value }
+    pub fn new(width: u8) -> Self {
+        assert!(width <= 8);
+
+        Self { width }
     }
 
-    #[inline]
-    pub fn value(&self) -> FloatValue {
-        self.value
+    pub fn width(&self) -> u8 {
+        self.width
     }
 }
 
@@ -40,11 +38,7 @@ impl proptest::prelude::Arbitrary for FloatHeader {
 
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         use proptest::strategy::Strategy;
-        proptest::prop_oneof![
-            proptest::num::f32::ANY.prop_map(|f| Self::new(f.into())),
-            proptest::num::f64::ANY.prop_map(|f| Self::new(f.into())),
-        ]
-        .boxed()
+        (1..=8_u8).prop_map(Self::new).boxed()
     }
 }
 

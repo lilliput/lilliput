@@ -1,6 +1,5 @@
 use crate::{config::PackingMode, sealed::Sealed};
 
-pub mod float;
 pub mod int;
 pub mod zigzag;
 
@@ -24,20 +23,20 @@ pub trait PackedBeBytes: Sealed {
 pub trait WithPackedBeBytes: PackedBeBytes {
     fn with_be_bytes<T, F>(&self, f: F) -> T
     where
-        F: FnOnce(u8, &[u8]) -> T;
+        F: FnOnce(&[u8]) -> T;
 
     fn with_native_packed_be_bytes<T, F>(&self, f: F) -> T
     where
-        F: FnOnce(u8, &[u8]) -> T;
+        F: FnOnce(&[u8]) -> T;
 
     fn with_optimal_packed_be_bytes<T, F>(&self, f: F) -> T
     where
-        F: FnOnce(u8, &[u8]) -> T;
+        F: FnOnce(&[u8]) -> T;
 
     #[inline]
     fn with_packed_be_bytes<T, F>(&self, packing_mode: PackingMode, f: F) -> T
     where
-        F: FnOnce(u8, &[u8]) -> T,
+        F: FnOnce(&[u8]) -> T,
     {
         match packing_mode {
             PackingMode::None => self.with_be_bytes(f),
@@ -66,20 +65,20 @@ impl WithPackedBeBytes for f32 {
     #[inline]
     fn with_be_bytes<T, F>(&self, f: F) -> T
     where
-        F: FnOnce(u8, &[u8]) -> T,
+        F: FnOnce(&[u8]) -> T,
     {
         let bytes = self.to_be_bytes();
         let width = bytes.len();
         debug_assert_eq!(width, bytes.len());
         debug_assert_eq!(width as u8, self.native_packed_width());
 
-        f(width as u8, &bytes)
+        f(&bytes)
     }
 
     #[inline]
     fn with_native_packed_be_bytes<T, F>(&self, f: F) -> T
     where
-        F: FnOnce(u8, &[u8]) -> T,
+        F: FnOnce(&[u8]) -> T,
     {
         // FIXME: add support for `f16` on nightly
         self.with_be_bytes(f)
@@ -88,7 +87,7 @@ impl WithPackedBeBytes for f32 {
     #[inline]
     fn with_optimal_packed_be_bytes<T, F>(&self, f: F) -> T
     where
-        F: FnOnce(u8, &[u8]) -> T,
+        F: FnOnce(&[u8]) -> T,
     {
         // FIXME: add support for optimized var-floats
         self.with_native_packed_be_bytes(f)
@@ -114,19 +113,19 @@ impl WithPackedBeBytes for f64 {
     #[inline]
     fn with_be_bytes<T, F>(&self, f: F) -> T
     where
-        F: FnOnce(u8, &[u8]) -> T,
+        F: FnOnce(&[u8]) -> T,
     {
         let bytes = self.to_be_bytes();
         let width = bytes.len();
         debug_assert_eq!(width, bytes.len());
 
-        f(width as u8, &bytes)
+        f(&bytes)
     }
 
     #[inline]
     fn with_native_packed_be_bytes<T, F>(&self, f: F) -> T
     where
-        F: FnOnce(u8, &[u8]) -> T,
+        F: FnOnce(&[u8]) -> T,
     {
         // FIXME: add support for `f16` on nightly
         let as_f32 = *self as f32;
@@ -141,7 +140,7 @@ impl WithPackedBeBytes for f64 {
     #[inline]
     fn with_optimal_packed_be_bytes<T, F>(&self, f: F) -> T
     where
-        F: FnOnce(u8, &[u8]) -> T,
+        F: FnOnce(&[u8]) -> T,
     {
         // FIXME: add support for optimized var-floats
         self.with_native_packed_be_bytes(f)
@@ -188,37 +187,37 @@ macro_rules! impl_with_packed_be_bytes_for_unsigned_int {
             #[inline]
             fn with_be_bytes<T, F>(&self, f: F) -> T
             where
-                F: FnOnce(u8, &[u8]) -> T,
+                F: FnOnce(&[u8]) -> T,
             {
                 let bytes = self.to_be_bytes();
                 let width = bytes.len();
                 debug_assert_eq!(width, bytes.len());
 
-                f(width as u8, &bytes)
+                f(&bytes)
             }
 
             #[inline]
             fn with_native_packed_be_bytes<T, F>(&self, f: F) -> T
             where
-                F: FnOnce(u8, &[u8]) -> T,
+                F: FnOnce(&[u8]) -> T,
             {
                 let be_bytes = self.to_be_bytes();
                 let width: u8 = self.native_packed_width();
                 let bytes: &[u8] = &be_bytes[(be_bytes.len() - (width as usize))..];
 
-                f(width, bytes)
+                f(bytes)
             }
 
             #[inline]
             fn with_optimal_packed_be_bytes<T, F>(&self, f: F) -> T
             where
-                F: FnOnce(u8, &[u8]) -> T,
+                F: FnOnce(&[u8]) -> T,
             {
                 let be_bytes = self.to_be_bytes();
                 let width = self.optimal_packed_width() as usize;
                 let bytes: &[u8] = &be_bytes[(be_bytes.len() - (width as usize))..];
 
-                f(width as u8, bytes)
+                f(bytes)
             }
         }
     };
@@ -256,7 +255,7 @@ macro_rules! impl_with_packed_be_bytes_for_signed_int {
             #[inline]
             fn with_be_bytes<T, F>(&self, f: F) -> T
             where
-                F: FnOnce(u8, &[u8]) -> T,
+                F: FnOnce(&[u8]) -> T,
             {
                 self.to_zig_zag().with_be_bytes(f)
             }
@@ -264,7 +263,7 @@ macro_rules! impl_with_packed_be_bytes_for_signed_int {
             #[inline]
             fn with_native_packed_be_bytes<T, F>(&self, f: F) -> T
             where
-                F: FnOnce(u8, &[u8]) -> T,
+                F: FnOnce(&[u8]) -> T,
             {
                 self.to_zig_zag().with_native_packed_be_bytes(f)
             }
@@ -272,7 +271,7 @@ macro_rules! impl_with_packed_be_bytes_for_signed_int {
             #[inline]
             fn with_optimal_packed_be_bytes<T, F>(&self, f: F) -> T
             where
-                F: FnOnce(u8, &[u8]) -> T,
+                F: FnOnce(&[u8]) -> T,
             {
                 self.to_zig_zag().with_optimal_packed_be_bytes(f)
             }

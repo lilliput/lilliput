@@ -3,7 +3,7 @@ use num_traits::{Signed, Unsigned};
 use crate::{
     binary::bits_if,
     error::Result,
-    header::IntHeader,
+    header::{CompactIntHeader, ExtendedIntHeader, IntHeader},
     io::Write,
     num::WithPackedBeBytes,
     value::{IntValue, SignedIntValue, UnsignedIntValue},
@@ -76,18 +76,33 @@ where
         let mut header_byte = IntHeader::TYPE_BITS;
 
         match header {
-            IntHeader::Compact(compact) => {
+            IntHeader::Compact(CompactIntHeader { is_signed, bits }) => {
                 header_byte |= IntHeader::COMPACT_VARIANT_BIT;
-                header_byte |= bits_if(IntHeader::SIGNEDNESS_BIT, compact.is_signed());
-                header_byte |= compact.bits() & IntHeader::COMPACT_VALUE_BITS;
+                header_byte |= bits_if(IntHeader::SIGNEDNESS_BIT, *is_signed);
+                header_byte |= bits & IntHeader::COMPACT_VALUE_BITS;
             }
-            IntHeader::Extended(extended) => {
-                header_byte |= bits_if(IntHeader::SIGNEDNESS_BIT, extended.is_signed());
-                header_byte |= (extended.width() - 1) & IntHeader::EXTENDED_WIDTH_BITS;
+            IntHeader::Extended(ExtendedIntHeader { is_signed, width }) => {
+                header_byte |= bits_if(IntHeader::SIGNEDNESS_BIT, *is_signed);
+                header_byte |= (width - 1) & IntHeader::EXTENDED_WIDTH_BITS;
             }
         }
 
+        // Push the header byte:
         self.push_byte(header_byte)
+    }
+
+    pub fn header_for_signed_int<T>(&self, value: T) -> IntHeader
+    where
+        T: Signed + WithPackedBeBytes,
+    {
+        IntHeader::signed(value, self.config.int_packing)
+    }
+
+    pub fn header_for_unsigned_int<T>(&self, value: T) -> IntHeader
+    where
+        T: Unsigned + WithPackedBeBytes,
+    {
+        IntHeader::unsigned(value, self.config.int_packing)
     }
 
     #[inline]
@@ -95,17 +110,23 @@ where
     where
         S: Signed + WithPackedBeBytes,
     {
-        let packing_mode = self.config.int_packing;
+        value.with_packed_be_bytes(self.config.int_packing, |bytes| {
+            let is_signed = true;
+            let width = bytes.len();
+            let bits = bytes[width - 1];
 
-        value.with_packed_be_bytes(packing_mode, |_width, bytes| {
-            let (header, is_compact) = IntHeader::be_bytes(true, bytes, packing_mode);
+            let header = if width == 1 && bits < IntHeader::COMPACT_VALUE_BITS {
+                IntHeader::Compact(CompactIntHeader { is_signed, bits })
+            } else {
+                IntHeader::Extended(ExtendedIntHeader {
+                    is_signed,
+                    width: width as u8,
+                })
+            };
+
             self.encode_int_header(&header)?;
 
-            if is_compact {
-                return Ok(());
-            }
-
-            // Push the value' bytes:
+            // Push the value bytes:
             self.push_bytes(bytes)
         })
     }
@@ -115,17 +136,23 @@ where
     where
         U: Unsigned + WithPackedBeBytes,
     {
-        let packing_mode = self.config.int_packing;
+        value.with_packed_be_bytes(self.config.int_packing, |bytes| {
+            let is_signed = false;
+            let width = bytes.len();
+            let bits = bytes[width - 1];
 
-        value.with_packed_be_bytes(packing_mode, |_width, bytes| {
-            let (header, is_compact) = IntHeader::be_bytes(false, bytes, packing_mode);
+            let header = if width == 1 && bits < IntHeader::COMPACT_VALUE_BITS {
+                IntHeader::Compact(CompactIntHeader { is_signed, bits })
+            } else {
+                IntHeader::Extended(ExtendedIntHeader {
+                    is_signed,
+                    width: width as u8,
+                })
+            };
+
             self.encode_int_header(&header)?;
 
-            if is_compact {
-                return Ok(());
-            }
-
-            // Push the value' bytes:
+            // Push the value bytes:
             self.push_bytes(bytes)
         })
     }

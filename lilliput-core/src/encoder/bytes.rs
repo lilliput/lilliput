@@ -28,13 +28,15 @@ where
         // The bytes header only supports native packing:
         let packing_mode = self.config.len_packing.min(PackingMode::Native);
 
-        len.with_packed_be_bytes(packing_mode, |width, bytes| {
+        len.with_packed_be_bytes(packing_mode, |bytes| {
+            let width = bytes.len();
+
             debug_assert!(width.count_ones() == 1, "must be a power of two");
 
             let mut header_byte = BytesHeader::TYPE_BITS;
 
             const EXPONENT: [u8; 8] = [0, 1, 2, 2, 3, 3, 3, 3];
-            let exponent = EXPONENT[(width as usize) - 1];
+            let exponent = EXPONENT[width - 1];
 
             header_byte |= exponent & BytesHeader::LEN_WIDTH_EXPONENT_BITS;
 
