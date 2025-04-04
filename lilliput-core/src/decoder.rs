@@ -25,8 +25,8 @@ impl<R> Decoder<R> {
         Decoder { reader, pos: 0 }
     }
 
-    pub fn pos(&self) -> usize {
-        self.pos
+    pub fn into_reader(self) -> R {
+        self.reader
     }
 }
 

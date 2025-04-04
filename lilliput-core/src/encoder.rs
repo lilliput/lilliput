@@ -24,6 +24,10 @@ impl<W> Encoder<W> {
             config,
         }
     }
+
+    pub fn into_writer(self) -> W {
+        self.writer
+    }
 }
 
 impl<W> Encoder<W>
