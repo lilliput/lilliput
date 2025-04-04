@@ -137,7 +137,9 @@ impl ExtendedIntHeader {
 }
 
 impl IntHeader {
+    pub const MASK: u8 = 0b11111111;
     pub(crate) const TYPE_BITS: u8 = 0b10000000;
+
     pub(crate) const SIGNEDNESS_BIT: u8 = 0b00100000;
 
     pub(crate) const COMPACT_VARIANT_BIT: u8 = 0b01000000;

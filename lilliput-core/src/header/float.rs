@@ -26,6 +26,7 @@ impl FloatHeader {
 }
 
 impl FloatHeader {
+    pub const MASK: u8 = 0b00001111;
     pub(crate) const TYPE_BITS: u8 = 0b00001000;
 
     pub(crate) const VALUE_WIDTH_BITS: u8 = 0b00000111;

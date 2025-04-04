@@ -116,6 +116,7 @@ impl ExtendedMapHeader {
 }
 
 impl MapHeader {
+    pub const MASK: u8 = 0b00011111;
     pub(crate) const TYPE_BITS: u8 = 0b00010000;
 
     pub(crate) const COMPACT_VARIANT_BIT: u8 = 0b00001000;
