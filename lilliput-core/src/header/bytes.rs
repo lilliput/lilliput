@@ -37,6 +37,7 @@ impl BytesHeader {
 }
 
 impl BytesHeader {
+    pub const MASK: u8 = 0b00000111;
     pub(crate) const TYPE_BITS: u8 = 0b00000100;
 
     pub(crate) const LEN_WIDTH_EXPONENT_BITS: u8 = 0b00000011;

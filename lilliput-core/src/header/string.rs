@@ -116,6 +116,7 @@ impl ExtendedStringHeader {
 }
 
 impl StringHeader {
+    pub const MASK: u8 = 0b01111111;
     pub(crate) const TYPE_BITS: u8 = 0b01000000;
 
     pub(crate) const COMPACT_VARIANT_BIT: u8 = 0b00100000;

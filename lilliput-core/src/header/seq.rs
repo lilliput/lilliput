@@ -117,6 +117,7 @@ impl ExtendedSeqHeader {
 }
 
 impl SeqHeader {
+    pub const MASK: u8 = 0b00111111;
     pub(crate) const TYPE_BITS: u8 = 0b00100000;
 
     pub(crate) const COMPACT_VARIANT_BIT: u8 = 0b00010000;
