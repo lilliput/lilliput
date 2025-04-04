@@ -1,4 +1,10 @@
-use crate::error::Expectation;
+use crate::{
+    error::Expectation,
+    header::{
+        BoolHeader, BytesHeader, FloatHeader, IntHeader, MapHeader, NullHeader, ReservedHeader,
+        SeqHeader, StringHeader,
+    },
+};
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 #[repr(u8)]
@@ -56,6 +62,21 @@ impl Marker {
         // }
         // ```
         unsafe { std::mem::transmute_copy(&Self::repr_for(byte)) }
+    }
+
+    #[inline]
+    pub fn header_mask(&self) -> u8 {
+        match self {
+            Self::Int => IntHeader::MASK,
+            Self::String => StringHeader::MASK,
+            Self::Seq => SeqHeader::MASK,
+            Self::Map => MapHeader::MASK,
+            Self::Float => FloatHeader::MASK,
+            Self::Bytes => BytesHeader::MASK,
+            Self::Bool => BoolHeader::MASK,
+            Self::Null => NullHeader::MASK,
+            Self::Reserved => ReservedHeader::MASK,
+        }
     }
 
     #[inline]
