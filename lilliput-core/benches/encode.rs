@@ -11,11 +11,7 @@ use rand::{
 use rand_xorshift::XorShiftRng;
 
 use lilliput_core::{
-    config::EncodingConfig,
-    encoder::Encoder,
-    error::Result,
-    header::{BytesHeader, MapHeader, SeqHeader, StringHeader},
-    io::Write,
+    config::EncodingConfig, encoder::Encoder, error::Result, header::BytesHeader, io::Write,
 };
 
 struct PlaceboWriter;
@@ -160,7 +156,7 @@ fn bench_string(c: &mut Criterion, label: &str, config: EncodingConfig) {
 
     g.bench_function(format!("encode_string_header @ {label}"), |b| {
         bench_sampled(b, config, lengths, |encoder, len| {
-            let header = StringHeader::new(len, config.len_packing);
+            let header = encoder.header_for_string(len);
             black_box(encoder.encode_string_header(black_box(&header))).unwrap();
         });
     });
@@ -180,7 +176,7 @@ fn bench_seq(c: &mut Criterion, label: &str, config: EncodingConfig) {
 
     g.bench_function(format!("encode_seq_header @ {label}"), |b| {
         bench_sampled(b, config, lengths, |encoder, len| {
-            let header = SeqHeader::new(len, config.len_packing);
+            let header = encoder.header_for_seq(len);
             black_box(encoder.encode_seq_header(black_box(&header))).unwrap();
         });
     });
@@ -200,7 +196,7 @@ fn bench_map(c: &mut Criterion, label: &str, config: EncodingConfig) {
 
     g.bench_function(format!("encode_map_header @ {label}"), |b| {
         bench_sampled(b, config, lengths, |encoder, len| {
-            let header = MapHeader::new(len, config.len_packing);
+            let header = encoder.header_for_map(len);
             black_box(encoder.encode_map_header(black_box(&header))).unwrap();
         });
     });

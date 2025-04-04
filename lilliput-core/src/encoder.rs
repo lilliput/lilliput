@@ -1,4 +1,13 @@
-use crate::{config::EncodingConfig, error::Result, io::Write, value::Value};
+use num_traits::{Signed, Unsigned};
+
+use crate::{
+    config::EncodingConfig,
+    error::Result,
+    header::{IntHeader, MapHeader, SeqHeader, StringHeader},
+    io::Write,
+    num::WithPackedBeBytes,
+    value::{IntValue, Value},
+};
 
 mod bool;
 mod bytes;
@@ -30,6 +39,36 @@ impl<W> Encoder<W>
 where
     W: Write,
 {
+    // pub fn header_for_int_value(&self, value: IntValue) -> IntHeader {
+    //     IntHeader::new(value, self.config.int_packing)
+    // }
+
+    pub fn header_for_signed_int<T>(&self, value: T) -> IntHeader
+    where
+        T: Signed + WithPackedBeBytes,
+    {
+        IntHeader::signed(value, self.config.int_packing)
+    }
+
+    pub fn header_for_unsigned_int<T>(&self, value: T) -> IntHeader
+    where
+        T: Unsigned + WithPackedBeBytes,
+    {
+        IntHeader::unsigned(value, self.config.int_packing)
+    }
+
+    pub fn header_for_map(&self, len: usize) -> MapHeader {
+        MapHeader::new(len, self.config.len_packing)
+    }
+
+    pub fn header_for_seq(&self, len: usize) -> SeqHeader {
+        SeqHeader::new(len, self.config.len_packing)
+    }
+
+    pub fn header_for_string(&self, len: usize) -> StringHeader {
+        StringHeader::new(len, self.config.len_packing)
+    }
+
     pub fn encode_any(&mut self, value: &Value) -> Result<()> {
         match value {
             Value::Int(value) => self.encode_int_value(value),
