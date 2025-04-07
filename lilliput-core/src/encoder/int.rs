@@ -114,16 +114,16 @@ where
             let is_signed = true;
             let width = bytes.len();
 
-            let header = if width == 1 {
+            let mut header = IntHeader::extended(is_signed, width as u8);
+
+            if width == 1 {
                 let bits = bytes[width - 1];
                 if bits <= IntHeader::COMPACT_VALUE_BITS {
-                    IntHeader::compact(is_signed, bits)
-                } else {
-                    IntHeader::extended(is_signed, width as u8)
+                    header = IntHeader::compact(is_signed, bits);
+
+                    return self.encode_int_header(&header);
                 }
-            } else {
-                IntHeader::extended(is_signed, width as u8)
-            };
+            }
 
             self.encode_int_header(&header)?;
 
@@ -141,16 +141,16 @@ where
             let is_signed = false;
             let width = bytes.len();
 
-            let header = if width == 1 {
+            let mut header = IntHeader::extended(is_signed, width as u8);
+
+            if width == 1 {
                 let bits = bytes[width - 1];
                 if bits <= IntHeader::COMPACT_VALUE_BITS {
-                    IntHeader::compact(is_signed, bits)
-                } else {
-                    IntHeader::extended(is_signed, width as u8)
+                    header = IntHeader::compact(is_signed, bits);
+
+                    return self.encode_int_header(&header);
                 }
-            } else {
-                IntHeader::extended(is_signed, width as u8)
-            };
+            }
 
             self.encode_int_header(&header)?;
 
