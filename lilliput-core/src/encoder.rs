@@ -1,4 +1,4 @@
-use crate::{config::EncodingConfig, error::Result, io::Write, value::Value};
+use crate::{config::EncodingConfig, error::Result, header::Header, io::Write, value::Value};
 
 mod bool;
 mod bytes;
@@ -34,6 +34,19 @@ impl<W> Encoder<W>
 where
     W: Write,
 {
+    pub fn encode_header(&mut self, header: &Header) -> Result<()> {
+        match header {
+            Header::Int(value) => self.encode_int_header(value),
+            Header::String(value) => self.encode_string_header(value),
+            Header::Seq(value) => self.encode_seq_header(value),
+            Header::Map(value) => self.encode_map_header(value),
+            Header::Float(value) => self.encode_float_header(value),
+            Header::Bytes(value) => self.encode_bytes_header(value),
+            Header::Bool(value) => self.encode_bool_header(value),
+            Header::Null(value) => self.encode_null_header(value),
+        }
+    }
+
     pub fn encode_value(&mut self, value: &Value) -> Result<()> {
         match value {
             Value::Int(value) => self.encode_int_value(value),
