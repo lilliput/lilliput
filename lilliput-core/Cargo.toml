@@ -23,7 +23,11 @@ rand = "0.9.0"
 rand_xorshift = "0.4.0"
 
 [[bench]]
-name = "encode"
+name = "values"
+harness = false
+
+[[bench]]
+name = "headers"
 harness = false
 
 [features]
