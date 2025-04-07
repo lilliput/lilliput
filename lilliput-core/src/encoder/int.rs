@@ -113,15 +113,16 @@ where
         value.with_packed_be_bytes(self.config.int_packing, |bytes| {
             let is_signed = true;
             let width = bytes.len();
-            let bits = bytes[width - 1];
 
-            let header = if width == 1 && bits < IntHeader::COMPACT_VALUE_BITS {
-                IntHeader::Compact(CompactIntHeader { is_signed, bits })
+            let header = if width == 1 {
+                let bits = bytes[width - 1];
+                if bits <= IntHeader::COMPACT_VALUE_BITS {
+                    IntHeader::compact(is_signed, bits)
+                } else {
+                    IntHeader::extended(is_signed, width as u8)
+                }
             } else {
-                IntHeader::Extended(ExtendedIntHeader {
-                    is_signed,
-                    width: width as u8,
-                })
+                IntHeader::extended(is_signed, width as u8)
             };
 
             self.encode_int_header(&header)?;
@@ -139,15 +140,16 @@ where
         value.with_packed_be_bytes(self.config.int_packing, |bytes| {
             let is_signed = false;
             let width = bytes.len();
-            let bits = bytes[width - 1];
 
-            let header = if width == 1 && bits < IntHeader::COMPACT_VALUE_BITS {
-                IntHeader::Compact(CompactIntHeader { is_signed, bits })
+            let header = if width == 1 {
+                let bits = bytes[width - 1];
+                if bits <= IntHeader::COMPACT_VALUE_BITS {
+                    IntHeader::compact(is_signed, bits)
+                } else {
+                    IntHeader::extended(is_signed, width as u8)
+                }
             } else {
-                IntHeader::Extended(ExtendedIntHeader {
-                    is_signed,
-                    width: width as u8,
-                })
+                IntHeader::extended(is_signed, width as u8)
             };
 
             self.encode_int_header(&header)?;

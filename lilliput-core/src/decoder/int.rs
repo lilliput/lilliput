@@ -131,14 +131,14 @@ where
                 const MAX_WIDTH: usize = 1;
                 let mut padded_be_bytes: [u8; MAX_WIDTH] = [0b0; MAX_WIDTH];
                 self.pull_bytes_into(&mut padded_be_bytes[(MAX_WIDTH - width)..])?;
+
+                let value = u8::from_be_bytes(padded_be_bytes);
+
                 if is_signed {
-                    Ok(IntValue::Signed(SignedIntValue::I8(i8::from_zig_zag(
-                        u8::from_be_bytes(padded_be_bytes),
-                    ))))
+                    let value = i8::from_zig_zag(value);
+                    Ok(IntValue::Signed(SignedIntValue::I8(value)))
                 } else {
-                    Ok(IntValue::Unsigned(UnsignedIntValue::U8(u8::from_be_bytes(
-                        padded_be_bytes,
-                    ))))
+                    Ok(IntValue::Unsigned(UnsignedIntValue::U8(value)))
                 }
             }
             2..=2 => {
@@ -146,14 +146,13 @@ where
                 let mut padded_be_bytes: [u8; MAX_WIDTH] = [0b0; MAX_WIDTH];
                 self.pull_bytes_into(&mut padded_be_bytes[(MAX_WIDTH - width)..])?;
 
+                let value = u16::from_be_bytes(padded_be_bytes);
+
                 if is_signed {
-                    Ok(IntValue::Signed(SignedIntValue::I16(i16::from_zig_zag(
-                        u16::from_be_bytes(padded_be_bytes),
-                    ))))
+                    let value = i16::from_zig_zag(value);
+                    Ok(IntValue::Signed(SignedIntValue::I16(value)))
                 } else {
-                    Ok(IntValue::Unsigned(UnsignedIntValue::U16(
-                        u16::from_be_bytes(padded_be_bytes),
-                    )))
+                    Ok(IntValue::Unsigned(UnsignedIntValue::U16(value)))
                 }
             }
             3..=4 => {
@@ -161,14 +160,13 @@ where
                 let mut padded_be_bytes: [u8; MAX_WIDTH] = [0b0; MAX_WIDTH];
                 self.pull_bytes_into(&mut padded_be_bytes[(MAX_WIDTH - width)..])?;
 
+                let value = u32::from_be_bytes(padded_be_bytes);
+
                 if is_signed {
-                    Ok(IntValue::Signed(SignedIntValue::I32(i32::from_zig_zag(
-                        u32::from_be_bytes(padded_be_bytes),
-                    ))))
+                    let value = i32::from_zig_zag(value);
+                    Ok(IntValue::Signed(SignedIntValue::I32(value)))
                 } else {
-                    Ok(IntValue::Unsigned(UnsignedIntValue::U32(
-                        u32::from_be_bytes(padded_be_bytes),
-                    )))
+                    Ok(IntValue::Unsigned(UnsignedIntValue::U32(value)))
                 }
             }
             5..=8 => {
@@ -176,14 +174,13 @@ where
                 let mut padded_be_bytes: [u8; MAX_WIDTH] = [0b0; MAX_WIDTH];
                 self.pull_bytes_into(&mut padded_be_bytes[(MAX_WIDTH - width)..])?;
 
+                let value = u64::from_be_bytes(padded_be_bytes);
+
                 if is_signed {
-                    Ok(IntValue::Signed(SignedIntValue::I64(i64::from_zig_zag(
-                        u64::from_be_bytes(padded_be_bytes),
-                    ))))
+                    let value = i64::from_zig_zag(value);
+                    Ok(IntValue::Signed(SignedIntValue::I64(value)))
                 } else {
-                    Ok(IntValue::Unsigned(UnsignedIntValue::U64(
-                        u64::from_be_bytes(padded_be_bytes),
-                    )))
+                    Ok(IntValue::Unsigned(UnsignedIntValue::U64(value)))
                 }
             }
             _ => unreachable!(),
