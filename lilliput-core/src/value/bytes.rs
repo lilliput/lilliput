@@ -107,7 +107,7 @@ mod tests {
 
             let reader = SliceReader::new(&encoded);
             let mut decoder = Decoder::new(reader);
-            let decoded = decoder.decode_any().unwrap();
+            let decoded = decoder.decode_value().unwrap();
             let Value::Bytes(decoded) = decoded else {
                 panic!("expected bytes value");
             };
