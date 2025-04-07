@@ -1,10 +1,6 @@
 use num_traits::{Signed, Unsigned};
 
-use crate::{
-    config::PackingMode,
-    num::WithPackedBeBytes,
-    value::{IntValue, SignedIntValue, UnsignedIntValue},
-};
+use crate::{config::PackingMode, num::WithPackedBeBytes};
 
 /// Represents an integer number.
 ///
@@ -50,21 +46,18 @@ pub enum IntHeader {
 
 impl IntHeader {
     #[inline]
-    pub fn packed(value: IntValue, packing_mode: PackingMode) -> Self {
-        match value {
-            IntValue::Signed(value) => match value {
-                SignedIntValue::I8(value) => Self::signed(value, packing_mode),
-                SignedIntValue::I16(value) => Self::signed(value, packing_mode),
-                SignedIntValue::I32(value) => Self::signed(value, packing_mode),
-                SignedIntValue::I64(value) => Self::signed(value, packing_mode),
-            },
-            IntValue::Unsigned(value) => match value {
-                UnsignedIntValue::U8(value) => Self::unsigned(value, packing_mode),
-                UnsignedIntValue::U16(value) => Self::unsigned(value, packing_mode),
-                UnsignedIntValue::U32(value) => Self::unsigned(value, packing_mode),
-                UnsignedIntValue::U64(value) => Self::unsigned(value, packing_mode),
-            },
-        }
+    pub fn compact(is_signed: bool, bits: u8) -> Self {
+        assert!(bits <= Self::COMPACT_VALUE_BITS);
+
+        Self::Compact(CompactIntHeader { is_signed, bits })
+    }
+
+    #[inline]
+    pub fn extended(is_signed: bool, width: u8) -> Self {
+        assert!(width >= 1);
+        assert!((width - 1) <= Self::EXTENDED_WIDTH_BITS);
+
+        Self::Extended(ExtendedIntHeader { is_signed, width })
     }
 
     #[inline]
@@ -161,12 +154,19 @@ impl proptest::arbitrary::Arbitrary for IntHeader {
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         use proptest::strategy::Strategy;
 
-        proptest::prop_oneof![
-            IntValue::arbitrary().prop_map(|value| Self::packed(value, PackingMode::None)),
-            IntValue::arbitrary().prop_map(|value| Self::packed(value, PackingMode::Native)),
-            IntValue::arbitrary().prop_map(|value| Self::packed(value, PackingMode::Optimal)),
-        ]
-        .boxed()
+        u8::arbitrary()
+            .prop_map(|random_bits| {
+                let is_signed: bool = random_bits & Self::SIGNEDNESS_BIT != 0b0;
+                let is_compact: bool = random_bits & Self::COMPACT_VARIANT_BIT != 0b0;
+                if is_compact {
+                    let bits: u8 = random_bits & Self::COMPACT_VALUE_BITS;
+                    Self::Compact(CompactIntHeader { is_signed, bits })
+                } else {
+                    let width: u8 = 1 + (random_bits & Self::EXTENDED_WIDTH_BITS);
+                    Self::Extended(ExtendedIntHeader { is_signed, width })
+                }
+            })
+            .boxed()
     }
 }
 
