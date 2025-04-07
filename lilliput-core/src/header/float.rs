@@ -15,6 +15,7 @@ pub struct FloatHeader {
 
 impl FloatHeader {
     pub fn new(width: u8) -> Self {
+        assert!(width >= 1);
         assert!(width <= 8);
 
         Self { width }
