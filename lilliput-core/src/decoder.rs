@@ -18,16 +18,11 @@ mod string;
 pub struct Decoder<R> {
     reader: R,
     pos: usize,
-    peeked: Option<u8>,
 }
 
 impl<R> Decoder<R> {
     pub fn new(reader: R) -> Self {
-        Decoder {
-            reader,
-            pos: 0,
-            peeked: None,
-        }
+        Decoder { reader, pos: 0 }
     }
 
     pub fn pos(&self) -> usize {
@@ -68,15 +63,7 @@ where
 {
     #[inline]
     fn peek_byte(&mut self) -> Result<u8> {
-        if let Some(byte) = self.peeked {
-            return Ok(byte);
-        }
-
-        let byte = self.reader.read_one()?;
-
-        self.peeked = Some(byte);
-
-        Ok(byte)
+        self.reader.peek_one()
     }
 
     #[inline]
@@ -98,12 +85,8 @@ where
 
     #[inline]
     fn pull_byte(&mut self) -> Result<u8> {
-        let byte = match self.peeked {
-            Some(byte) => byte,
-            None => self.reader.read_one()?,
-        };
+        let byte = self.reader.read_one()?;
 
-        self.peeked = None;
         self.pos += 1;
 
         Ok(byte)
@@ -117,14 +100,8 @@ where
             return Ok(());
         }
 
-        if let Some(peeked) = self.peeked {
-            self.reader.read_into(&mut buf[1..])?;
-            buf[0] = peeked;
-        } else {
-            self.reader.read_into(buf)?;
-        };
+        self.reader.read_into(buf)?;
 
-        self.peeked = None;
         self.pos += len;
 
         Ok(())
@@ -161,7 +138,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::io::SliceReader;
+    use crate::{error::ErrorCode, io::SliceReader};
 
     use super::*;
 
@@ -173,6 +150,28 @@ mod test {
     }
 
     #[test]
+    fn pull_byte() {
+        let bytes = SliceReader::new(&[1, 2, 3]);
+        let mut decoder = Decoder::new(bytes);
+        assert_eq!(decoder.pos, 0);
+
+        let byte = decoder.pull_byte().unwrap();
+        assert_eq!(byte, 1);
+        assert_eq!(decoder.pos, 1);
+
+        let byte = decoder.pull_byte().unwrap();
+        assert_eq!(byte, 2);
+        assert_eq!(decoder.pos, 2);
+
+        let byte = decoder.pull_byte().unwrap();
+        assert_eq!(byte, 3);
+        assert_eq!(decoder.pos, 3);
+
+        let error_code = decoder.pull_byte().unwrap_err().code();
+        assert_eq!(error_code, ErrorCode::UnexpectedEndOfFile);
+    }
+
+    #[test]
     fn pull_bytes_into() {
         let bytes = SliceReader::new(&[1, 2, 3]);
         let mut decoder = Decoder::new(bytes);
@@ -180,7 +179,7 @@ mod test {
 
         let mut buf = vec![];
         decoder.pull_bytes_into(&mut buf).unwrap();
-        assert_eq!(buf.len(), 0);
+        assert_eq!(buf, &[]);
         assert_eq!(decoder.pos, 0);
 
         let mut buf = vec![0];
@@ -194,7 +193,38 @@ mod test {
         assert_eq!(decoder.pos, 3);
 
         let mut buf = vec![0, 0, 0];
-        assert!(decoder.pull_bytes_into(&mut buf).is_err());
+        let error_code = decoder.pull_bytes_into(&mut buf).unwrap_err().code();
+        assert_eq!(error_code, ErrorCode::UnexpectedEndOfFile);
+        assert_eq!(decoder.pos, 3);
+    }
+
+    #[test]
+    fn pull_bytes() {
+        let bytes = SliceReader::new(&[1, 2, 3]);
+        let mut decoder = Decoder::new(bytes);
+        let mut scratch = vec![];
+        assert_eq!(decoder.pos, 0);
+
+        let reference = decoder.pull_bytes(0, &mut scratch).unwrap();
+        assert_eq!(reference.as_ref(), &[]);
+        assert_eq!(decoder.pos, 0);
+
+        scratch.clear();
+
+        let reference = decoder.pull_bytes(1, &mut scratch).unwrap();
+        assert_eq!(reference.as_ref(), &[1]);
+        assert_eq!(decoder.pos, 1);
+
+        scratch.clear();
+
+        let reference = decoder.pull_bytes(2, &mut scratch).unwrap();
+        assert_eq!(reference.as_ref(), &[2, 3]);
+        assert_eq!(decoder.pos, 3);
+
+        scratch.clear();
+
+        let error_code = decoder.pull_bytes(1, &mut scratch).unwrap_err().code();
+        assert_eq!(error_code, ErrorCode::UnexpectedEndOfFile);
         assert_eq!(decoder.pos, 3);
     }
 }
