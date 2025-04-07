@@ -30,7 +30,7 @@ impl<W> Encoder<W>
 where
     W: Write,
 {
-    pub fn encode_any(&mut self, value: &Value) -> Result<()> {
+    pub fn encode_value(&mut self, value: &Value) -> Result<()> {
         match value {
             Value::Int(value) => self.encode_int_value(value),
             Value::String(value) => self.encode_string_value(value),

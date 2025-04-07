@@ -18,7 +18,7 @@ where
         self.encode_seq_header(&SeqHeader::new(value.len(), packing_mode))?;
 
         for value in value {
-            self.encode_any(value)?;
+            self.encode_value(value)?;
         }
 
         Ok(())
