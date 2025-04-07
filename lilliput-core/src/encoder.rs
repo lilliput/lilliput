@@ -28,6 +28,10 @@ impl<W> Encoder<W> {
     pub fn into_writer(self) -> W {
         self.writer
     }
+
+    pub fn pos(&self) -> usize {
+        self.pos
+    }
 }
 
 impl<W> Encoder<W>
