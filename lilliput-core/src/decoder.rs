@@ -134,7 +134,9 @@ where
     ) -> Result<Reference<'de, 's, [u8]>> {
         let bytes = self.reader.read(len, scratch)?;
 
-        self.pos += bytes.len();
+        debug_assert_eq!(bytes.len(), len);
+
+        self.pos += len;
 
         Ok(bytes)
     }
