@@ -1,5 +1,6 @@
 use crate::{
     error::{Error, Result},
+    header::Header,
     io::{Read, Reference},
     marker::Marker,
     value::Value,
@@ -38,6 +39,20 @@ where
 
     pub fn peek_marker(&mut self) -> Result<Marker> {
         self.peek_byte().map(Marker::detect)
+    }
+
+    pub fn decode_header(&mut self) -> Result<Header> {
+        match self.peek_marker()? {
+            Marker::Int => self.decode_int_header().map(From::from),
+            Marker::String => self.decode_string_header().map(From::from),
+            Marker::Seq => self.decode_seq_header().map(From::from),
+            Marker::Map => self.decode_map_header().map(From::from),
+            Marker::Float => self.decode_float_header().map(From::from),
+            Marker::Bytes => self.decode_bytes_header().map(From::from),
+            Marker::Bool => self.decode_bool_header().map(From::from),
+            Marker::Null => self.decode_null_header().map(From::from),
+            Marker::Reserved => unimplemented!(),
+        }
     }
 
     pub fn decode_value(&mut self) -> Result<Value> {
