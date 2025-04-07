@@ -18,8 +18,8 @@ where
         self.encode_map_header(&MapHeader::new(value.len(), packing_mode))?;
 
         for (key, value) in value {
-            self.encode_any(key)?;
-            self.encode_any(value)?;
+            self.encode_value(key)?;
+            self.encode_value(value)?;
         }
 
         Ok(())
