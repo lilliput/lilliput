@@ -23,8 +23,8 @@ where
         let mut map = Map::default();
 
         for _ in 0..header.len() {
-            let key = self.decode_any()?;
-            let value = self.decode_any()?;
+            let key = self.decode_value()?;
+            let value = self.decode_value()?;
             map.insert(key, value);
         }
 

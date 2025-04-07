@@ -17,7 +17,7 @@ where
         let mut vec = Vec::new();
 
         for _ in 0..header.len() {
-            let value = self.decode_any()?;
+            let value = self.decode_value()?;
             vec.push(value);
         }
 

@@ -45,7 +45,7 @@ where
         self.peek_byte().map(Marker::detect)
     }
 
-    pub fn decode_any(&mut self) -> Result<Value> {
+    pub fn decode_value(&mut self) -> Result<Value> {
         match self.peek_marker()? {
             Marker::Int => self.decode_int_value().map(From::from),
             Marker::String => self.decode_string_value().map(From::from),
