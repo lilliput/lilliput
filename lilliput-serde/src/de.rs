@@ -112,6 +112,7 @@ where
 {
     type Error = Error;
 
+    #[inline]
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
@@ -129,6 +130,7 @@ where
         }
     }
 
+    #[inline]
     fn deserialize_bool<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
@@ -136,6 +138,7 @@ where
         visitor.visit_bool(self.decoder.decode_bool()?)
     }
 
+    #[inline]
     fn deserialize_i8<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
@@ -143,6 +146,7 @@ where
         visitor.visit_i8(self.decoder.decode_i8()?)
     }
 
+    #[inline]
     fn deserialize_i16<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
@@ -150,6 +154,7 @@ where
         visitor.visit_i16(self.decoder.decode_i16()?)
     }
 
+    #[inline]
     fn deserialize_i32<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
@@ -157,6 +162,7 @@ where
         visitor.visit_i32(self.decoder.decode_i32()?)
     }
 
+    #[inline]
     fn deserialize_i64<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
@@ -164,6 +170,7 @@ where
         visitor.visit_i64(self.decoder.decode_i64()?)
     }
 
+    #[inline]
     fn deserialize_i128<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
@@ -171,6 +178,7 @@ where
         visitor.visit_i128(self.decoder.decode_i64()? as i128)
     }
 
+    #[inline]
     fn deserialize_u8<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
@@ -178,6 +186,7 @@ where
         visitor.visit_u8(self.decoder.decode_u8()?)
     }
 
+    #[inline]
     fn deserialize_u16<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
@@ -185,6 +194,7 @@ where
         visitor.visit_u16(self.decoder.decode_u16()?)
     }
 
+    #[inline]
     fn deserialize_u32<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
@@ -192,6 +202,7 @@ where
         visitor.visit_u32(self.decoder.decode_u32()?)
     }
 
+    #[inline]
     fn deserialize_u64<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
@@ -199,6 +210,7 @@ where
         visitor.visit_u64(self.decoder.decode_u64()?)
     }
 
+    #[inline]
     fn deserialize_u128<V>(self, visitor: V) -> std::result::Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
@@ -206,6 +218,7 @@ where
         visitor.visit_u128(self.decoder.decode_u64()? as u128)
     }
 
+    #[inline]
     fn deserialize_f32<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
@@ -213,6 +226,7 @@ where
         visitor.visit_f32(self.decoder.decode_f32()?)
     }
 
+    #[inline]
     fn deserialize_f64<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
@@ -220,6 +234,7 @@ where
         visitor.visit_f64(self.decoder.decode_f64()?)
     }
 
+    #[inline]
     fn deserialize_char<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
@@ -227,6 +242,7 @@ where
         self.deserialize_str(visitor)
     }
 
+    #[inline]
     fn deserialize_str<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
@@ -237,6 +253,7 @@ where
         }
     }
 
+    #[inline]
     fn deserialize_string<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
@@ -244,6 +261,7 @@ where
         visitor.visit_string(self.decoder.decode_string()?)
     }
 
+    #[inline]
     fn deserialize_bytes<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
@@ -263,6 +281,7 @@ where
         }
     }
 
+    #[inline]
     fn deserialize_byte_buf<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
@@ -270,6 +289,7 @@ where
         visitor.visit_byte_buf(self.decoder.decode_bytes_buf()?)
     }
 
+    #[inline]
     fn deserialize_option<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
@@ -283,6 +303,7 @@ where
         }
     }
 
+    #[inline]
     fn deserialize_unit<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
@@ -291,6 +312,7 @@ where
         visitor.visit_unit()
     }
 
+    #[inline]
     fn deserialize_unit_struct<V>(self, _name: &'static str, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
@@ -298,6 +320,7 @@ where
         self.deserialize_unit(visitor)
     }
 
+    #[inline]
     fn deserialize_newtype_struct<V>(self, _name: &'static str, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
@@ -305,6 +328,7 @@ where
         visitor.visit_newtype_struct(self)
     }
 
+    #[inline]
     fn deserialize_seq<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
@@ -319,6 +343,7 @@ where
         Ok(value)
     }
 
+    #[inline]
     fn deserialize_tuple<V>(self, _len: usize, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
@@ -326,6 +351,7 @@ where
         self.deserialize_seq(visitor)
     }
 
+    #[inline]
     fn deserialize_tuple_struct<V>(
         self,
         _name: &'static str,
@@ -338,6 +364,7 @@ where
         self.deserialize_seq(visitor)
     }
 
+    #[inline]
     fn deserialize_map<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
@@ -352,6 +379,7 @@ where
         Ok(value)
     }
 
+    #[inline]
     fn deserialize_struct<V>(
         self,
         _name: &'static str,
@@ -364,6 +392,7 @@ where
         self.deserialize_map(visitor)
     }
 
+    #[inline]
     fn deserialize_enum<V>(
         self,
         _name: &'static str,
@@ -397,6 +426,7 @@ where
         }
     }
 
+    #[inline]
     fn deserialize_identifier<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
@@ -404,6 +434,7 @@ where
         self.deserialize_str(visitor)
     }
 
+    #[inline]
     fn deserialize_ignored_any<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
@@ -416,6 +447,7 @@ impl<'de, 'a, R> Deserializer<R>
 where
     R: Read<'de> + 'a,
 {
+    #[inline]
     fn deserialize_float<V>(&mut self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
@@ -426,6 +458,7 @@ where
         }
     }
 
+    #[inline]
     fn deserialize_int<V>(&mut self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,

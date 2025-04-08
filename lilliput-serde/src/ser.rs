@@ -252,6 +252,7 @@ where
     type Ok = ();
     type Error = Error;
 
+    #[inline]
     fn serialize_element<T>(&mut self, value: &T) -> Result<()>
     where
         T: ?Sized + Serialize,
@@ -259,6 +260,7 @@ where
         value.serialize(&mut **self)
     }
 
+    #[inline]
     fn end(self) -> Result<()> {
         Ok(())
     }
@@ -271,6 +273,7 @@ where
     type Ok = ();
     type Error = Error;
 
+    #[inline]
     fn serialize_element<T>(&mut self, value: &T) -> Result<()>
     where
         T: ?Sized + Serialize,
@@ -278,6 +281,7 @@ where
         value.serialize(&mut **self)
     }
 
+    #[inline]
     fn end(self) -> Result<()> {
         Ok(())
     }
@@ -290,6 +294,7 @@ where
     type Ok = ();
     type Error = Error;
 
+    #[inline]
     fn serialize_field<T>(&mut self, value: &T) -> Result<()>
     where
         T: ?Sized + Serialize,
@@ -297,6 +302,7 @@ where
         value.serialize(&mut **self)
     }
 
+    #[inline]
     fn end(self) -> Result<()> {
         Ok(())
     }
@@ -309,6 +315,7 @@ where
     type Ok = ();
     type Error = Error;
 
+    #[inline]
     fn serialize_field<T>(&mut self, value: &T) -> Result<()>
     where
         T: ?Sized + Serialize,
@@ -316,6 +323,7 @@ where
         value.serialize(&mut **self)
     }
 
+    #[inline]
     fn end(self) -> Result<()> {
         Ok(())
     }
@@ -328,6 +336,7 @@ where
     type Ok = ();
     type Error = Error;
 
+    #[inline]
     fn serialize_key<T>(&mut self, key: &T) -> Result<()>
     where
         T: ?Sized + Serialize,
@@ -335,6 +344,7 @@ where
         key.serialize(&mut **self)
     }
 
+    #[inline]
     fn serialize_value<T>(&mut self, value: &T) -> Result<()>
     where
         T: ?Sized + Serialize,
@@ -342,6 +352,7 @@ where
         value.serialize(&mut **self)
     }
 
+    #[inline]
     fn end(self) -> Result<()> {
         Ok(())
     }
@@ -354,6 +365,7 @@ where
     type Ok = ();
     type Error = Error;
 
+    #[inline]
     fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<()>
     where
         T: ?Sized + Serialize,
@@ -362,6 +374,7 @@ where
         value.serialize(&mut **self)
     }
 
+    #[inline]
     fn end(self) -> Result<()> {
         Ok(())
     }
@@ -374,6 +387,7 @@ where
     type Ok = ();
     type Error = Error;
 
+    #[inline]
     fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<()>
     where
         T: ?Sized + Serialize,
@@ -382,6 +396,7 @@ where
         value.serialize(&mut **self)
     }
 
+    #[inline]
     fn end(self) -> Result<()> {
         Ok(())
     }
