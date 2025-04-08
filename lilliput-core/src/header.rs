@@ -4,9 +4,9 @@ mod float;
 mod int;
 mod map;
 mod null;
-mod reserved;
 mod seq;
 mod string;
+mod unit;
 
 use crate::marker::Marker;
 
@@ -19,9 +19,8 @@ pub use self::{
     null::NullHeader,
     seq::{CompactSeqHeader, ExtendedSeqHeader, SeqHeader},
     string::{CompactStringHeader, ExtendedStringHeader, StringHeader},
+    unit::UnitHeader,
 };
-
-pub(crate) use self::reserved::ReservedHeader;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum Header {
@@ -49,6 +48,9 @@ pub enum Header {
 
     /// Represents a boolean.
     Bool(BoolHeader),
+
+    /// Represents a unit value.
+    Unit(UnitHeader),
 
     /// Represents a null value.
     Null(NullHeader),
@@ -110,6 +112,13 @@ impl From<BoolHeader> for Header {
     }
 }
 
+impl From<UnitHeader> for Header {
+    #[inline]
+    fn from(value: UnitHeader) -> Self {
+        Self::Unit(value)
+    }
+}
+
 impl From<NullHeader> for Header {
     #[inline]
     fn from(value: NullHeader) -> Self {
@@ -127,6 +136,7 @@ impl Header {
             Header::Float(_) => Marker::Float,
             Header::Bytes(_) => Marker::Bytes,
             Header::Bool(_) => Marker::Bool,
+            Header::Unit(_) => Marker::Unit,
             Header::Null(_) => Marker::Null,
         }
     }

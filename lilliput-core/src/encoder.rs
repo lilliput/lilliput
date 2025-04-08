@@ -8,6 +8,7 @@ mod map;
 mod null;
 mod seq;
 mod string;
+mod unit;
 
 #[derive(Debug)]
 pub struct Encoder<W> {
@@ -47,6 +48,7 @@ where
             Header::Float(value) => self.encode_float_header(value),
             Header::Bytes(value) => self.encode_bytes_header(value),
             Header::Bool(value) => self.encode_bool_header(value),
+            Header::Unit(value) => self.encode_unit_header(value),
             Header::Null(value) => self.encode_null_header(value),
         }
     }
@@ -60,6 +62,7 @@ where
             Value::Float(value) => self.encode_float_value(value),
             Value::Bytes(value) => self.encode_bytes_value(value),
             Value::Bool(value) => self.encode_bool_value(value),
+            Value::Unit(value) => self.encode_unit_value(value),
             Value::Null(value) => self.encode_null_value(value),
         }
     }

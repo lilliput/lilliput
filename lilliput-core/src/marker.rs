@@ -1,8 +1,8 @@
 use crate::{
     error::Expectation,
     header::{
-        BoolHeader, BytesHeader, FloatHeader, IntHeader, MapHeader, NullHeader, ReservedHeader,
-        SeqHeader, StringHeader,
+        BoolHeader, BytesHeader, FloatHeader, IntHeader, MapHeader, NullHeader, SeqHeader,
+        StringHeader, UnitHeader,
     },
 };
 
@@ -16,7 +16,7 @@ pub enum Marker {
     Float = 0b00001000,
     Bytes = 0b00000100,
     Bool = 0b00000010,
-    Reserved = 0b00000001,
+    Unit = 0b00000001,
     Null = 0b00000000,
 }
 
@@ -31,7 +31,7 @@ impl std::fmt::Display for Marker {
             Self::Bytes => write!(f, "byte sequence"),
             Self::Bool => write!(f, "bool"),
             Self::Null => write!(f, "null"),
-            Self::Reserved => write!(f, "reserved"),
+            Self::Unit => write!(f, "unit"),
         }
     }
 }
@@ -74,8 +74,8 @@ impl Marker {
             Self::Float => FloatHeader::MASK,
             Self::Bytes => BytesHeader::MASK,
             Self::Bool => BoolHeader::MASK,
+            Self::Unit => UnitHeader::MASK,
             Self::Null => NullHeader::MASK,
-            Self::Reserved => ReservedHeader::MASK,
         }
     }
 
@@ -108,7 +108,7 @@ mod tests {
 
     const MARKERS: [Marker; 9] = [
         Marker::Null,
-        Marker::Reserved,
+        Marker::Unit,
         Marker::Bool,
         Marker::Bytes,
         Marker::Float,
