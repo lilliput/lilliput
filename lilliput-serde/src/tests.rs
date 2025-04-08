@@ -71,11 +71,12 @@ where
 {
     let encoded: Vec<u8> = to_vec(&value).unwrap();
     let decoded: T = from_slice(&encoded).unwrap();
-
     Ok(decoded)
 }
 
 mod value {
+    use lilliput_core::value::UnitValue;
+
     use super::*;
 
     proptest! {
@@ -122,6 +123,12 @@ mod value {
         }
 
         #[test]
+        fn unit_roundtrip(value in UnitValue::arbitrary()) {
+            let decoded = roundtrip(&value)?;
+            prop_assert_eq!(&decoded, &value);
+        }
+
+        #[test]
         fn null_roundtrip(value in NullValue::arbitrary()) {
             let decoded = roundtrip(&value)?;
             prop_assert_eq!(&decoded, &value);
@@ -140,12 +147,108 @@ mod value {
                 (Value::Float(lhs), Value::Float(rhs)) => assert_eq!(lhs, rhs),
                 (Value::Bytes(lhs), Value::Bytes(rhs)) => assert_eq!(lhs, rhs),
                 (Value::Bool(lhs), Value::Bool(rhs)) => assert_eq!(lhs, rhs),
+                (Value::Unit(lhs), Value::Unit(rhs)) => assert_eq!(lhs, rhs),
                 (Value::Null(lhs), Value::Null(rhs)) => assert_eq!(lhs, rhs),
                 (lhs, rhs) => panic!("{lhs:#?} != {rhs:#?} (encoded: {encoded:?}"),
             }
             assert_eq!(&decoded, &value);
             prop_assert_eq!(&decoded, &value);
         }
+    }
+}
+
+mod bytes_repr {
+    use super::*;
+
+    #[test]
+    fn seq() {
+        #[derive(Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
+        struct Subject {
+            id: u32,
+            name: String,
+            data: Vec<u8>,
+        }
+
+        let value = Subject {
+            id: 42,
+            name: "Bob".to_owned(),
+            data: vec![1, 2, 3, 4],
+        };
+
+        let encoded = to_vec(&value).unwrap();
+        let decoded: Subject = from_slice(&encoded).unwrap();
+
+        assert_eq!(decoded, value);
+    }
+
+    #[test]
+    fn bytes() {
+        #[derive(Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
+        struct Subject {
+            id: u32,
+            name: String,
+            #[serde(with = "serde_bytes")]
+            data: Vec<u8>,
+        }
+
+        let value = Subject {
+            id: 42,
+            name: "Bob".to_owned(),
+            data: vec![1, 2, 3, 4],
+        };
+
+        let encoded = to_vec(&value).unwrap();
+        let decoded: Subject = from_slice(&encoded).unwrap();
+
+        assert_eq!(decoded, value);
+    }
+}
+
+mod zero_copy {
+    use super::*;
+
+    #[test]
+    fn borrowed() {
+        #[derive(Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
+        struct Subject<'a> {
+            id: u32,
+            name: &'a str,
+            #[serde(with = "serde_bytes")]
+            data: &'a [u8],
+        }
+
+        let value = Subject {
+            id: 42,
+            name: "Bob",
+            data: &[1, 2, 3, 4],
+        };
+
+        let encoded = to_vec(&value).unwrap();
+        let decoded: Subject = from_slice(&encoded).unwrap();
+
+        assert_eq!(decoded, value);
+    }
+
+    #[test]
+    fn owned() {
+        #[derive(Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
+        struct Subject {
+            id: u32,
+            name: String,
+            #[serde(with = "serde_bytes")]
+            data: Vec<u8>,
+        }
+
+        let value = Subject {
+            id: 42,
+            name: "Bob".to_owned(),
+            data: vec![1, 2, 3, 4],
+        };
+
+        let encoded = to_vec(&value).unwrap();
+        let decoded: Subject = from_slice(&encoded).unwrap();
+
+        assert_eq!(decoded, value);
     }
 }
 
