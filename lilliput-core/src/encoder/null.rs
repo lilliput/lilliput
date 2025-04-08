@@ -8,9 +8,7 @@ where
 {
     #[inline]
     pub fn encode_null(&mut self) -> Result<()> {
-        let header_byte = NullHeader::TYPE_BITS;
-
-        self.push_byte(header_byte)
+        self.push_byte(0b00000000)
     }
 
     #[inline]

@@ -3,7 +3,7 @@
 /// # Binary representation
 ///
 /// ```plain
-/// 0b00000001
+/// 0b00000000
 ///   ├──────┘
 ///   └─ Null Type
 /// ```
@@ -18,8 +18,7 @@ impl NullHeader {
 }
 
 impl NullHeader {
-    pub const MASK: u8 = 0b00000001;
-    pub(crate) const TYPE_BITS: u8 = 0b00000001;
+    pub const MASK: u8 = 0b00000000;
 }
 
 #[cfg(any(test, feature = "testing"))]
