@@ -14,6 +14,7 @@ mod map;
 mod null;
 mod seq;
 mod string;
+mod unit;
 
 #[derive(Debug)]
 pub struct Decoder<R> {
@@ -54,8 +55,8 @@ where
             Marker::Float => self.decode_float_header().map(From::from),
             Marker::Bytes => self.decode_bytes_header().map(From::from),
             Marker::Bool => self.decode_bool_header().map(From::from),
+            Marker::Unit => self.decode_unit_header().map(From::from),
             Marker::Null => self.decode_null_header().map(From::from),
-            Marker::Reserved => unimplemented!(),
         }
     }
 
@@ -68,8 +69,8 @@ where
             Marker::Float => self.decode_float_value().map(From::from),
             Marker::Bytes => self.decode_bytes_value().map(From::from),
             Marker::Bool => self.decode_bool_value().map(From::from),
+            Marker::Unit => self.decode_unit_value().map(From::from),
             Marker::Null => self.decode_null_value().map(From::from),
-            Marker::Reserved => unimplemented!(),
         }
     }
 }

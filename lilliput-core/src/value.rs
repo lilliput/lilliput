@@ -6,6 +6,7 @@ mod map;
 mod null;
 mod seq;
 mod string;
+mod unit;
 
 pub use self::{
     bool::BoolValue,
@@ -16,6 +17,7 @@ pub use self::{
     null::NullValue,
     seq::SeqValue,
     string::StringValue,
+    unit::UnitValue,
 };
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -44,6 +46,9 @@ pub enum Value {
 
     /// Represents a boolean.
     Bool(BoolValue),
+
+    /// Represents a unit value.
+    Unit(UnitValue),
 
     /// Represents a null value.
     Null(NullValue),
@@ -97,6 +102,12 @@ impl From<BoolValue> for Value {
     }
 }
 
+impl From<UnitValue> for Value {
+    fn from(value: UnitValue) -> Self {
+        Self::Unit(value)
+    }
+}
+
 impl From<NullValue> for Value {
     fn from(value: NullValue) -> Self {
         Self::Null(value)
@@ -114,6 +125,7 @@ impl std::fmt::Debug for Value {
                 Self::Float(value) => f.debug_tuple("Float").field(value).finish(),
                 Self::Bytes(value) => f.debug_tuple("Bytes").field(value).finish(),
                 Self::Bool(value) => f.debug_tuple("Bool").field(value).finish(),
+                Self::Unit(value) => f.debug_tuple("Unit").field(value).finish(),
                 Self::Null(value) => f.debug_tuple("Null").field(value).finish(),
             }
         } else {
@@ -125,6 +137,7 @@ impl std::fmt::Debug for Value {
                 Self::Float(value) => std::fmt::Debug::fmt(value, f),
                 Self::Bytes(value) => std::fmt::Debug::fmt(value, f),
                 Self::Bool(value) => std::fmt::Debug::fmt(value, f),
+                Self::Unit(value) => std::fmt::Debug::fmt(value, f),
                 Self::Null(value) => std::fmt::Debug::fmt(value, f),
             }
         }
