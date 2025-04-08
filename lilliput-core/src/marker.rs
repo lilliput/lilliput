@@ -16,8 +16,8 @@ pub enum Marker {
     Float = 0b00001000,
     Bytes = 0b00000100,
     Bool = 0b00000010,
-    Null = 0b00000001,
-    Reserved = 0b00000000,
+    Reserved = 0b00000001,
+    Null = 0b00000000,
 }
 
 impl std::fmt::Display for Marker {
@@ -107,8 +107,8 @@ mod tests {
     use super::*;
 
     const MARKERS: [Marker; 9] = [
-        Marker::Reserved,
         Marker::Null,
+        Marker::Reserved,
         Marker::Bool,
         Marker::Bytes,
         Marker::Float,
