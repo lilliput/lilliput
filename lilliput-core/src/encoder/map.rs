@@ -1,4 +1,5 @@
 use crate::{
+    config::PackingMode,
     error::Result,
     header::{CompactMapHeader, ExtendedMapHeader, MapHeader},
     io::Write,
@@ -13,9 +14,7 @@ where
     W: Write,
 {
     pub fn encode_map(&mut self, value: &Map) -> Result<()> {
-        let packing_mode = self.config.len_packing;
-
-        self.encode_map_header(&MapHeader::new(value.len(), packing_mode))?;
+        self.encode_map_header(&self.header_for_map(value.len()))?;
 
         for (key, value) in value {
             self.encode_value(key)?;
@@ -57,6 +56,12 @@ where
     }
 
     pub fn header_for_map(&self, len: usize) -> MapHeader {
-        MapHeader::new(len, self.config.len_packing)
+        let allows_compact = self.config.len_packing == PackingMode::Optimal;
+
+        if allows_compact && len <= (MapHeader::COMPACT_LEN_BITS as usize) {
+            MapHeader::compact_unchecked(len as u8)
+        } else {
+            MapHeader::extended(len)
+        }
     }
 }

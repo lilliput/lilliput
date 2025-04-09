@@ -1,5 +1,3 @@
-use crate::config::PackingMode;
-
 /// Represents a string.
 ///
 /// # Binary representation
@@ -42,12 +40,20 @@ pub enum StringHeader {
 
 impl StringHeader {
     #[inline]
-    pub fn new(len: usize, packing_mode: PackingMode) -> Self {
-        if let Some(len) = Self::as_compact(len, packing_mode) {
-            Self::compact(len)
-        } else {
-            Self::extended(len)
-        }
+    pub fn compact(len: u8) -> Self {
+        assert!(len <= Self::COMPACT_LEN_BITS);
+
+        Self::compact_unchecked(len)
+    }
+
+    #[inline]
+    pub fn compact_unchecked(len: u8) -> Self {
+        Self::Compact(CompactStringHeader { len })
+    }
+
+    #[inline]
+    pub fn extended(len: usize) -> Self {
+        Self::Extended(ExtendedStringHeader { len })
     }
 
     pub fn is_empty(&self) -> bool {
@@ -58,27 +64,6 @@ impl StringHeader {
         match self {
             Self::Compact(compact) => compact.len().into(),
             Self::Extended(extended) => extended.len(),
-        }
-    }
-
-    #[inline]
-    pub(crate) fn compact(len: u8) -> Self {
-        Self::Compact(CompactStringHeader { len })
-    }
-
-    #[inline]
-    pub(crate) fn extended(len: usize) -> Self {
-        Self::Extended(ExtendedStringHeader { len })
-    }
-
-    fn as_compact(len: usize, packing_mode: PackingMode) -> Option<u8> {
-        let allows_compact = packing_mode == PackingMode::Optimal;
-        let mask = StringHeader::COMPACT_LEN_BITS as usize;
-        let compact_len = len & mask;
-        if allows_compact && compact_len == len {
-            Some(compact_len as u8)
-        } else {
-            None
         }
     }
 }
