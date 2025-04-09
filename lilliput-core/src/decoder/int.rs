@@ -16,6 +16,8 @@ impl<'de, R> Decoder<R>
 where
     R: Read<'de>,
 {
+    // MARK: - Value
+
     pub fn decode_u8(&mut self) -> Result<u8> {
         self.decode_unsigned_int()
     }
@@ -91,6 +93,8 @@ where
         self.decode_int_value_body(header)
     }
 
+    // MARK: - Header
+
     pub fn decode_int_header(&mut self) -> Result<IntHeader> {
         let header_byte = self.pull_byte_expecting(Marker::Int)?;
 
@@ -106,12 +110,9 @@ where
             Ok(IntHeader::Extended(ExtendedIntHeader { is_signed, width }))
         }
     }
-}
 
-impl<'de, R> Decoder<R>
-where
-    R: Read<'de>,
-{
+    // MARK: - Body
+
     fn decode_int_value_body(&mut self, header: IntHeader) -> Result<IntValue> {
         let (is_signed, width): (bool, usize) = match header {
             IntHeader::Compact(CompactIntHeader { is_signed, bits }) => {

@@ -12,6 +12,8 @@ impl<W> Encoder<W>
 where
     W: Write,
 {
+    // MARK: - Value
+
     pub fn encode_seq(&mut self, value: &[Value]) -> Result<()> {
         self.encode_seq_header(&self.header_for_seq(value))?;
 
@@ -25,6 +27,8 @@ where
     pub fn encode_seq_value(&mut self, value: &SeqValue) -> Result<()> {
         self.encode_seq(&value.0)
     }
+
+    // MARK: - Header
 
     pub fn encode_seq_header(&mut self, header: &SeqHeader) -> Result<()> {
         let mut header_byte = SeqHeader::TYPE_BITS;

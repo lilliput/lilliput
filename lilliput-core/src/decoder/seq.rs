@@ -12,6 +12,8 @@ impl<'de, R> Decoder<R>
 where
     R: Read<'de>,
 {
+    // MARK: - Value
+
     pub fn decode_seq(&mut self) -> Result<Seq> {
         let header = self.decode_seq_header()?;
         let mut vec = Vec::new();
@@ -27,6 +29,8 @@ where
     pub fn decode_seq_value(&mut self) -> Result<SeqValue> {
         self.decode_seq().map(From::from)
     }
+
+    // MARK: - Header
 
     pub fn decode_seq_header(&mut self) -> Result<SeqHeader> {
         let header_byte = self.pull_byte_expecting(Marker::Seq)?;

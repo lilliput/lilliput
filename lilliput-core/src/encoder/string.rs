@@ -12,6 +12,8 @@ impl<W> Encoder<W>
 where
     W: Write,
 {
+    // MARK: - Value
+
     pub fn encode_str(&mut self, value: &str) -> Result<()> {
         self.encode_string_header(&self.header_for_str(value))?;
 
@@ -26,6 +28,8 @@ where
 
         Ok(())
     }
+
+    // MARK: - Header
 
     pub fn encode_string_header(&mut self, header: &StringHeader) -> Result<()> {
         let mut header_byte = StringHeader::TYPE_BITS;

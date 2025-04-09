@@ -9,6 +9,8 @@ impl<W> Encoder<W>
 where
     W: Write,
 {
+    // MARK: - Value
+
     pub fn encode_bytes(&mut self, value: &[u8]) -> Result<()> {
         self.encode_bytes_header(&BytesHeader::new(value.len()))?;
 
@@ -21,6 +23,8 @@ where
     pub fn encode_bytes_value(&mut self, value: &BytesValue) -> Result<()> {
         self.encode_bytes(&value.0)
     }
+
+    // MARK: - Header
 
     pub fn encode_bytes_header(&mut self, header: &BytesHeader) -> Result<()> {
         let len = header.len();
