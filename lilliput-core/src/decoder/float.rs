@@ -10,18 +10,18 @@ where
 
     pub fn decode_f32(&mut self) -> Result<f32> {
         let header = self.decode_float_header()?;
-        Ok(self.decode_float_value_body(header)?.into())
+        Ok(self.decode_float_value_of(header)?.into())
     }
 
     pub fn decode_f64(&mut self) -> Result<f64> {
         let header = self.decode_float_header()?;
-        Ok(self.decode_float_value_body(header)?.into())
+        Ok(self.decode_float_value_of(header)?.into())
     }
 
     pub fn decode_float_value(&mut self) -> Result<FloatValue> {
         let header = self.decode_float_header()?;
 
-        self.decode_float_value_body(header)
+        self.decode_float_value_of(header)
     }
 
     // MARK: - Header
@@ -36,8 +36,7 @@ where
 
     // MARK: - Body
 
-    #[inline]
-    fn decode_float_value_body(&mut self, header: FloatHeader) -> Result<FloatValue> {
+    pub fn decode_float_value_of(&mut self, header: FloatHeader) -> Result<FloatValue> {
         match header.width() {
             1..=3 => unimplemented!(),
             4 => {

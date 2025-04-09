@@ -20,78 +20,31 @@ where
         &'s mut self,
         scratch: &'s mut Vec<u8>,
     ) -> Result<Reference<'de, 's, str>> {
-        let (bytes, range) = self.decode_str_bytes_and_range(scratch)?;
-
-        let str_ref = match bytes {
-            Reference::Borrowed(bytes) => std::str::from_utf8(bytes).map(Reference::Borrowed),
-            Reference::Copied(bytes) => std::str::from_utf8(bytes).map(Reference::Copied),
-        }
-        .map_err(|err| {
-            let pos = range.start + err.valid_up_to() + 1;
-            Error::utf8(err, Some(pos))
-        })?;
-
-        Ok(str_ref)
+        let header = self.decode_string_header()?;
+        self.decode_str_of(header, scratch)
     }
 
     pub fn decode_str_bytes<'s>(
         &'s mut self,
         scratch: &'s mut Vec<u8>,
     ) -> Result<Reference<'de, 's, [u8]>> {
-        Ok(self.decode_str_bytes_and_range(scratch)?.0)
+        let header = self.decode_string_header()?;
+        self.decode_str_bytes_of(header, scratch)
     }
 
     pub fn decode_string(&mut self) -> Result<String> {
-        let (bytes_buf, range) = self.decode_string_bytes_buf_and_range()?;
-
-        let string = String::from_utf8(bytes_buf).map_err(|err| {
-            let err = err.utf8_error();
-            let pos = range.start + err.valid_up_to() + 1;
-            Error::utf8(err, Some(pos))
-        })?;
-
-        Ok(string)
+        let header = self.decode_string_header()?;
+        self.decode_string_of(header)
     }
 
     pub fn decode_string_bytes_buf(&mut self) -> Result<Vec<u8>> {
-        Ok(self.decode_string_bytes_buf_and_range()?.0)
+        let header = self.decode_string_header()?;
+        self.decode_string_bytes_buf_of(header)
     }
 
     pub fn decode_string_value(&mut self) -> Result<StringValue> {
-        self.decode_string().map(From::from)
-    }
-
-    fn decode_string_bytes_buf_and_range(&mut self) -> Result<(Vec<u8>, Range<usize>)> {
-        let mut buf = Vec::new();
-
-        let (bytes, range) = self.decode_str_bytes_and_range(&mut buf)?;
-
-        match bytes {
-            Reference::Borrowed(slice) => {
-                debug_assert_eq!(buf.len(), 0);
-                buf.extend_from_slice(slice);
-            }
-            Reference::Copied(slice) => {
-                debug_assert_eq!(slice.len(), buf.len());
-            }
-        }
-
-        Ok((buf, range))
-    }
-
-    fn decode_str_bytes_and_range<'s>(
-        &'s mut self,
-        scratch: &'s mut Vec<u8>,
-    ) -> Result<(Reference<'de, 's, [u8]>, Range<usize>)> {
         let header = self.decode_string_header()?;
-
-        scratch.clear();
-
-        let start = self.pos;
-        let bytes = self.pull_bytes(header.len(), scratch)?;
-        let range = start..(start + bytes.len());
-
-        Ok((bytes, range))
+        self.decode_string_value_of(header)
     }
 
     // MARK: - Header
@@ -109,5 +62,91 @@ where
             let len = self.pull_len_bytes(len_width)?;
             Ok(StringHeader::extended(len))
         }
+    }
+
+    // MARK: - Body
+
+    pub fn decode_string_value_of(&mut self, header: StringHeader) -> Result<StringValue> {
+        self.decode_string_of(header).map(From::from)
+    }
+
+    // MARK: - Private
+
+    fn decode_str_of<'s>(
+        &'s mut self,
+        header: StringHeader,
+        scratch: &'s mut Vec<u8>,
+    ) -> Result<Reference<'de, 's, str>> {
+        let (bytes, range) = self.decode_str_bytes_and_range_of(header, scratch)?;
+
+        let str_ref = match bytes {
+            Reference::Borrowed(bytes) => std::str::from_utf8(bytes).map(Reference::Borrowed),
+            Reference::Copied(bytes) => std::str::from_utf8(bytes).map(Reference::Copied),
+        }
+        .map_err(|err| {
+            let pos = range.start + err.valid_up_to() + 1;
+            Error::utf8(err, Some(pos))
+        })?;
+
+        Ok(str_ref)
+    }
+
+    fn decode_str_bytes_of<'s>(
+        &'s mut self,
+        header: StringHeader,
+        scratch: &'s mut Vec<u8>,
+    ) -> Result<Reference<'de, 's, [u8]>> {
+        Ok(self.decode_str_bytes_and_range_of(header, scratch)?.0)
+    }
+
+    fn decode_string_of(&mut self, header: StringHeader) -> Result<String> {
+        let (bytes_buf, range) = self.decode_string_bytes_buf_and_range_of(header)?;
+
+        let string = String::from_utf8(bytes_buf).map_err(|err| {
+            let err = err.utf8_error();
+            let pos = range.start + err.valid_up_to() + 1;
+            Error::utf8(err, Some(pos))
+        })?;
+
+        Ok(string)
+    }
+
+    fn decode_string_bytes_buf_of(&mut self, header: StringHeader) -> Result<Vec<u8>> {
+        Ok(self.decode_string_bytes_buf_and_range_of(header)?.0)
+    }
+
+    fn decode_string_bytes_buf_and_range_of(
+        &mut self,
+        header: StringHeader,
+    ) -> Result<(Vec<u8>, Range<usize>)> {
+        let mut buf = Vec::new();
+
+        let (bytes, range) = self.decode_str_bytes_and_range_of(header, &mut buf)?;
+
+        match bytes {
+            Reference::Borrowed(slice) => {
+                debug_assert_eq!(buf.len(), 0);
+                buf.extend_from_slice(slice);
+            }
+            Reference::Copied(slice) => {
+                debug_assert_eq!(slice.len(), buf.len());
+            }
+        }
+
+        Ok((buf, range))
+    }
+
+    fn decode_str_bytes_and_range_of<'s>(
+        &'s mut self,
+        header: StringHeader,
+        scratch: &'s mut Vec<u8>,
+    ) -> Result<(Reference<'de, 's, [u8]>, Range<usize>)> {
+        scratch.clear();
+
+        let start = self.pos;
+        let bytes = self.pull_bytes(header.len(), scratch)?;
+        let range = start..(start + bytes.len());
+
+        Ok((bytes, range))
     }
 }

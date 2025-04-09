@@ -21,8 +21,16 @@ where
     // MARK: - Header
 
     pub fn decode_null_header(&mut self) -> Result<NullHeader> {
-        let _header_byte = self.pull_byte_expecting(Marker::Null)?;
+        let _ = self.pull_byte_expecting(Marker::Null)?;
 
         Ok(NullHeader)
+    }
+
+    // MARK: - Body
+
+    pub fn decode_null_value_of(&mut self, header: NullHeader) -> Result<NullValue> {
+        let _ = header;
+
+        Ok(NullValue)
     }
 }

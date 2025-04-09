@@ -30,4 +30,16 @@ where
 
         Ok(BoolHeader::new(value))
     }
+
+    // MARK: - Body
+
+    pub fn decode_bool_value_of(&mut self, header: BoolHeader) -> Result<BoolValue> {
+        self.decode_bool_of(header).map(From::from)
+    }
+
+    // MARK: - Private
+
+    fn decode_bool_of(&mut self, header: BoolHeader) -> Result<bool> {
+        Ok(header.value())
+    }
 }

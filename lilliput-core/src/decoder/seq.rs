@@ -16,18 +16,14 @@ where
 
     pub fn decode_seq(&mut self) -> Result<Seq> {
         let header = self.decode_seq_header()?;
-        let mut vec = Vec::new();
 
-        for _ in 0..header.len() {
-            let value = self.decode_value()?;
-            vec.push(value);
-        }
-
-        Ok(vec)
+        self.decode_seq_of(header)
     }
 
     pub fn decode_seq_value(&mut self) -> Result<SeqValue> {
-        self.decode_seq().map(From::from)
+        let header = self.decode_seq_header()?;
+
+        self.decode_seq_value_of(header)
     }
 
     // MARK: - Header
@@ -45,5 +41,24 @@ where
             let len = self.pull_len_bytes(len_width)?;
             Ok(SeqHeader::extended(len))
         }
+    }
+
+    // MARK: - Body
+
+    pub fn decode_seq_value_of(&mut self, header: SeqHeader) -> Result<SeqValue> {
+        self.decode_seq_of(header).map(From::from)
+    }
+
+    // MARK: - Private
+
+    fn decode_seq_of(&mut self, header: SeqHeader) -> Result<Seq> {
+        let mut seq = Seq::default();
+
+        for _ in 0..header.len() {
+            let value = self.decode_value()?;
+            seq.push(value);
+        }
+
+        Ok(seq)
     }
 }

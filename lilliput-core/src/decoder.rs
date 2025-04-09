@@ -46,6 +46,11 @@ where
         self.peek_byte().map(Marker::detect)
     }
 
+    pub fn decode_value(&mut self) -> Result<Value> {
+        let header = self.decode_header()?;
+        self.decode_value_of(header)
+    }
+
     pub fn decode_header(&mut self) -> Result<Header> {
         match self.peek_marker()? {
             Marker::Int => self.decode_int_header().map(From::from),
@@ -60,17 +65,17 @@ where
         }
     }
 
-    pub fn decode_value(&mut self) -> Result<Value> {
-        match self.peek_marker()? {
-            Marker::Int => self.decode_int_value().map(From::from),
-            Marker::String => self.decode_string_value().map(From::from),
-            Marker::Seq => self.decode_seq_value().map(From::from),
-            Marker::Map => self.decode_map_value().map(From::from),
-            Marker::Float => self.decode_float_value().map(From::from),
-            Marker::Bytes => self.decode_bytes_value().map(From::from),
-            Marker::Bool => self.decode_bool_value().map(From::from),
-            Marker::Unit => self.decode_unit_value().map(From::from),
-            Marker::Null => self.decode_null_value().map(From::from),
+    pub fn decode_value_of(&mut self, header: Header) -> Result<Value> {
+        match header {
+            Header::Int(header) => self.decode_int_value_of(header).map(From::from),
+            Header::String(header) => self.decode_string_value_of(header).map(From::from),
+            Header::Seq(header) => self.decode_seq_value_of(header).map(From::from),
+            Header::Map(header) => self.decode_map_value_of(header).map(From::from),
+            Header::Float(header) => self.decode_float_value_of(header).map(From::from),
+            Header::Bytes(header) => self.decode_bytes_value_of(header).map(From::from),
+            Header::Bool(header) => self.decode_bool_value_of(header).map(From::from),
+            Header::Unit(header) => self.decode_unit_value_of(header).map(From::from),
+            Header::Null(header) => self.decode_null_value_of(header).map(From::from),
         }
     }
 }
