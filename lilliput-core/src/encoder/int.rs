@@ -84,10 +84,26 @@ where
                 byte |= IntHeader::COMPACT_VARIANT_BIT;
                 byte |= bits_if(IntHeader::SIGNEDNESS_BIT, *is_signed);
                 byte |= bits & IntHeader::COMPACT_VALUE_BITS;
+
+                #[cfg(feature = "tracing")]
+                tracing::debug!(
+                    byte = crate::binary::fmt_byte(byte),
+                    is_compact = true,
+                    is_signed = is_signed,
+                    bits = bits
+                );
             }
             IntHeader::Extended(ExtendedIntHeader { is_signed, width }) => {
                 byte |= bits_if(IntHeader::SIGNEDNESS_BIT, *is_signed);
                 byte |= (width - 1) & IntHeader::EXTENDED_WIDTH_BITS;
+
+                #[cfg(feature = "tracing")]
+                tracing::debug!(
+                    byte = crate::binary::fmt_byte(byte),
+                    is_compact = false,
+                    is_signed = is_signed,
+                    width = width
+                );
             }
         }
 
@@ -114,25 +130,20 @@ where
     where
         S: Signed + WithPackedBeBytes,
     {
-        value.with_packed_be_bytes(self.config.int_packing, |bytes| {
-            let is_signed = true;
-            let width = bytes.len();
-
-            let mut header = IntHeader::extended(is_signed, width as u8);
-
-            if width == 1 {
-                let bits = bytes[width - 1];
-                if bits <= IntHeader::COMPACT_VALUE_BITS {
-                    header = IntHeader::compact(is_signed, bits);
-
-                    return self.encode_int_header(&header);
-                }
-            }
+        let packing_mode = self.config.int_packing;
+        value.with_packed_be_bytes(packing_mode, |bytes| {
+            let header = IntHeader::for_int_be_bytes(true, bytes, packing_mode);
 
             self.encode_int_header(&header)?;
 
-            // Push the value bytes:
-            self.push_bytes(bytes)
+            #[cfg(feature = "tracing")]
+            tracing::debug!(bytes = bytes);
+
+            if matches!(header, IntHeader::Extended(_)) {
+                self.push_bytes(bytes)?;
+            }
+
+            Ok(())
         })
     }
 
@@ -141,25 +152,20 @@ where
     where
         U: Unsigned + WithPackedBeBytes,
     {
-        value.with_packed_be_bytes(self.config.int_packing, |bytes| {
-            let is_signed = false;
-            let width = bytes.len();
-
-            let mut header = IntHeader::extended(is_signed, width as u8);
-
-            if width == 1 {
-                let bits = bytes[width - 1];
-                if bits <= IntHeader::COMPACT_VALUE_BITS {
-                    header = IntHeader::compact(is_signed, bits);
-
-                    return self.encode_int_header(&header);
-                }
-            }
+        let packing_mode = self.config.int_packing;
+        value.with_packed_be_bytes(packing_mode, |bytes| {
+            let header = IntHeader::for_int_be_bytes(false, bytes, packing_mode);
 
             self.encode_int_header(&header)?;
 
-            // Push the value bytes:
-            self.push_bytes(bytes)
+            #[cfg(feature = "tracing")]
+            tracing::debug!(bytes = bytes);
+
+            if matches!(header, IntHeader::Extended(_)) {
+                self.push_bytes(bytes)?;
+            }
+
+            Ok(())
         })
     }
 }

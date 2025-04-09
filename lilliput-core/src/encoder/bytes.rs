@@ -44,6 +44,13 @@ where
 
             byte |= exponent & BytesHeader::LEN_WIDTH_EXPONENT_BITS;
 
+            #[cfg(feature = "tracing")]
+            tracing::debug!(
+                byte = crate::binary::fmt_byte(byte),
+                bytes = format!("{:b}", crate::binary::BytesSlice(bytes)),
+                len = len
+            );
+
             // Push the value's header:
             self.push_byte(byte)?;
 

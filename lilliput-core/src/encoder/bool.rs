@@ -27,6 +27,13 @@ where
 
         byte |= binary::bits_if(BoolHeader::VALUE_BIT, header.value());
 
+        #[cfg(feature = "tracing")]
+        tracing::debug!(
+            byte = crate::binary::fmt_byte(byte),
+            is_compact = true,
+            value = header.value()
+        );
+
         self.push_byte(byte)
     }
 

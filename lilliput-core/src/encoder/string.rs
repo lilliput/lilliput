@@ -48,6 +48,13 @@ where
 
                     byte |= (width - 1) & StringHeader::EXTENDED_LEN_WIDTH_BITS;
 
+                    #[cfg(feature = "tracing")]
+                    tracing::debug!(
+                        byte = crate::binary::fmt_byte(byte),
+                        bytes = format!("{:b}", crate::binary::BytesSlice(bytes)),
+                        len = len
+                    );
+
                     // Push the value's header:
                     self.push_byte(byte)?;
 

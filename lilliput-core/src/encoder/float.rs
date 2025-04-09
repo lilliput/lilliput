@@ -44,6 +44,9 @@ where
 
         byte |= (width - 1) & FloatHeader::VALUE_WIDTH_BITS;
 
+        #[cfg(feature = "tracing")]
+        tracing::debug!(byte = crate::binary::fmt_byte(byte), width = width);
+
         // Push the value's header:
         self.push_byte(byte)
     }
