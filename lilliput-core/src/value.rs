@@ -15,7 +15,7 @@ pub use self::{
     int::{IntValue, SignedIntValue, UnsignedIntValue},
     map::{Map, MapValue},
     null::NullValue,
-    seq::SeqValue,
+    seq::{Seq, SeqValue},
     string::StringValue,
     unit::UnitValue,
 };

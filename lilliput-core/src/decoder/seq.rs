@@ -3,7 +3,7 @@ use crate::{
     header::SeqHeader,
     io::Read,
     marker::Marker,
-    value::{SeqValue, Value},
+    value::{Seq, SeqValue},
 };
 
 use super::Decoder;
@@ -12,7 +12,7 @@ impl<'de, R> Decoder<R>
 where
     R: Read<'de>,
 {
-    pub fn decode_seq(&mut self) -> Result<Vec<Value>> {
+    pub fn decode_seq(&mut self) -> Result<Seq> {
         let header = self.decode_seq_header()?;
         let mut vec = Vec::new();
 

@@ -3,22 +3,24 @@ use proptest::{prelude::*, sample::SizeRange};
 
 use super::Value;
 
+pub type Seq = Vec<Value>;
+
 /// Represents a sequence of values.
 #[derive(Default, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct SeqValue(pub Vec<Value>);
+pub struct SeqValue(pub Seq);
 
 impl SeqValue {
     pub fn as_slice(&self) -> &[Value] {
         &self.0
     }
 
-    pub fn into_vec(self) -> Vec<Value> {
+    pub fn into_vec(self) -> Seq {
         self.0
     }
 }
 
-impl From<Vec<Value>> for SeqValue {
-    fn from(value: Vec<Value>) -> Self {
+impl From<Seq> for SeqValue {
+    fn from(value: Seq) -> Self {
         Self(value)
     }
 }
@@ -29,7 +31,7 @@ impl<'a> From<&'a SeqValue> for &'a [Value] {
     }
 }
 
-impl From<SeqValue> for Vec<Value> {
+impl From<SeqValue> for Seq {
     fn from(value: SeqValue) -> Self {
         value.0
     }
