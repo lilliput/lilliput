@@ -188,11 +188,168 @@ mod tests {
         decoder::Decoder,
         encoder::Encoder,
         io::{SliceReader, VecWriter},
+        num::zigzag::ToZigZag as _,
     };
 
     use super::*;
 
     proptest! {
+        #[test]
+        fn for_u8(unsigned in u8::arbitrary(), packing_mode in PackingMode::arbitrary()) {
+            let header = IntHeader::for_unsigned(unsigned, packing_mode);
+
+            let extended_width = header.extended_width().unwrap_or(0);
+
+            match packing_mode {
+                PackingMode::None => prop_assert!(extended_width == 1),
+                PackingMode::Native => prop_assert!([1].contains(&extended_width)),
+                PackingMode::Optimal => {
+                    if unsigned <= IntHeader::COMPACT_VALUE_BITS {
+                        prop_assert!(extended_width == 0)
+                    } else {
+                        prop_assert!(extended_width <= 1)
+                    }
+                },
+            }
+        }
+
+        #[test]
+        fn for_u16(unsigned in u16::arbitrary(), packing_mode in PackingMode::arbitrary()) {
+            let header = IntHeader::for_unsigned(unsigned, packing_mode);
+
+            let extended_width = header.extended_width().unwrap_or(0);
+
+            match packing_mode {
+                PackingMode::None => prop_assert!(extended_width == 2),
+                PackingMode::Native => prop_assert!([1, 2].contains(&extended_width)),
+                PackingMode::Optimal => {
+                    if unsigned <= IntHeader::COMPACT_VALUE_BITS as u16 {
+                        prop_assert!(extended_width == 0)
+                    } else {
+                        prop_assert!(extended_width <= 2)
+                    }
+                },
+            }
+        }
+
+        #[test]
+        fn for_u32(unsigned in u32::arbitrary(), packing_mode in PackingMode::arbitrary()) {
+            let header = IntHeader::for_unsigned(unsigned, packing_mode);
+
+            let extended_width = header.extended_width().unwrap_or(0);
+
+            match packing_mode {
+                PackingMode::None => prop_assert!(extended_width == 4),
+                PackingMode::Native => prop_assert!([1, 2, 4].contains(&extended_width)),
+                PackingMode::Optimal => {
+                    if unsigned <= IntHeader::COMPACT_VALUE_BITS as u32 {
+                        prop_assert!(extended_width == 0)
+                    } else {
+                        prop_assert!(extended_width <= 4)
+                    }
+                },
+            }
+        }
+
+        #[test]
+        fn for_u64(unsigned in u64::arbitrary(), packing_mode in PackingMode::arbitrary()) {
+            let header = IntHeader::for_unsigned(unsigned, packing_mode);
+
+            let extended_width = header.extended_width().unwrap_or(0);
+
+            match packing_mode {
+                PackingMode::None => prop_assert!(extended_width == 8),
+                PackingMode::Native => prop_assert!([1, 2, 4, 8].contains(&extended_width)),
+                PackingMode::Optimal => {
+                    if unsigned <= IntHeader::COMPACT_VALUE_BITS as u64 {
+                        prop_assert!(extended_width == 0)
+                    } else {
+                        prop_assert!(extended_width <= 8)
+                    }
+                },
+            }
+        }
+
+        #[test]
+        fn for_i8(signed in i8::arbitrary(), packing_mode in PackingMode::arbitrary()) {
+            let unsigned = signed.to_zig_zag();
+            let header = IntHeader::for_unsigned(unsigned, packing_mode);
+
+            let extended_width = header.extended_width().unwrap_or(0);
+
+            match packing_mode {
+                PackingMode::None => prop_assert!(extended_width == 1),
+                PackingMode::Native => prop_assert!([1].contains(&extended_width)),
+                PackingMode::Optimal => {
+                    if unsigned <= IntHeader::COMPACT_VALUE_BITS {
+                        prop_assert!(extended_width == 0)
+                    } else {
+                        prop_assert!(extended_width <= 1)
+                    }
+                },
+            }
+        }
+
+        #[test]
+        fn for_i16(signed in i16::arbitrary(), packing_mode in PackingMode::arbitrary()) {
+            let unsigned = signed.to_zig_zag();
+            let header = IntHeader::for_unsigned(unsigned, packing_mode);
+
+            let extended_width = header.extended_width().unwrap_or(0);
+
+            match packing_mode {
+                PackingMode::None => prop_assert!(extended_width == 2),
+                PackingMode::Native => prop_assert!([1, 2].contains(&extended_width)),
+                PackingMode::Optimal => {
+                    if unsigned <= IntHeader::COMPACT_VALUE_BITS as u16 {
+                        prop_assert!(extended_width == 0)
+                    } else {
+                        prop_assert!(extended_width <= 2)
+                    }
+                },
+            }
+        }
+
+        #[test]
+        fn for_i32(signed in i32::arbitrary(), packing_mode in PackingMode::arbitrary()) {
+            let unsigned = signed.to_zig_zag();
+            let header = IntHeader::for_unsigned(unsigned, packing_mode);
+
+            let extended_width = header.extended_width().unwrap_or(0);
+
+            match packing_mode {
+                PackingMode::None => prop_assert!(extended_width == 4),
+                PackingMode::Native => prop_assert!([1, 2, 4].contains(&extended_width)),
+                PackingMode::Optimal => {
+                    if unsigned <= IntHeader::COMPACT_VALUE_BITS as u32 {
+                        prop_assert!(extended_width == 0)
+                    } else {
+                        prop_assert!(extended_width <= 4)
+                    }
+                },
+            }
+        }
+
+        #[test]
+        fn for_i64(signed in i64::arbitrary(), packing_mode in PackingMode::arbitrary()) {
+            let unsigned = signed.to_zig_zag();
+            let header = IntHeader::for_unsigned(unsigned, packing_mode);
+
+            let extended_width = header.extended_width().unwrap_or(0);
+
+            match packing_mode {
+                PackingMode::None => prop_assert!(extended_width == 8),
+                PackingMode::Native => prop_assert!([1, 2, 4, 8].contains(&extended_width)),
+                PackingMode::Optimal => {
+                    if unsigned <= IntHeader::COMPACT_VALUE_BITS as u64 {
+                        prop_assert!(extended_width == 0)
+                    } else {
+                        prop_assert!(extended_width <= 8)
+                    }
+                },
+            }
+        }
+
         #[test]
         fn encode_decode_roundtrip(header in IntHeader::arbitrary(), config in EncodingConfig::arbitrary()) {
             let mut encoded: Vec<u8> = Vec::new();

@@ -165,6 +165,19 @@ mod tests {
 
     proptest! {
         #[test]
+        fn as_compact_len(len in usize::arbitrary(), packing_mode in PackingMode::arbitrary()) {
+            let compact_len = SeqHeader::as_compact_len(len, packing_mode);
+            let is_optimal = packing_mode == PackingMode::Optimal;
+            let can_be_compact = len <= SeqHeader::COMPACT_MAX_LEN;
+
+            if is_optimal && can_be_compact {
+                prop_assert_eq!(compact_len, Some(len as u8));
+            } else {
+                prop_assert_eq!(compact_len, None);
+            }
+        }
+
+        #[test]
         fn encode_decode_roundtrip(header in SeqHeader::arbitrary(), config in EncodingConfig::arbitrary()) {
             let mut encoded: Vec<u8> = Vec::new();
             let writer = VecWriter::new(&mut encoded);
