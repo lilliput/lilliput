@@ -13,17 +13,20 @@ where
 {
     // MARK: - Value
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_map(&mut self) -> Result<Map> {
         let header = self.decode_map_header()?;
         self.decode_map_of(header)
     }
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_map_value(&mut self) -> Result<MapValue> {
         self.decode_map().map(From::from)
     }
 
     // MARK: - Header
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_map_header(&mut self) -> Result<MapHeader> {
         let byte = self.pull_byte_expecting(Marker::Map)?;
 
@@ -43,12 +46,14 @@ where
 
     // MARK: - Body
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_map_value_of(&mut self, header: MapHeader) -> Result<MapValue> {
         self.decode_map_of(header).map(From::from)
     }
 
     // MARK: - Private
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     fn decode_map_of(&mut self, header: MapHeader) -> Result<Map> {
         let mut map = Map::default();
 

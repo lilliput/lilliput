@@ -8,16 +8,19 @@ where
 {
     // MARK: - Value
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_f32(&mut self) -> Result<f32> {
         let header = self.decode_float_header()?;
         Ok(self.decode_float_value_of(header)?.into())
     }
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_f64(&mut self) -> Result<f64> {
         let header = self.decode_float_header()?;
         Ok(self.decode_float_value_of(header)?.into())
     }
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_float_value(&mut self) -> Result<FloatValue> {
         let header = self.decode_float_header()?;
 
@@ -26,6 +29,7 @@ where
 
     // MARK: - Header
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_float_header(&mut self) -> Result<FloatHeader> {
         let byte = self.pull_byte_expecting(Marker::Float)?;
 
@@ -36,6 +40,7 @@ where
 
     // MARK: - Body
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_float_value_of(&mut self, header: FloatHeader) -> Result<FloatValue> {
         match header.width() {
             1..=3 => unimplemented!(),
