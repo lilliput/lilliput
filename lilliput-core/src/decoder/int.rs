@@ -18,38 +18,47 @@ where
 {
     // MARK: - Value
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_u8(&mut self) -> Result<u8> {
         self.decode_unsigned_int()
     }
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_u16(&mut self) -> Result<u16> {
         self.decode_unsigned_int()
     }
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_u32(&mut self) -> Result<u32> {
         self.decode_unsigned_int()
     }
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_u64(&mut self) -> Result<u64> {
         self.decode_unsigned_int()
     }
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_i8(&mut self) -> Result<i8> {
         self.decode_signed_int()
     }
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_i16(&mut self) -> Result<i16> {
         self.decode_signed_int()
     }
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_i32(&mut self) -> Result<i32> {
         self.decode_signed_int()
     }
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_i64(&mut self) -> Result<i64> {
         self.decode_signed_int()
     }
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_signed_int<T>(&mut self) -> Result<T>
     where
         T: Signed + TryFrom<SignedIntValue, Error = TryFromIntError>,
@@ -61,6 +70,7 @@ where
             .map_err(|_| Error::number_out_of_range(Some(pos)))
     }
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_unsigned_int<T>(&mut self) -> Result<T>
     where
         T: Unsigned + TryFrom<UnsignedIntValue, Error = TryFromIntError>,
@@ -72,6 +82,7 @@ where
             .map_err(|_| Error::number_out_of_range(Some(pos)))
     }
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_signed_int_value(&mut self) -> Result<SignedIntValue> {
         let pos = self.pos;
 
@@ -80,6 +91,7 @@ where
             .map_err(|_| Error::number_out_of_range(Some(pos)))
     }
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_unsigned_int_value(&mut self) -> Result<UnsignedIntValue> {
         let pos = self.pos;
 
@@ -88,6 +100,7 @@ where
             .map_err(|_| Error::number_out_of_range(Some(pos)))
     }
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_int_value(&mut self) -> Result<IntValue> {
         let header = self.decode_int_header()?;
         self.decode_int_value_of(header)
@@ -95,6 +108,7 @@ where
 
     // MARK: - Header
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_int_header(&mut self) -> Result<IntHeader> {
         let byte = self.pull_byte_expecting(Marker::Int)?;
 
@@ -113,6 +127,7 @@ where
 
     // MARK: - Body
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_int_value_of(&mut self, header: IntHeader) -> Result<IntValue> {
         let (is_signed, width): (bool, usize) = match header {
             IntHeader::Compact(CompactIntHeader { is_signed, bits }) => {

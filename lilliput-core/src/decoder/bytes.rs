@@ -14,6 +14,7 @@ where
 {
     // MARK: - Value
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_bytes<'s>(
         &'s mut self,
         scratch: &'s mut Vec<u8>,
@@ -23,18 +24,21 @@ where
         self.decode_bytes_of(header, scratch)
     }
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_bytes_buf(&mut self) -> Result<Vec<u8>> {
         let header = self.decode_bytes_header()?;
 
         self.decode_bytes_buf_of(header)
     }
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_bytes_value(&mut self) -> Result<BytesValue> {
         self.decode_bytes_buf().map(From::from)
     }
 
     // MARK: - Header
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_bytes_header(&mut self) -> Result<BytesHeader> {
         let byte = self.pull_byte_expecting(Marker::Bytes)?;
 
@@ -48,12 +52,14 @@ where
 
     // MARK: - Body
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_bytes_value_of(&mut self, header: BytesHeader) -> Result<BytesValue> {
         self.decode_bytes_buf_of(header).map(From::from)
     }
 
     // MARK: - Private
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     fn decode_bytes_of<'s>(
         &'s mut self,
         header: BytesHeader,
@@ -62,6 +68,7 @@ where
         self.pull_bytes(header.len(), scratch)
     }
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     fn decode_bytes_buf_of(&mut self, header: BytesHeader) -> Result<Vec<u8>> {
         let mut buf = Vec::new();
 
