@@ -26,6 +26,9 @@ where
     pub fn encode_unit_header(&mut self, _header: &UnitHeader) -> Result<()> {
         let byte = UnitHeader::TYPE_BITS;
 
+        #[cfg(feature = "tracing")]
+        tracing::debug!(byte = crate::binary::fmt_byte(byte));
+
         self.push_byte(byte)
     }
 

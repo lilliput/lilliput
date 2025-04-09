@@ -26,6 +26,9 @@ where
     pub fn encode_null_header(&mut self, _header: &NullHeader) -> Result<()> {
         let byte = NullHeader::TYPE_BITS;
 
+        #[cfg(feature = "tracing")]
+        tracing::debug!(byte = crate::binary::fmt_byte(byte));
+
         self.push_byte(byte)
     }
 
