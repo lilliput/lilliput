@@ -10,7 +10,8 @@ where
 
     #[inline]
     pub fn encode_unit(&mut self) -> Result<()> {
-        self.push_byte(0b00000001)
+        let header = self.header_for_unit();
+        self.encode_unit_header(&header)
     }
 
     #[inline]
@@ -22,9 +23,10 @@ where
     // MARK: - Header
 
     #[inline]
-    pub fn encode_unit_header(&mut self, header: &UnitHeader) -> Result<()> {
-        let _ = header;
-        self.encode_unit()
+    pub fn encode_unit_header(&mut self, _header: &UnitHeader) -> Result<()> {
+        let byte = UnitHeader::TYPE_BITS;
+
+        self.push_byte(byte)
     }
 
     pub fn header_for_unit(&self) -> UnitHeader {

@@ -27,9 +27,9 @@ where
     // MARK: - Header
 
     pub fn decode_float_header(&mut self) -> Result<FloatHeader> {
-        let header_byte = self.pull_byte_expecting(Marker::Float)?;
+        let byte = self.pull_byte_expecting(Marker::Float)?;
 
-        let width = 1 + (header_byte & FloatHeader::VALUE_WIDTH_BITS);
+        let width = 1 + (byte & FloatHeader::VALUE_WIDTH_BITS);
 
         Ok(FloatHeader::new(width))
     }

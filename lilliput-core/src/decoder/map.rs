@@ -25,16 +25,18 @@ where
     // MARK: - Header
 
     pub fn decode_map_header(&mut self) -> Result<MapHeader> {
-        let header_byte = self.pull_byte_expecting(Marker::Map)?;
+        let byte = self.pull_byte_expecting(Marker::Map)?;
 
-        let is_compact = (header_byte & MapHeader::COMPACT_VARIANT_BIT) != 0b0;
+        let is_compact = (byte & MapHeader::COMPACT_VARIANT_BIT) != 0b0;
 
         if is_compact {
-            let len = header_byte & MapHeader::COMPACT_LEN_BITS;
+            let len = byte & MapHeader::COMPACT_LEN_BITS;
+
             Ok(MapHeader::compact(len))
         } else {
-            let len_width = 1 + (header_byte & MapHeader::EXTENDED_LEN_WIDTH_BITS);
+            let len_width = 1 + (byte & MapHeader::EXTENDED_LEN_WIDTH_BITS);
             let len = self.pull_len_bytes(len_width)?;
+
             Ok(MapHeader::extended(len))
         }
     }

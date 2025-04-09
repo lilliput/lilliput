@@ -40,12 +40,12 @@ where
     pub fn encode_float_header(&mut self, header: &FloatHeader) -> Result<()> {
         let width = header.width();
 
-        let mut header_byte = FloatHeader::TYPE_BITS;
+        let mut byte = FloatHeader::TYPE_BITS;
 
-        header_byte |= (width - 1) & FloatHeader::VALUE_WIDTH_BITS;
+        byte |= (width - 1) & FloatHeader::VALUE_WIDTH_BITS;
 
         // Push the value's header:
-        self.push_byte(header_byte)
+        self.push_byte(byte)
     }
 
     pub fn header_for_f32(&self, value: f32) -> FloatHeader {

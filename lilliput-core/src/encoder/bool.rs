@@ -23,11 +23,11 @@ where
 
     #[inline]
     pub fn encode_bool_header(&mut self, header: &BoolHeader) -> Result<()> {
-        let mut header_byte = BoolHeader::TYPE_BITS;
+        let mut byte = BoolHeader::TYPE_BITS;
 
-        header_byte |= binary::bits_if(BoolHeader::VALUE_BIT, header.value());
+        byte |= binary::bits_if(BoolHeader::VALUE_BIT, header.value());
 
-        self.push_byte(header_byte)
+        self.push_byte(byte)
     }
 
     #[inline]

@@ -21,7 +21,7 @@ where
     // MARK: - Header
 
     pub fn decode_unit_header(&mut self) -> Result<UnitHeader> {
-        let _ = self.pull_byte_expecting(Marker::Unit)?;
+        let _byte = self.pull_byte_expecting(Marker::Unit)?;
 
         Ok(UnitHeader)
     }

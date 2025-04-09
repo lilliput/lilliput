@@ -10,7 +10,8 @@ where
 
     #[inline]
     pub fn encode_null(&mut self) -> Result<()> {
-        self.push_byte(0b00000000)
+        let header = self.header_for_null();
+        self.encode_null_header(&header)
     }
 
     #[inline]
@@ -22,9 +23,10 @@ where
     // MARK: - Header
 
     #[inline]
-    pub fn encode_null_header(&mut self, header: &NullHeader) -> Result<()> {
-        let _ = header;
-        self.encode_null()
+    pub fn encode_null_header(&mut self, _header: &NullHeader) -> Result<()> {
+        let byte = NullHeader::TYPE_BITS;
+
+        self.push_byte(byte)
     }
 
     pub fn header_for_null(&self) -> NullHeader {

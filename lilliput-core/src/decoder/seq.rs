@@ -29,16 +29,18 @@ where
     // MARK: - Header
 
     pub fn decode_seq_header(&mut self) -> Result<SeqHeader> {
-        let header_byte = self.pull_byte_expecting(Marker::Seq)?;
+        let byte = self.pull_byte_expecting(Marker::Seq)?;
 
-        let is_compact = (header_byte & SeqHeader::COMPACT_VARIANT_BIT) != 0b0;
+        let is_compact = (byte & SeqHeader::COMPACT_VARIANT_BIT) != 0b0;
 
         if is_compact {
-            let len = header_byte & SeqHeader::COMPACT_LEN_BITS;
+            let len = byte & SeqHeader::COMPACT_LEN_BITS;
+
             Ok(SeqHeader::compact(len))
         } else {
-            let len_width = 1 + (header_byte & SeqHeader::EXTENDED_LEN_WIDTH_BITS);
+            let len_width = 1 + (byte & SeqHeader::EXTENDED_LEN_WIDTH_BITS);
             let len = self.pull_len_bytes(len_width)?;
+
             Ok(SeqHeader::extended(len))
         }
     }

@@ -31,24 +31,24 @@ where
     // MARK: - Header
 
     pub fn encode_seq_header(&mut self, header: &SeqHeader) -> Result<()> {
-        let mut header_byte = SeqHeader::TYPE_BITS;
+        let mut byte = SeqHeader::TYPE_BITS;
 
         match *header {
             SeqHeader::Compact(CompactSeqHeader { len }) => {
-                header_byte |= SeqHeader::COMPACT_VARIANT_BIT;
-                header_byte |= len & SeqHeader::COMPACT_LEN_BITS;
+                byte |= SeqHeader::COMPACT_VARIANT_BIT;
+                byte |= len & SeqHeader::COMPACT_LEN_BITS;
 
                 // Push the value's header:
-                self.push_byte(header_byte)
+                self.push_byte(byte)
             }
             SeqHeader::Extended(ExtendedSeqHeader { len }) => {
                 len.with_packed_be_bytes(self.config.len_packing, |bytes| {
                     let width = bytes.len() as u8;
 
-                    header_byte |= (width - 1) & SeqHeader::EXTENDED_LEN_WIDTH_BITS;
+                    byte |= (width - 1) & SeqHeader::EXTENDED_LEN_WIDTH_BITS;
 
                     // Push the value's header:
-                    self.push_byte(header_byte)?;
+                    self.push_byte(byte)?;
 
                     // Push the value's length:
                     self.push_bytes(bytes)

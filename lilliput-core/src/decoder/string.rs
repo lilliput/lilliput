@@ -50,16 +50,18 @@ where
     // MARK: - Header
 
     pub fn decode_string_header(&mut self) -> Result<StringHeader> {
-        let header_byte = self.pull_byte_expecting(Marker::String)?;
+        let byte = self.pull_byte_expecting(Marker::String)?;
 
-        let is_compact = (header_byte & StringHeader::COMPACT_VARIANT_BIT) != 0b0;
+        let is_compact = (byte & StringHeader::COMPACT_VARIANT_BIT) != 0b0;
 
         if is_compact {
-            let len = header_byte & StringHeader::COMPACT_LEN_BITS;
+            let len = byte & StringHeader::COMPACT_LEN_BITS;
+
             Ok(StringHeader::compact(len))
         } else {
-            let len_width = 1 + (header_byte & StringHeader::EXTENDED_LEN_WIDTH_BITS);
+            let len_width = 1 + (byte & StringHeader::EXTENDED_LEN_WIDTH_BITS);
             let len = self.pull_len_bytes(len_width)?;
+
             Ok(StringHeader::extended(len))
         }
     }

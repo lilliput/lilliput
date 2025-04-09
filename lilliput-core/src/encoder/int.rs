@@ -77,22 +77,22 @@ where
     // MARK: - Header
 
     pub fn encode_int_header(&mut self, header: &IntHeader) -> Result<()> {
-        let mut header_byte = IntHeader::TYPE_BITS;
+        let mut byte = IntHeader::TYPE_BITS;
 
         match header {
             IntHeader::Compact(CompactIntHeader { is_signed, bits }) => {
-                header_byte |= IntHeader::COMPACT_VARIANT_BIT;
-                header_byte |= bits_if(IntHeader::SIGNEDNESS_BIT, *is_signed);
-                header_byte |= bits & IntHeader::COMPACT_VALUE_BITS;
+                byte |= IntHeader::COMPACT_VARIANT_BIT;
+                byte |= bits_if(IntHeader::SIGNEDNESS_BIT, *is_signed);
+                byte |= bits & IntHeader::COMPACT_VALUE_BITS;
             }
             IntHeader::Extended(ExtendedIntHeader { is_signed, width }) => {
-                header_byte |= bits_if(IntHeader::SIGNEDNESS_BIT, *is_signed);
-                header_byte |= (width - 1) & IntHeader::EXTENDED_WIDTH_BITS;
+                byte |= bits_if(IntHeader::SIGNEDNESS_BIT, *is_signed);
+                byte |= (width - 1) & IntHeader::EXTENDED_WIDTH_BITS;
             }
         }
 
         // Push the header byte:
-        self.push_byte(header_byte)
+        self.push_byte(byte)
     }
 
     pub fn header_for_signed_int<T>(&self, value: T) -> IntHeader
