@@ -47,6 +47,9 @@ where
         let len_width: u8 = 1 << len_width_exponent;
         let len = self.pull_len_bytes(len_width)?;
 
+        #[cfg(feature = "tracing")]
+        tracing::debug!(byte = crate::binary::fmt_byte(byte), len = len);
+
         Ok(BytesHeader::new(len))
     }
 

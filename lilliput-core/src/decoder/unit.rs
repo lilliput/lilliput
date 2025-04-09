@@ -24,7 +24,11 @@ where
 
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_unit_header(&mut self) -> Result<UnitHeader> {
-        let _byte = self.pull_byte_expecting(Marker::Unit)?;
+        #[allow(unused_variables)]
+        let byte = self.pull_byte_expecting(Marker::Unit)?;
+
+        #[cfg(feature = "tracing")]
+        tracing::debug!(byte = crate::binary::fmt_byte(byte));
 
         Ok(UnitHeader)
     }

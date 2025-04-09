@@ -39,10 +39,24 @@ where
         if is_compact {
             let len = byte & SeqHeader::COMPACT_LEN_BITS;
 
+            #[cfg(feature = "tracing")]
+            tracing::debug!(
+                byte = crate::binary::fmt_byte(byte),
+                is_compact = true,
+                len = len
+            );
+
             Ok(SeqHeader::compact(len))
         } else {
             let len_width = 1 + (byte & SeqHeader::EXTENDED_LEN_WIDTH_BITS);
             let len = self.pull_len_bytes(len_width)?;
+
+            #[cfg(feature = "tracing")]
+            tracing::debug!(
+                byte = crate::binary::fmt_byte(byte),
+                is_compact = false,
+                len = len
+            );
 
             Ok(SeqHeader::extended(len))
         }

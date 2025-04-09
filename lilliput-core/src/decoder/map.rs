@@ -35,10 +35,24 @@ where
         if is_compact {
             let len = byte & MapHeader::COMPACT_LEN_BITS;
 
+            #[cfg(feature = "tracing")]
+            tracing::debug!(
+                byte = crate::binary::fmt_byte(byte),
+                is_compact = true,
+                len = len
+            );
+
             Ok(MapHeader::compact(len))
         } else {
             let len_width = 1 + (byte & MapHeader::EXTENDED_LEN_WIDTH_BITS);
             let len = self.pull_len_bytes(len_width)?;
+
+            #[cfg(feature = "tracing")]
+            tracing::debug!(
+                byte = crate::binary::fmt_byte(byte),
+                is_compact = false,
+                len = len
+            );
 
             Ok(MapHeader::extended(len))
         }

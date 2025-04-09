@@ -35,6 +35,9 @@ where
 
         let width = 1 + (byte & FloatHeader::VALUE_WIDTH_BITS);
 
+        #[cfg(feature = "tracing")]
+        tracing::debug!(byte = crate::binary::fmt_byte(byte), width = width);
+
         Ok(FloatHeader::new(width))
     }
 
@@ -47,13 +50,23 @@ where
             4 => {
                 let mut bytes: [u8; 4] = [0b0; 4];
                 self.pull_bytes_into(&mut bytes)?;
-                Ok(FloatValue::F32(f32::from_be_bytes(bytes)))
+                let value = f32::from_be_bytes(bytes);
+
+                #[cfg(feature = "tracing")]
+                tracing::debug!(bytes = crate::binary::fmt_bytes(&bytes), value = value);
+
+                Ok(FloatValue::F32(value))
             }
             5..=7 => unimplemented!(),
             8 => {
                 let mut bytes: [u8; 8] = [0b0; 8];
                 self.pull_bytes_into(&mut bytes)?;
-                Ok(FloatValue::F64(f64::from_be_bytes(bytes)))
+                let value = f64::from_be_bytes(bytes);
+
+                #[cfg(feature = "tracing")]
+                tracing::debug!(bytes = crate::binary::fmt_bytes(&bytes), value = value);
+
+                Ok(FloatValue::F64(value))
             }
             _ => unreachable!(),
         }

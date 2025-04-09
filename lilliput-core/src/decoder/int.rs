@@ -116,10 +116,26 @@ where
             let is_signed = (byte & IntHeader::SIGNEDNESS_BIT) != 0b0;
             let bits = byte & IntHeader::COMPACT_VALUE_BITS;
 
+            #[cfg(feature = "tracing")]
+            tracing::debug!(
+                byte = crate::binary::fmt_byte(byte),
+                is_compact = true,
+                is_signed = is_signed,
+                bits = bits
+            );
+
             Ok(IntHeader::Compact(CompactIntHeader { is_signed, bits }))
         } else {
             let is_signed = (byte & IntHeader::SIGNEDNESS_BIT) != 0b0;
             let width = 1 + (byte & IntHeader::EXTENDED_WIDTH_BITS);
+
+            #[cfg(feature = "tracing")]
+            tracing::debug!(
+                byte = crate::binary::fmt_byte(byte),
+                is_compact = false,
+                is_signed = is_signed,
+                width = width
+            );
 
             Ok(IntHeader::Extended(ExtendedIntHeader { is_signed, width }))
         }
@@ -132,9 +148,19 @@ where
         let (is_signed, width): (bool, usize) = match header {
             IntHeader::Compact(CompactIntHeader { is_signed, bits }) => {
                 if is_signed {
-                    return Ok(IntValue::Signed(SignedIntValue::I8(i8::from_zig_zag(bits))));
+                    let value = i8::from_zig_zag(bits);
+
+                    #[cfg(feature = "tracing")]
+                    tracing::debug!(value = value);
+
+                    return Ok(IntValue::Signed(SignedIntValue::I8(value)));
                 } else {
-                    return Ok(IntValue::Unsigned(UnsignedIntValue::U8(bits)));
+                    let value = bits;
+
+                    #[cfg(feature = "tracing")]
+                    tracing::debug!(value = value);
+
+                    return Ok(IntValue::Unsigned(UnsignedIntValue::U8(value)));
                 }
             }
             IntHeader::Extended(ExtendedIntHeader { is_signed, width }) => {
@@ -148,12 +174,22 @@ where
                 let mut padded_be_bytes: [u8; MAX_WIDTH] = [0b0; MAX_WIDTH];
                 self.pull_bytes_into(&mut padded_be_bytes[(MAX_WIDTH - width)..])?;
 
+                #[cfg(feature = "tracing")]
+                let bytes = crate::binary::fmt_bytes(&padded_be_bytes[(MAX_WIDTH - width)..]);
+
                 let value = u8::from_be_bytes(padded_be_bytes);
 
                 if is_signed {
                     let value = i8::from_zig_zag(value);
+
+                    #[cfg(feature = "tracing")]
+                    tracing::debug!(bytes = bytes, value = value);
+
                     Ok(IntValue::Signed(SignedIntValue::I8(value)))
                 } else {
+                    #[cfg(feature = "tracing")]
+                    tracing::debug!(bytes = bytes, value = value);
+
                     Ok(IntValue::Unsigned(UnsignedIntValue::U8(value)))
                 }
             }
@@ -162,12 +198,22 @@ where
                 let mut padded_be_bytes: [u8; MAX_WIDTH] = [0b0; MAX_WIDTH];
                 self.pull_bytes_into(&mut padded_be_bytes[(MAX_WIDTH - width)..])?;
 
+                #[cfg(feature = "tracing")]
+                let bytes = crate::binary::fmt_bytes(&padded_be_bytes[(MAX_WIDTH - width)..]);
+
                 let value = u16::from_be_bytes(padded_be_bytes);
 
                 if is_signed {
                     let value = i16::from_zig_zag(value);
+
+                    #[cfg(feature = "tracing")]
+                    tracing::debug!(bytes = bytes, value = value);
+
                     Ok(IntValue::Signed(SignedIntValue::I16(value)))
                 } else {
+                    #[cfg(feature = "tracing")]
+                    tracing::debug!(bytes = bytes, value = value);
+
                     Ok(IntValue::Unsigned(UnsignedIntValue::U16(value)))
                 }
             }
@@ -176,12 +222,22 @@ where
                 let mut padded_be_bytes: [u8; MAX_WIDTH] = [0b0; MAX_WIDTH];
                 self.pull_bytes_into(&mut padded_be_bytes[(MAX_WIDTH - width)..])?;
 
+                #[cfg(feature = "tracing")]
+                let bytes = crate::binary::fmt_bytes(&padded_be_bytes[(MAX_WIDTH - width)..]);
+
                 let value = u32::from_be_bytes(padded_be_bytes);
 
                 if is_signed {
                     let value = i32::from_zig_zag(value);
+
+                    #[cfg(feature = "tracing")]
+                    tracing::debug!(bytes = bytes, value = value);
+
                     Ok(IntValue::Signed(SignedIntValue::I32(value)))
                 } else {
+                    #[cfg(feature = "tracing")]
+                    tracing::debug!(bytes = bytes, value = value);
+
                     Ok(IntValue::Unsigned(UnsignedIntValue::U32(value)))
                 }
             }
@@ -190,12 +246,22 @@ where
                 let mut padded_be_bytes: [u8; MAX_WIDTH] = [0b0; MAX_WIDTH];
                 self.pull_bytes_into(&mut padded_be_bytes[(MAX_WIDTH - width)..])?;
 
+                #[cfg(feature = "tracing")]
+                let bytes = crate::binary::fmt_bytes(&padded_be_bytes[(MAX_WIDTH - width)..]);
+
                 let value = u64::from_be_bytes(padded_be_bytes);
 
                 if is_signed {
                     let value = i64::from_zig_zag(value);
+
+                    #[cfg(feature = "tracing")]
+                    tracing::debug!(bytes = bytes, value = value);
+
                     Ok(IntValue::Signed(SignedIntValue::I64(value)))
                 } else {
+                    #[cfg(feature = "tracing")]
+                    tracing::debug!(bytes = bytes, value = value);
+
                     Ok(IntValue::Unsigned(UnsignedIntValue::U64(value)))
                 }
             }
