@@ -90,7 +90,7 @@ where
 
     pub fn decode_int_value(&mut self) -> Result<IntValue> {
         let header = self.decode_int_header()?;
-        self.decode_int_value_body(header)
+        self.decode_int_value_of(header)
     }
 
     // MARK: - Header
@@ -113,7 +113,7 @@ where
 
     // MARK: - Body
 
-    fn decode_int_value_body(&mut self, header: IntHeader) -> Result<IntValue> {
+    pub fn decode_int_value_of(&mut self, header: IntHeader) -> Result<IntValue> {
         let (is_signed, width): (bool, usize) = match header {
             IntHeader::Compact(CompactIntHeader { is_signed, bits }) => {
                 if is_signed {

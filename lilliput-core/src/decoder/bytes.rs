@@ -20,23 +20,13 @@ where
     ) -> Result<Reference<'de, 's, [u8]>> {
         let header = self.decode_bytes_header()?;
 
-        self.pull_bytes(header.len(), scratch)
+        self.decode_bytes_of(header, scratch)
     }
 
     pub fn decode_bytes_buf(&mut self) -> Result<Vec<u8>> {
-        let mut buf = Vec::new();
+        let header = self.decode_bytes_header()?;
 
-        match self.decode_bytes(&mut buf)? {
-            Reference::Borrowed(slice) => {
-                debug_assert_eq!(buf.len(), 0);
-                buf.extend_from_slice(slice);
-            }
-            Reference::Copied(slice) => {
-                debug_assert_eq!(slice.len(), buf.len());
-            }
-        }
-
-        Ok(buf)
+        self.decode_bytes_buf_of(header)
     }
 
     pub fn decode_bytes_value(&mut self) -> Result<BytesValue> {
@@ -54,5 +44,37 @@ where
         let len = self.pull_len_bytes(len_width)?;
 
         Ok(BytesHeader::new(len))
+    }
+
+    // MARK: - Body
+
+    pub fn decode_bytes_value_of(&mut self, header: BytesHeader) -> Result<BytesValue> {
+        self.decode_bytes_buf_of(header).map(From::from)
+    }
+
+    // MARK: - Private
+
+    fn decode_bytes_of<'s>(
+        &'s mut self,
+        header: BytesHeader,
+        scratch: &'s mut Vec<u8>,
+    ) -> Result<Reference<'de, 's, [u8]>> {
+        self.pull_bytes(header.len(), scratch)
+    }
+
+    fn decode_bytes_buf_of(&mut self, header: BytesHeader) -> Result<Vec<u8>> {
+        let mut buf = Vec::new();
+
+        match self.decode_bytes_of(header, &mut buf)? {
+            Reference::Borrowed(slice) => {
+                debug_assert_eq!(buf.len(), 0);
+                buf.extend_from_slice(slice);
+            }
+            Reference::Copied(slice) => {
+                debug_assert_eq!(slice.len(), buf.len());
+            }
+        }
+
+        Ok(buf)
     }
 }

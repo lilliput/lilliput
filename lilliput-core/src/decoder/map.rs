@@ -2,7 +2,7 @@ use crate::{
     error::Result,
     header::MapHeader,
     marker::Marker,
-    value::{Map, MapValue, Value},
+    value::{Map, MapValue},
 };
 
 use super::{Decoder, Read};
@@ -15,22 +15,7 @@ where
 
     pub fn decode_map(&mut self) -> Result<Map> {
         let header = self.decode_map_header()?;
-
-        #[cfg(feature = "preserve_order")]
-        pub(crate) type Map = ordermap::OrderMap<Value, Value>;
-
-        #[cfg(not(feature = "preserve_order"))]
-        pub(crate) type Map = std::collections::BTreeMap<Value, Value>;
-
-        let mut map = Map::default();
-
-        for _ in 0..header.len() {
-            let key = self.decode_value()?;
-            let value = self.decode_value()?;
-            map.insert(key, value);
-        }
-
-        Ok(map)
+        self.decode_map_of(header)
     }
 
     pub fn decode_map_value(&mut self) -> Result<MapValue> {
@@ -52,5 +37,25 @@ where
             let len = self.pull_len_bytes(len_width)?;
             Ok(MapHeader::extended(len))
         }
+    }
+
+    // MARK: - Body
+
+    pub fn decode_map_value_of(&mut self, header: MapHeader) -> Result<MapValue> {
+        self.decode_map_of(header).map(From::from)
+    }
+
+    // MARK: - Private
+
+    fn decode_map_of(&mut self, header: MapHeader) -> Result<Map> {
+        let mut map = Map::default();
+
+        for _ in 0..header.len() {
+            let key = self.decode_value()?;
+            let value = self.decode_value()?;
+            map.insert(key, value);
+        }
+
+        Ok(map)
     }
 }
