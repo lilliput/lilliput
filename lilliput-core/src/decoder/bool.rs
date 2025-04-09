@@ -24,9 +24,9 @@ where
     // MARK: - Header
 
     pub fn decode_bool_header(&mut self) -> Result<BoolHeader> {
-        let header_byte = self.pull_byte_expecting(Marker::Bool)?;
+        let byte = self.pull_byte_expecting(Marker::Bool)?;
 
-        let value = (header_byte & BoolHeader::VALUE_BIT) != 0b0;
+        let value = (byte & BoolHeader::VALUE_BIT) != 0b0;
 
         Ok(BoolHeader::new(value))
     }

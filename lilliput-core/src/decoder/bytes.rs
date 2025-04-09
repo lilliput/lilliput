@@ -36,9 +36,9 @@ where
     // MARK: - Header
 
     pub fn decode_bytes_header(&mut self) -> Result<BytesHeader> {
-        let header_byte = self.pull_byte_expecting(Marker::Bytes)?;
+        let byte = self.pull_byte_expecting(Marker::Bytes)?;
 
-        let len_width_exponent = header_byte & BytesHeader::LEN_WIDTH_EXPONENT_BITS;
+        let len_width_exponent = byte & BytesHeader::LEN_WIDTH_EXPONENT_BITS;
 
         let len_width: u8 = 1 << len_width_exponent;
         let len = self.pull_len_bytes(len_width)?;

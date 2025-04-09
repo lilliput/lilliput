@@ -19,6 +19,7 @@ impl UnitHeader {
 
 impl UnitHeader {
     pub const MASK: u8 = 0b00000001;
+    pub(crate) const TYPE_BITS: u8 = 0b00000001;
 }
 
 #[cfg(any(test, feature = "testing"))]

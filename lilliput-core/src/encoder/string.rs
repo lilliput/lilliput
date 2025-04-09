@@ -32,24 +32,24 @@ where
     // MARK: - Header
 
     pub fn encode_string_header(&mut self, header: &StringHeader) -> Result<()> {
-        let mut header_byte = StringHeader::TYPE_BITS;
+        let mut byte = StringHeader::TYPE_BITS;
 
         match *header {
             StringHeader::Compact(CompactStringHeader { len }) => {
-                header_byte |= StringHeader::COMPACT_VARIANT_BIT;
-                header_byte |= len & StringHeader::COMPACT_LEN_BITS;
+                byte |= StringHeader::COMPACT_VARIANT_BIT;
+                byte |= len & StringHeader::COMPACT_LEN_BITS;
 
                 // Push the value's header:
-                self.push_byte(header_byte)
+                self.push_byte(byte)
             }
             StringHeader::Extended(ExtendedStringHeader { len }) => {
                 len.with_packed_be_bytes(self.config.len_packing, |bytes| {
                     let width = bytes.len() as u8;
 
-                    header_byte |= (width - 1) & StringHeader::EXTENDED_LEN_WIDTH_BITS;
+                    byte |= (width - 1) & StringHeader::EXTENDED_LEN_WIDTH_BITS;
 
                     // Push the value's header:
-                    self.push_byte(header_byte)?;
+                    self.push_byte(byte)?;
 
                     // Push the value's length:
                     self.push_bytes(bytes)

@@ -32,24 +32,24 @@ where
     // MARK: - Header
 
     pub fn encode_map_header(&mut self, header: &MapHeader) -> Result<()> {
-        let mut header_byte = MapHeader::TYPE_BITS;
+        let mut byte = MapHeader::TYPE_BITS;
 
         match *header {
             MapHeader::Compact(CompactMapHeader { len }) => {
-                header_byte |= MapHeader::COMPACT_VARIANT_BIT;
-                header_byte |= len & MapHeader::COMPACT_LEN_BITS;
+                byte |= MapHeader::COMPACT_VARIANT_BIT;
+                byte |= len & MapHeader::COMPACT_LEN_BITS;
 
                 // Push the value's header:
-                self.push_byte(header_byte)
+                self.push_byte(byte)
             }
             MapHeader::Extended(ExtendedMapHeader { len }) => {
                 len.with_packed_be_bytes(self.config.len_packing, |bytes| {
                     let width = bytes.len() as u8;
 
-                    header_byte |= (width - 1) & MapHeader::EXTENDED_LEN_WIDTH_BITS;
+                    byte |= (width - 1) & MapHeader::EXTENDED_LEN_WIDTH_BITS;
 
                     // Push the value's header:
-                    self.push_byte(header_byte)?;
+                    self.push_byte(byte)?;
 
                     // Push the value's length:
                     self.push_bytes(bytes)

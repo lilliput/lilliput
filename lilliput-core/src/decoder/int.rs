@@ -96,16 +96,16 @@ where
     // MARK: - Header
 
     pub fn decode_int_header(&mut self) -> Result<IntHeader> {
-        let header_byte = self.pull_byte_expecting(Marker::Int)?;
+        let byte = self.pull_byte_expecting(Marker::Int)?;
 
-        if (header_byte & IntHeader::COMPACT_VARIANT_BIT) != 0b0 {
-            let is_signed = (header_byte & IntHeader::SIGNEDNESS_BIT) != 0b0;
-            let bits = header_byte & IntHeader::COMPACT_VALUE_BITS;
+        if (byte & IntHeader::COMPACT_VARIANT_BIT) != 0b0 {
+            let is_signed = (byte & IntHeader::SIGNEDNESS_BIT) != 0b0;
+            let bits = byte & IntHeader::COMPACT_VALUE_BITS;
 
             Ok(IntHeader::Compact(CompactIntHeader { is_signed, bits }))
         } else {
-            let is_signed = (header_byte & IntHeader::SIGNEDNESS_BIT) != 0b0;
-            let width = 1 + (header_byte & IntHeader::EXTENDED_WIDTH_BITS);
+            let is_signed = (byte & IntHeader::SIGNEDNESS_BIT) != 0b0;
+            let width = 1 + (byte & IntHeader::EXTENDED_WIDTH_BITS);
 
             Ok(IntHeader::Extended(ExtendedIntHeader { is_signed, width }))
         }

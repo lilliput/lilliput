@@ -37,15 +37,15 @@ where
 
             debug_assert!(width.count_ones() == 1, "must be a power of two");
 
-            let mut header_byte = BytesHeader::TYPE_BITS;
+            let mut byte = BytesHeader::TYPE_BITS;
 
             const EXPONENT: [u8; 8] = [0, 1, 2, 2, 3, 3, 3, 3];
             let exponent = EXPONENT[width - 1];
 
-            header_byte |= exponent & BytesHeader::LEN_WIDTH_EXPONENT_BITS;
+            byte |= exponent & BytesHeader::LEN_WIDTH_EXPONENT_BITS;
 
             // Push the value's header:
-            self.push_byte(header_byte)?;
+            self.push_byte(byte)?;
 
             // Push the value's length:
             self.push_bytes(bytes)
