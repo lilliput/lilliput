@@ -89,18 +89,12 @@ mod tests {
     #[test]
     fn debug() {
         assert_eq!(
-            format!(
-                "{:?}",
-                SeqValue::from(vec![Value::Null(NullValue::default())])
-            ),
+            format!("{:?}", SeqValue::from(vec![Value::Null(NullValue)])),
             "[null]"
         );
 
         assert_eq!(
-            format!(
-                "{:#?}",
-                SeqValue::from(vec![Value::Null(NullValue::default())])
-            ),
+            format!("{:#?}", SeqValue::from(vec![Value::Null(NullValue)])),
             "[\n    Null(\n        null,\n    ),\n]"
         );
     }

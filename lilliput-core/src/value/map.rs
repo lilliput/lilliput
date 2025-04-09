@@ -65,10 +65,7 @@ mod tests {
     #[test]
     fn debug() {
         let mut map = Map::default();
-        map.insert(
-            Value::Null(NullValue::default()),
-            Value::Null(NullValue::default()),
-        );
+        map.insert(Value::Null(NullValue), Value::Null(NullValue));
         let value = MapValue::from(map);
 
         assert_eq!(format!("{:?}", value), "{null: null}");

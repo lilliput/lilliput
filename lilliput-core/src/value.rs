@@ -56,7 +56,7 @@ pub enum Value {
 
 impl Default for Value {
     fn default() -> Self {
-        Self::Null(NullValue::default())
+        Self::Null(NullValue)
     }
 }
 
@@ -257,9 +257,9 @@ mod tests {
         );
 
         // Null
-        assert_eq!(format!("{:?}", Value::Null(NullValue::default())), "null");
+        assert_eq!(format!("{:?}", Value::Null(NullValue)), "null");
         assert_eq!(
-            format!("{:#?}", Value::Null(NullValue::default())),
+            format!("{:#?}", Value::Null(NullValue)),
             "Null(\n    null,\n)"
         );
     }

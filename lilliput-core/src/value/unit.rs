@@ -27,7 +27,7 @@ impl proptest::prelude::Arbitrary for UnitValue {
 
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         use proptest::prelude::*;
-        Just(UnitValue::default()).boxed()
+        Just(UnitValue).boxed()
     }
 }
 
@@ -47,13 +47,13 @@ mod tests {
 
     #[test]
     fn display() {
-        assert_eq!(format!("{}", UnitValue::default()), "unit");
+        assert_eq!(format!("{}", UnitValue), "unit");
     }
 
     #[test]
     fn debug() {
-        assert_eq!(format!("{:?}", UnitValue::default()), "unit");
-        assert_eq!(format!("{:#?}", UnitValue::default()), "unit");
+        assert_eq!(format!("{:?}", UnitValue), "unit");
+        assert_eq!(format!("{:#?}", UnitValue), "unit");
     }
 
     proptest! {
