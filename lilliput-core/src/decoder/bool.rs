@@ -31,6 +31,9 @@ where
 
         let value = (byte & BoolHeader::VALUE_BIT) != 0b0;
 
+        #[cfg(feature = "tracing")]
+        tracing::debug!(byte = crate::binary::fmt_byte(byte), value = value);
+
         Ok(BoolHeader::new(value))
     }
 

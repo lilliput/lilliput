@@ -63,10 +63,24 @@ where
         if is_compact {
             let len = byte & StringHeader::COMPACT_LEN_BITS;
 
+            #[cfg(feature = "tracing")]
+            tracing::debug!(
+                byte = crate::binary::fmt_byte(byte),
+                is_compact = true,
+                len = len
+            );
+
             Ok(StringHeader::compact(len))
         } else {
             let len_width = 1 + (byte & StringHeader::EXTENDED_LEN_WIDTH_BITS);
             let len = self.pull_len_bytes(len_width)?;
+
+            #[cfg(feature = "tracing")]
+            tracing::debug!(
+                byte = crate::binary::fmt_byte(byte),
+                is_compact = false,
+                len = len
+            );
 
             Ok(StringHeader::extended(len))
         }

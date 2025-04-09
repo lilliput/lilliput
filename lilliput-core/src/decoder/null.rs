@@ -24,7 +24,11 @@ where
 
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_null_header(&mut self) -> Result<NullHeader> {
-        let _ = self.pull_byte_expecting(Marker::Null)?;
+        #[allow(unused_variables)]
+        let byte = self.pull_byte_expecting(Marker::Null)?;
+
+        #[cfg(feature = "tracing")]
+        tracing::debug!(byte = crate::binary::fmt_byte(byte),);
 
         Ok(NullHeader)
     }
