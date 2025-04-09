@@ -34,6 +34,7 @@ impl proptest::prelude::Arbitrary for NullValue {
 #[cfg(test)]
 mod tests {
     use proptest::prelude::*;
+    use test_log::test;
 
     use crate::{
         config::EncodingConfig,

@@ -127,6 +127,8 @@ impl std::fmt::Binary for BytesSlice<'_> {
 
 #[cfg(test)]
 mod tests {
+    use test_log::test;
+
     use super::*;
 
     #[test]

@@ -207,6 +207,7 @@ mod tests {
     use std::{cmp::Ordering, hash::RandomState};
 
     use proptest::prelude::*;
+    use test_log::test;
 
     use crate::{
         config::EncodingConfig,

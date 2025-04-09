@@ -200,6 +200,8 @@ impl proptest::arbitrary::Arbitrary for Value {
 
 #[cfg(test)]
 mod tests {
+    use test_log::test;
+
     use super::*;
 
     #[test]
