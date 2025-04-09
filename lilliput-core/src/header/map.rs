@@ -165,6 +165,39 @@ mod tests {
 
     proptest! {
         #[test]
+        fn as_compact_len(len in usize::arbitrary(), packing_mode in PackingMode::arbitrary()) {
+            let compact_len = MapHeader::as_compact_len(len, packing_mode);
+
+            if packing_mode.is_optimal() && len <= MapHeader::COMPACT_MAX_LEN {
+                prop_assert_eq!(compact_len, Some(len as u8));
+            } else {
+                prop_assert_eq!(compact_len, None);
+            }
+        }
+
+        #[test]
+        fn for_len(len in usize::arbitrary(), packing_mode in PackingMode::arbitrary()) {
+            let header = MapHeader::for_len(len, packing_mode);
+
+            match packing_mode {
+                PackingMode::None => {
+                    prop_assert!(matches!(header, MapHeader::Extended(_)));
+                    prop_assert!(header.len() == len);
+                },
+                PackingMode::Native => {
+                    prop_assert!(matches!(header, MapHeader::Extended(_)));
+                },
+                PackingMode::Optimal => {
+                    if len <= MapHeader::COMPACT_MAX_LEN {
+                        prop_assert!(matches!(header, MapHeader::Compact(_)));
+                    } else {
+                        prop_assert!(matches!(header, MapHeader::Extended(_)));
+                    }
+                },
+            }
+        }
+
+        #[test]
         fn encode_decode_roundtrip(header in MapHeader::arbitrary(), config in EncodingConfig::arbitrary()) {
             let mut encoded: Vec<u8> = Vec::new();
             let writer = VecWriter::new(&mut encoded);
