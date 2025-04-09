@@ -22,4 +22,8 @@ where
         let _ = header;
         self.encode_null()
     }
+
+    pub fn header_for_null(&self) -> NullHeader {
+        NullHeader
+    }
 }

@@ -1,3 +1,5 @@
+use crate::config::PackingMode;
+
 /// Represents a string.
 ///
 /// # Binary representation
@@ -56,6 +58,24 @@ impl StringHeader {
         Self::Extended(ExtendedStringHeader { len })
     }
 
+    #[inline]
+    pub fn for_len(len: usize, packing_mode: PackingMode) -> Self {
+        if let Some(len) = Self::as_compact_len(len, packing_mode) {
+            Self::compact_unchecked(len)
+        } else {
+            Self::extended(len)
+        }
+    }
+
+    #[inline]
+    pub fn as_compact_len(len: usize, packing_mode: PackingMode) -> Option<u8> {
+        if packing_mode.is_optimal() && len <= Self::COMPACT_MAX_LEN {
+            Some(len as u8)
+        } else {
+            None
+        }
+    }
+
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
@@ -107,6 +127,11 @@ impl StringHeader {
     pub(crate) const COMPACT_VARIANT_BIT: u8 = 0b00100000;
     pub(crate) const COMPACT_LEN_BITS: u8 = 0b00011111;
     pub(crate) const EXTENDED_LEN_WIDTH_BITS: u8 = 0b00000111;
+
+    #[allow(dead_code)]
+    pub(crate) const COMPACT_MAX_LEN: usize = Self::COMPACT_LEN_BITS as usize;
+    #[allow(dead_code)]
+    pub(crate) const EXTENDED_MAX_LEN_WIDTH: usize = 1 + (Self::EXTENDED_LEN_WIDTH_BITS as usize);
 }
 
 #[cfg(any(test, feature = "testing"))]

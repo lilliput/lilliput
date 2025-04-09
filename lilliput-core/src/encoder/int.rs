@@ -95,14 +95,14 @@ where
     where
         T: Signed + WithPackedBeBytes,
     {
-        IntHeader::signed(value, self.config.int_packing)
+        IntHeader::for_signed(value, self.config.int_packing)
     }
 
     pub fn header_for_unsigned_int<T>(&self, value: T) -> IntHeader
     where
         T: Unsigned + WithPackedBeBytes,
     {
-        IntHeader::unsigned(value, self.config.int_packing)
+        IntHeader::for_unsigned(value, self.config.int_packing)
     }
 
     #[inline]

@@ -51,10 +51,10 @@ impl proptest::prelude::Arbitrary for BytesHeader {
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         use proptest::prelude::Strategy as _;
         proptest::prop_oneof![
-            proptest::num::u8::ANY.prop_map(|n| n as usize),
-            proptest::num::u16::ANY.prop_map(|n| n as usize),
-            proptest::num::u32::ANY.prop_map(|n| n as usize),
-            proptest::num::u64::ANY.prop_map(|n| n as usize),
+            proptest::num::u8::ANY.prop_map(|len| len as usize),
+            proptest::num::u16::ANY.prop_map(|len| len as usize),
+            proptest::num::u32::ANY.prop_map(|len| len as usize),
+            proptest::num::u64::ANY.prop_map(|len| len as usize),
         ]
         .prop_map(Self::new)
         .boxed()

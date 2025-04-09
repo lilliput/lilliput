@@ -1,5 +1,3 @@
-use num_traits::float::FloatCore;
-
 use crate::{
     error::Result, header::FloatHeader, io::Write, num::WithPackedBeBytes, value::FloatValue,
 };
@@ -46,12 +44,11 @@ where
         self.push_byte(header_byte)
     }
 
-    pub fn header_for_float<T>(&self, value: f64) -> FloatHeader
-    where
-        T: FloatCore + WithPackedBeBytes,
-    {
-        value.with_packed_be_bytes(self.config.int_packing, |bytes| {
-            FloatHeader::new(bytes.len() as u8)
-        })
+    pub fn header_for_f32(&self, value: f32) -> FloatHeader {
+        FloatHeader::for_f32(value, self.config.int_packing)
+    }
+
+    pub fn header_for_f64(&self, value: f64) -> FloatHeader {
+        FloatHeader::for_f64(value, self.config.int_packing)
     }
 }
