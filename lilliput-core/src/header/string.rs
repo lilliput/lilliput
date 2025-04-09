@@ -155,6 +155,7 @@ impl proptest::prelude::Arbitrary for StringHeader {
 #[cfg(test)]
 mod tests {
     use proptest::prelude::*;
+    use test_log::test;
 
     use crate::{
         config::EncodingConfig,

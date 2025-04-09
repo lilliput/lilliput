@@ -182,6 +182,7 @@ impl proptest::arbitrary::Arbitrary for IntHeader {
 #[cfg(test)]
 mod tests {
     use proptest::prelude::*;
+    use test_log::test;
 
     use crate::{
         config::EncodingConfig,

@@ -70,6 +70,7 @@ impl FromZigZag for SignedIntValue {
 #[cfg(test)]
 mod tests {
     use proptest::prelude::*;
+    use test_log::test;
 
     use super::*;
 

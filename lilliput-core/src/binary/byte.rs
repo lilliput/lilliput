@@ -69,6 +69,8 @@ impl std::fmt::Binary for Byte {
 
 #[cfg(test)]
 mod tests {
+    use test_log::test;
+
     use super::*;
 
     #[test]

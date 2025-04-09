@@ -51,6 +51,7 @@ impl proptest::arbitrary::Arbitrary for MapValue {
 #[cfg(test)]
 mod tests {
     use proptest::prelude::*;
+    use test_log::test;
 
     use crate::{
         config::EncodingConfig,

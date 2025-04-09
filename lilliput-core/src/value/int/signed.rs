@@ -171,6 +171,7 @@ mod tests {
     use std::hash::RandomState;
 
     use proptest::prelude::*;
+    use test_log::test;
 
     use crate::{
         config::EncodingConfig,

@@ -64,6 +64,7 @@ impl proptest::prelude::Arbitrary for BytesHeader {
 #[cfg(test)]
 mod tests {
     use proptest::prelude::*;
+    use test_log::test;
 
     use crate::{
         config::EncodingConfig,

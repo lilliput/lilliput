@@ -104,6 +104,8 @@ impl Marker {
 mod tests {
     use std::ops::RangeInclusive;
 
+    use test_log::test;
+
     use super::*;
 
     const MARKERS: [Marker; 9] = [
