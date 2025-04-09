@@ -8,6 +8,8 @@ impl<W> Encoder<W>
 where
     W: Write,
 {
+    // MARK: - Value
+
     pub fn encode_f32(&mut self, value: f32) -> Result<()> {
         value.with_packed_be_bytes(self.config.float_packing, |bytes| {
             self.encode_float_header(&FloatHeader::new(bytes.len() as u8))?;
@@ -32,6 +34,8 @@ where
             FloatValue::F64(value) => self.encode_f64(*value),
         }
     }
+
+    // MARK: - Header
 
     pub fn encode_float_header(&mut self, header: &FloatHeader) -> Result<()> {
         let width = header.width();

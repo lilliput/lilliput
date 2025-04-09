@@ -12,6 +12,8 @@ impl<W> Encoder<W>
 where
     W: Write,
 {
+    // MARK: - Value
+
     pub fn encode_map(&mut self, value: &Map) -> Result<()> {
         self.encode_map_header(&self.header_for_map(value))?;
 
@@ -26,6 +28,8 @@ where
     pub fn encode_map_value(&mut self, value: &MapValue) -> Result<()> {
         self.encode_map(&value.0)
     }
+
+    // MARK: - Header
 
     pub fn encode_map_header(&mut self, header: &MapHeader) -> Result<()> {
         let mut header_byte = MapHeader::TYPE_BITS;

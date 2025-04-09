@@ -6,6 +6,8 @@ impl<W> Encoder<W>
 where
     W: Write,
 {
+    // MARK: - Value
+
     #[inline]
     pub fn encode_null(&mut self) -> Result<()> {
         self.push_byte(0b00000000)
@@ -16,6 +18,8 @@ where
         let _ = value;
         self.encode_null()
     }
+
+    // MARK: - Header
 
     #[inline]
     pub fn encode_null_header(&mut self, header: &NullHeader) -> Result<()> {

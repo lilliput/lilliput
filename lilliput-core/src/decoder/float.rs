@@ -6,6 +6,8 @@ impl<'de, R> Decoder<R>
 where
     R: Read<'de>,
 {
+    // MARK: - Value
+
     pub fn decode_f32(&mut self) -> Result<f32> {
         let header = self.decode_float_header()?;
         Ok(self.decode_float_value_body(header)?.into())
@@ -22,6 +24,8 @@ where
         self.decode_float_value_body(header)
     }
 
+    // MARK: - Header
+
     pub fn decode_float_header(&mut self) -> Result<FloatHeader> {
         let header_byte = self.pull_byte_expecting(Marker::Float)?;
 
@@ -29,6 +33,8 @@ where
 
         Ok(FloatHeader::new(width))
     }
+
+    // MARK: - Body
 
     #[inline]
     fn decode_float_value_body(&mut self, header: FloatHeader) -> Result<FloatValue> {

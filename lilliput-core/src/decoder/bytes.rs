@@ -12,6 +12,8 @@ impl<'de, R> Decoder<R>
 where
     R: Read<'de>,
 {
+    // MARK: - Value
+
     pub fn decode_bytes<'s>(
         &'s mut self,
         scratch: &'s mut Vec<u8>,
@@ -40,6 +42,8 @@ where
     pub fn decode_bytes_value(&mut self) -> Result<BytesValue> {
         self.decode_bytes_buf().map(From::from)
     }
+
+    // MARK: - Header
 
     pub fn decode_bytes_header(&mut self) -> Result<BytesHeader> {
         let header_byte = self.pull_byte_expecting(Marker::Bytes)?;

@@ -6,6 +6,8 @@ impl<W> Encoder<W>
 where
     W: Write,
 {
+    // MARK: - Value
+
     #[inline]
     pub fn encode_bool(&mut self, value: bool) -> Result<()> {
         let header = self.header_for_bool(value);

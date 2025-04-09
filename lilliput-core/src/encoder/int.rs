@@ -15,6 +15,8 @@ impl<W> Encoder<W>
 where
     W: Write,
 {
+    // MARK: - Value
+
     pub fn encode_i8(&mut self, value: i8) -> Result<()> {
         self.encode_signed_int(value)
     }
@@ -71,6 +73,8 @@ where
             IntValue::Unsigned(value) => self.encode_unsigned_int_value(value),
         }
     }
+
+    // MARK: - Header
 
     pub fn encode_int_header(&mut self, header: &IntHeader) -> Result<()> {
         let mut header_byte = IntHeader::TYPE_BITS;

@@ -6,6 +6,8 @@ impl<W> Encoder<W>
 where
     W: Write,
 {
+    // MARK: - Value
+
     #[inline]
     pub fn encode_unit(&mut self) -> Result<()> {
         self.push_byte(0b00000001)
