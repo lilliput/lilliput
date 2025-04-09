@@ -17,6 +17,9 @@ use lilliput_core::{
     value::{BoolValue, FloatValue, IntValue, NullValue, Value},
 };
 
+const CRITERION_SIGNIFICANCE_LEVEL: f64 = 0.1;
+const CRITERION_SAMPLE_SIZE: usize = 500;
+
 // Value values have a size between 1 and 9 bytes:
 const WIRE_SIZE_HINT: usize = 10;
 const SAMPLES: usize = 65_536;
@@ -139,6 +142,9 @@ fn bench_int(c: &mut Criterion, config: EncodingConfig) {
 
     let mut g = c.benchmark_group("int");
 
+    g.significance_level(CRITERION_SIGNIFICANCE_LEVEL);
+    g.sample_size(CRITERION_SAMPLE_SIZE);
+
     let samples: Vec<Value> = samples_iter::<u8>(SAMPLES).collect();
     bench_roundtrip_with_samples(&mut g, Some("u8"), &samples, config);
 
@@ -177,6 +183,9 @@ fn bench_float(c: &mut Criterion, config: EncodingConfig) {
 
     let mut g = c.benchmark_group("float");
 
+    g.significance_level(CRITERION_SIGNIFICANCE_LEVEL);
+    g.sample_size(CRITERION_SAMPLE_SIZE);
+
     let samples: Vec<Value> = samples_iter::<f32>(SAMPLES).collect();
     bench_roundtrip_with_samples(&mut g, Some("f32"), &samples, config);
 
@@ -193,6 +202,9 @@ fn bench_bool(c: &mut Criterion, config: EncodingConfig) {
 
     let mut g = c.benchmark_group("bool");
 
+    g.significance_level(CRITERION_SIGNIFICANCE_LEVEL);
+    g.sample_size(CRITERION_SAMPLE_SIZE);
+
     let samples: Vec<Value> = samples_iter(SAMPLES).collect();
     bench_roundtrip_with_samples(&mut g, None, &samples, config);
 
@@ -205,6 +217,9 @@ fn bench_null(c: &mut Criterion, config: EncodingConfig) {
     }
 
     let mut g = c.benchmark_group("null");
+
+    g.significance_level(CRITERION_SIGNIFICANCE_LEVEL);
+    g.sample_size(CRITERION_SAMPLE_SIZE);
 
     let samples: Vec<Value> = samples_iter(SAMPLES).collect();
     bench_roundtrip_with_samples(&mut g, None, &samples, config);
