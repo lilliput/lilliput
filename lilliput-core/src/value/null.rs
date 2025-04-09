@@ -1,10 +1,10 @@
 /// Represents a null value.
 #[derive(Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct NullValue(pub ());
+pub struct NullValue;
 
 impl From<()> for NullValue {
-    fn from(value: ()) -> Self {
-        Self(value)
+    fn from(_value: ()) -> Self {
+        Self
     }
 }
 
