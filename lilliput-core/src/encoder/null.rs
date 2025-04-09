@@ -13,7 +13,7 @@ where
 
     #[inline]
     pub fn encode_null_value(&mut self, value: &NullValue) -> Result<()> {
-        let NullValue(()) = value;
+        let _ = value;
         self.encode_null()
     }
 
