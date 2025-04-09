@@ -47,4 +47,8 @@ where
             self.push_bytes(bytes)
         })
     }
+
+    pub fn header_for_bytes(&self, len: usize) -> BytesHeader {
+        BytesHeader::new(len)
+    }
 }

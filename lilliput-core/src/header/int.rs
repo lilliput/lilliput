@@ -61,7 +61,34 @@ impl IntHeader {
     }
 
     #[inline]
-    pub(crate) fn from_be_bytes(
+    pub fn for_signed<T>(value: T, packing_mode: PackingMode) -> Self
+    where
+        T: Signed + WithPackedBeBytes,
+    {
+        value.with_packed_be_bytes(packing_mode, |be_bytes| {
+            Self::for_int_be_bytes(true, be_bytes, packing_mode)
+        })
+    }
+
+    #[inline]
+    pub fn for_unsigned<T>(value: T, packing_mode: PackingMode) -> Self
+    where
+        T: Unsigned + WithPackedBeBytes,
+    {
+        value.with_packed_be_bytes(packing_mode, |be_bytes| {
+            Self::for_int_be_bytes(true, be_bytes, packing_mode)
+        })
+    }
+
+    pub fn extended_width(&self) -> Option<u8> {
+        match self {
+            Self::Compact(_) => None,
+            Self::Extended(header) => Some(header.width),
+        }
+    }
+
+    #[inline]
+    pub(crate) fn for_int_be_bytes(
         is_signed: bool,
         be_bytes: &[u8],
         packing_mode: PackingMode,
@@ -81,26 +108,6 @@ impl IntHeader {
         }
 
         header
-    }
-
-    #[inline]
-    pub(crate) fn signed<T>(value: T, packing_mode: PackingMode) -> Self
-    where
-        T: Signed + WithPackedBeBytes,
-    {
-        value.with_packed_be_bytes(packing_mode, |be_bytes| {
-            Self::from_be_bytes(true, be_bytes, packing_mode)
-        })
-    }
-
-    #[inline]
-    pub(crate) fn unsigned<T>(value: T, packing_mode: PackingMode) -> Self
-    where
-        T: Unsigned + WithPackedBeBytes,
-    {
-        value.with_packed_be_bytes(packing_mode, |be_bytes| {
-            Self::from_be_bytes(true, be_bytes, packing_mode)
-        })
     }
 }
 

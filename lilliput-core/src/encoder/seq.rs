@@ -1,5 +1,4 @@
 use crate::{
-    config::PackingMode,
     error::Result,
     header::{CompactSeqHeader, ExtendedSeqHeader, SeqHeader},
     io::Write,
@@ -14,7 +13,7 @@ where
     W: Write,
 {
     pub fn encode_seq(&mut self, value: &[Value]) -> Result<()> {
-        self.encode_seq_header(&self.header_for_seq(value.len()))?;
+        self.encode_seq_header(&self.header_for_seq(value))?;
 
         for value in value {
             self.encode_value(value)?;
@@ -54,13 +53,7 @@ where
         }
     }
 
-    pub fn header_for_seq(&self, len: usize) -> SeqHeader {
-        let allows_compact = self.config.len_packing == PackingMode::Optimal;
-
-        if allows_compact && len <= (SeqHeader::COMPACT_LEN_BITS as usize) {
-            SeqHeader::compact_unchecked(len as u8)
-        } else {
-            SeqHeader::extended(len)
-        }
+    pub fn header_for_seq(&self, seq: &[Value]) -> SeqHeader {
+        SeqHeader::for_len(seq.len(), self.config.len_packing)
     }
 }

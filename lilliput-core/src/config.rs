@@ -8,6 +8,12 @@ pub enum PackingMode {
     Optimal = 2,
 }
 
+impl PackingMode {
+    pub(crate) fn is_optimal(self) -> bool {
+        self == Self::Optimal
+    }
+}
+
 #[cfg_attr(any(test, feature = "testing"), derive(proptest_derive::Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub struct EncodingConfig {

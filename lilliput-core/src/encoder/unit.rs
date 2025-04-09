@@ -17,9 +17,15 @@ where
         self.encode_unit()
     }
 
+    // MARK: - Header
+
     #[inline]
     pub fn encode_unit_header(&mut self, header: &UnitHeader) -> Result<()> {
         let _ = header;
         self.encode_unit()
+    }
+
+    pub fn header_for_unit(&self) -> UnitHeader {
+        UnitHeader
     }
 }

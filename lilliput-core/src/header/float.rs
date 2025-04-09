@@ -1,3 +1,5 @@
+use crate::{config::PackingMode, num::WithPackedBeBytes};
+
 /// Represents a floating-point number.
 ///
 /// # Binary representation
@@ -21,8 +23,22 @@ impl FloatHeader {
         Self { width }
     }
 
+    pub fn for_f32(value: f32, packing_mode: PackingMode) -> Self {
+        value.with_packed_be_bytes(packing_mode, Self::for_float_be_bytes)
+    }
+
+    pub fn for_f64(value: f64, packing_mode: PackingMode) -> Self {
+        value.with_packed_be_bytes(packing_mode, Self::for_float_be_bytes)
+    }
+
     pub fn width(&self) -> u8 {
         self.width
+    }
+
+    fn for_float_be_bytes(be_bytes: &[u8]) -> FloatHeader {
+        let width = be_bytes.len();
+        assert!((1..=8).contains(&width));
+        FloatHeader::new(width as u8)
     }
 }
 

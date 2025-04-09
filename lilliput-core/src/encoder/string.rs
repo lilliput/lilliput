@@ -1,5 +1,4 @@
 use crate::{
-    config::PackingMode,
     error::Result,
     header::{CompactStringHeader, ExtendedStringHeader, StringHeader},
     io::Write,
@@ -14,7 +13,7 @@ where
     W: Write,
 {
     pub fn encode_str(&mut self, value: &str) -> Result<()> {
-        self.encode_string_header(&self.header_for_string(value.len()))?;
+        self.encode_string_header(&self.header_for_str(value))?;
 
         // Push the value's actual bytes:
         self.push_bytes(value.as_bytes())?;
@@ -55,13 +54,7 @@ where
         }
     }
 
-    pub fn header_for_string(&self, len: usize) -> StringHeader {
-        let allows_compact = self.config.len_packing == PackingMode::Optimal;
-
-        if allows_compact && len <= (StringHeader::COMPACT_LEN_BITS as usize) {
-            StringHeader::compact_unchecked(len as u8)
-        } else {
-            StringHeader::extended(len)
-        }
+    pub fn header_for_str(&self, str: &str) -> StringHeader {
+        StringHeader::for_len(str.len(), self.config.len_packing)
     }
 }
