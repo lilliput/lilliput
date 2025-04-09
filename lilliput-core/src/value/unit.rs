@@ -1,10 +1,10 @@
 /// Represents a unit value.
 #[derive(Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct UnitValue(pub ());
+pub struct UnitValue;
 
 impl From<()> for UnitValue {
-    fn from(value: ()) -> Self {
-        Self(value)
+    fn from(_value: ()) -> Self {
+        Self
     }
 }
 
