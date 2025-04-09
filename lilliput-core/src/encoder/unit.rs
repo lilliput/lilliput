@@ -13,7 +13,7 @@ where
 
     #[inline]
     pub fn encode_unit_value(&mut self, value: &UnitValue) -> Result<()> {
-        let UnitValue(()) = value;
+        let _ = value;
         self.encode_unit()
     }
 
