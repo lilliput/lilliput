@@ -27,7 +27,7 @@ impl proptest::prelude::Arbitrary for NullValue {
 
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         use proptest::prelude::*;
-        Just(NullValue::default()).boxed()
+        Just(NullValue).boxed()
     }
 }
 
@@ -47,13 +47,13 @@ mod tests {
 
     #[test]
     fn display() {
-        assert_eq!(format!("{}", NullValue::default()), "null");
+        assert_eq!(format!("{}", NullValue), "null");
     }
 
     #[test]
     fn debug() {
-        assert_eq!(format!("{:?}", NullValue::default()), "null");
-        assert_eq!(format!("{:#?}", NullValue::default()), "null");
+        assert_eq!(format!("{:?}", NullValue), "null");
+        assert_eq!(format!("{:#?}", NullValue), "null");
     }
 
     proptest! {
