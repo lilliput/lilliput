@@ -1,6 +1,12 @@
+#[cfg(any(test, feature = "testing"))]
+use proptest::prelude::*;
+#[cfg(any(test, feature = "testing"))]
+use proptest_derive::Arbitrary;
+
 use crate::binary::BytesSlice;
 
 /// Represents a byte sequence.
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Default, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct BytesValue(pub Vec<u8>);
 
@@ -41,19 +47,6 @@ impl std::fmt::Debug for BytesValue {
 impl std::fmt::Display for BytesValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         std::fmt::Display::fmt(&BytesSlice(&self.0), f)
-    }
-}
-
-#[cfg(any(test, feature = "testing"))]
-impl proptest::prelude::Arbitrary for BytesValue {
-    type Parameters = ();
-    type Strategy = proptest::prelude::BoxedStrategy<Self>;
-
-    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        use proptest::prelude::Strategy as _;
-        proptest::collection::vec(proptest::num::u8::ANY, 0..=10)
-            .prop_map(Self)
-            .boxed()
     }
 }
 

@@ -1,3 +1,8 @@
+#[cfg(any(test, feature = "testing"))]
+use proptest::prelude::*;
+#[cfg(any(test, feature = "testing"))]
+use proptest_derive::Arbitrary;
+
 /// Represents a unit value.
 ///
 /// # Binary representation
@@ -7,6 +12,7 @@
 ///   ├──────┘
 ///   └─ Unit Type
 /// ```
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Default, Copy, Clone, Eq, PartialEq, Debug)]
 pub struct UnitHeader;
 
@@ -20,17 +26,6 @@ impl UnitHeader {
 impl UnitHeader {
     pub const MASK: u8 = 0b00000001;
     pub(crate) const TYPE_BITS: u8 = 0b00000001;
-}
-
-#[cfg(any(test, feature = "testing"))]
-impl proptest::prelude::Arbitrary for UnitHeader {
-    type Parameters = ();
-    type Strategy = proptest::prelude::BoxedStrategy<Self>;
-
-    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        use proptest::prelude::*;
-        Just(UnitHeader).boxed()
-    }
 }
 
 #[cfg(test)]

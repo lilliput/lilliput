@@ -8,6 +8,11 @@ mod seq;
 mod string;
 mod unit;
 
+#[cfg(any(test, feature = "testing"))]
+use proptest::prelude::*;
+#[cfg(any(test, feature = "testing"))]
+use proptest_derive::Arbitrary;
+
 use crate::marker::Marker;
 
 pub use self::{
@@ -22,6 +27,17 @@ pub use self::{
     unit::UnitHeader,
 };
 
+#[cfg(any(test, feature = "testing"))]
+pub(crate) fn arbitrary_len() -> impl Strategy<Value = usize> {
+    proptest::prop_oneof![
+        proptest::num::u8::ANY.prop_map(|len| len as usize),
+        proptest::num::u16::ANY.prop_map(|len| len as usize),
+        proptest::num::u32::ANY.prop_map(|len| len as usize),
+        proptest::num::u64::ANY.prop_map(|len| len as usize),
+    ]
+}
+
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum Header {
     /// Represents a integer number.
@@ -139,28 +155,6 @@ impl Header {
             Header::Unit(_) => Marker::Unit,
             Header::Null(_) => Marker::Null,
         }
-    }
-}
-
-#[cfg(any(test, feature = "testing"))]
-impl proptest::prelude::Arbitrary for Header {
-    type Parameters = ();
-    type Strategy = proptest::strategy::BoxedStrategy<Self>;
-
-    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        use proptest::strategy::Strategy;
-        proptest::prop_oneof![
-            IntHeader::arbitrary().prop_map(Self::from),
-            StringHeader::arbitrary().prop_map(Self::from),
-            SeqHeader::arbitrary().prop_map(Self::from),
-            MapHeader::arbitrary().prop_map(Self::from),
-            FloatHeader::arbitrary().prop_map(Self::from),
-            BytesHeader::arbitrary().prop_map(Self::from),
-            BoolHeader::arbitrary().prop_map(Self::from),
-            UnitHeader::arbitrary().prop_map(Self::from),
-            NullHeader::arbitrary().prop_map(Self::from),
-        ]
-        .boxed()
     }
 }
 

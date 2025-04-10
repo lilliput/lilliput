@@ -1,3 +1,8 @@
+#[cfg(any(test, feature = "testing"))]
+use proptest::prelude::*;
+#[cfg(any(test, feature = "testing"))]
+use proptest_derive::Arbitrary;
+
 use crate::config::PackingMode;
 
 /// Represents a sequence of values.
@@ -35,6 +40,7 @@ use crate::config::PackingMode;
 ///   │  └─ Extended variant
 ///   └─ Seq type
 /// ```
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum SeqHeader {
     Compact(CompactSeqHeader),
@@ -70,7 +76,7 @@ impl SeqHeader {
 
     #[inline]
     pub fn as_compact_len(len: usize, packing_mode: PackingMode) -> Option<u8> {
-        if packing_mode.is_optimal() && len <= Self::COMPACT_MAX_LEN {
+        if packing_mode.is_optimal() && len <= (Self::COMPACT_MAX_LEN as usize) {
             Some(len as u8)
         } else {
             None
@@ -89,9 +95,14 @@ impl SeqHeader {
     }
 }
 
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 #[repr(transparent)]
 pub struct CompactSeqHeader {
+    #[cfg_attr(
+        any(test, feature = "testing"),
+        proptest(strategy = "(0..=SeqHeader::COMPACT_MAX_LEN)")
+    )]
     pub(crate) len: u8,
 }
 
@@ -105,9 +116,14 @@ impl CompactSeqHeader {
     }
 }
 
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 #[repr(transparent)]
 pub struct ExtendedSeqHeader {
+    #[cfg_attr(
+        any(test, feature = "testing"),
+        proptest(strategy = "super::arbitrary_len()")
+    )]
     pub(crate) len: usize,
 }
 
@@ -129,27 +145,8 @@ impl SeqHeader {
     pub(crate) const COMPACT_LEN_BITS: u8 = 0b00000111;
     pub(crate) const EXTENDED_LEN_WIDTH_BITS: u8 = 0b00000111;
 
-    pub(crate) const COMPACT_MAX_LEN: usize = Self::COMPACT_LEN_BITS as usize;
+    pub(crate) const COMPACT_MAX_LEN: u8 = Self::COMPACT_LEN_BITS;
 }
-
-#[cfg(any(test, feature = "testing"))]
-impl proptest::prelude::Arbitrary for SeqHeader {
-    type Parameters = ();
-    type Strategy = proptest::strategy::BoxedStrategy<Self>;
-
-    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        use proptest::prelude::Strategy as _;
-        proptest::prop_oneof![
-            (0..=Self::COMPACT_LEN_BITS).prop_map(Self::compact),
-            proptest::num::u8::ANY.prop_map(|len| Self::extended(len as usize)),
-            proptest::num::u16::ANY.prop_map(|len| Self::extended(len as usize)),
-            proptest::num::u32::ANY.prop_map(|len| Self::extended(len as usize)),
-            proptest::num::u64::ANY.prop_map(|len| Self::extended(len as usize)),
-        ]
-        .boxed()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use proptest::prelude::*;
@@ -169,12 +166,34 @@ mod tests {
         fn as_compact_len(len in usize::arbitrary(), packing_mode in PackingMode::arbitrary()) {
             let compact_len = SeqHeader::as_compact_len(len, packing_mode);
             let is_optimal = packing_mode == PackingMode::Optimal;
-            let can_be_compact = len <= SeqHeader::COMPACT_MAX_LEN;
+            let can_be_compact = len <= (SeqHeader::COMPACT_MAX_LEN as usize);
 
             if is_optimal && can_be_compact {
                 prop_assert_eq!(compact_len, Some(len as u8));
             } else {
                 prop_assert_eq!(compact_len, None);
+            }
+        }
+
+        #[test]
+        fn for_len(len in usize::arbitrary(), packing_mode in PackingMode::arbitrary()) {
+            let header = SeqHeader::for_len(len, packing_mode);
+
+            match packing_mode {
+                PackingMode::None => {
+                    prop_assert!(matches!(header, SeqHeader::Extended(_)));
+                    prop_assert!(header.len() == len);
+                },
+                PackingMode::Native => {
+                    prop_assert!(matches!(header, SeqHeader::Extended(_)));
+                },
+                PackingMode::Optimal => {
+                    if len <= (SeqHeader::COMPACT_MAX_LEN as usize) {
+                        prop_assert!(matches!(header, SeqHeader::Compact(_)));
+                    } else {
+                        prop_assert!(matches!(header, SeqHeader::Extended(_)));
+                    }
+                },
             }
         }
 

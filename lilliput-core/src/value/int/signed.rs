@@ -3,10 +3,17 @@ use std::{
     num::TryFromIntError,
 };
 
+#[cfg(any(test, feature = "testing"))]
+use proptest::prelude::*;
+#[cfg(any(test, feature = "testing"))]
+use proptest_derive::Arbitrary;
+
 use crate::num::int::{TryFromInt, TryIntoInt as _};
 
 use super::UnsignedIntValue;
 
+/// Represents a signed integer number.
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone)]
 pub enum SignedIntValue {
     I8(i8),
@@ -125,24 +132,6 @@ impl std::fmt::Display for SignedIntValue {
             Self::I32(value) => std::fmt::Display::fmt(value, f),
             Self::I64(value) => std::fmt::Display::fmt(value, f),
         }
-    }
-}
-
-#[cfg(any(test, feature = "testing"))]
-impl proptest::prelude::Arbitrary for SignedIntValue {
-    type Parameters = ();
-    type Strategy = proptest::strategy::BoxedStrategy<Self>;
-
-    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        use proptest::strategy::Strategy;
-
-        proptest::prop_oneof![
-            proptest::num::i8::ANY.prop_map(SignedIntValue::I8),
-            proptest::num::i16::ANY.prop_map(SignedIntValue::I16),
-            proptest::num::i32::ANY.prop_map(SignedIntValue::I32),
-            proptest::num::i64::ANY.prop_map(SignedIntValue::I64),
-        ]
-        .boxed()
     }
 }
 

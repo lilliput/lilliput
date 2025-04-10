@@ -1,3 +1,8 @@
+#[cfg(any(test, feature = "testing"))]
+use proptest::prelude::*;
+#[cfg(any(test, feature = "testing"))]
+use proptest_derive::Arbitrary;
+
 /// Represents a boolean.
 ///
 /// # Binary representation
@@ -7,6 +12,7 @@
 ///   ├─────┘└─ Value (0 = false, 1 = true)
 ///   └─ Data Type
 /// ```
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct BoolHeader {
     value: bool,
@@ -29,17 +35,6 @@ impl BoolHeader {
     pub(crate) const TYPE_BITS: u8 = 0b0000010;
 
     pub(crate) const VALUE_BIT: u8 = 0b0000001;
-}
-
-#[cfg(any(test, feature = "testing"))]
-impl proptest::prelude::Arbitrary for BoolHeader {
-    type Parameters = ();
-    type Strategy = proptest::prelude::BoxedStrategy<Self>;
-
-    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        use proptest::prelude::Strategy as _;
-        proptest::bool::ANY.prop_map(Self::new).boxed()
-    }
 }
 
 #[cfg(test)]

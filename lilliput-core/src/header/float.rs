@@ -1,3 +1,8 @@
+#[cfg(any(test, feature = "testing"))]
+use proptest::prelude::*;
+#[cfg(any(test, feature = "testing"))]
+use proptest_derive::Arbitrary;
+
 use crate::{config::PackingMode, num::WithPackedBeBytes};
 
 /// Represents a floating-point number.
@@ -10,8 +15,13 @@ use crate::{config::PackingMode, num::WithPackedBeBytes};
 ///   │    └─ Width in bytes, minus 1
 ///   └─ Float Type
 /// ```
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct FloatHeader {
+    #[cfg_attr(
+        any(test, feature = "testing"),
+        proptest(strategy = "(1..=FloatHeader::MAX_VALUE_WIDTH)")
+    )]
     width: u8,
 }
 
@@ -44,20 +54,11 @@ impl FloatHeader {
 
 impl FloatHeader {
     pub const MASK: u8 = 0b00001111;
+    pub const MAX_VALUE_WIDTH: u8 = Self::VALUE_WIDTH_BITS + 1;
+
     pub(crate) const TYPE_BITS: u8 = 0b00001000;
 
     pub(crate) const VALUE_WIDTH_BITS: u8 = 0b00000111;
-}
-
-#[cfg(any(test, feature = "testing"))]
-impl proptest::prelude::Arbitrary for FloatHeader {
-    type Parameters = ();
-    type Strategy = proptest::strategy::BoxedStrategy<Self>;
-
-    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        use proptest::strategy::Strategy;
-        (1..=8_u8).prop_map(Self::new).boxed()
-    }
 }
 
 #[cfg(test)]

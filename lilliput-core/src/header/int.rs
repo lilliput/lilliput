@@ -1,3 +1,8 @@
+#[cfg(any(test, feature = "testing"))]
+use proptest::prelude::*;
+#[cfg(any(test, feature = "testing"))]
+use proptest_derive::Arbitrary;
+
 use num_traits::{Signed, Unsigned};
 
 use crate::{config::PackingMode, num::WithPackedBeBytes};
@@ -38,6 +43,7 @@ use crate::{config::PackingMode, num::WithPackedBeBytes};
 ///   │└─ Extended variant
 ///   └─ Integer type
 /// ```
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum IntHeader {
     Compact(CompactIntHeader),
@@ -111,9 +117,14 @@ impl IntHeader {
     }
 }
 
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct CompactIntHeader {
     pub(crate) is_signed: bool,
+    #[cfg_attr(
+        any(test, feature = "testing"),
+        proptest(strategy = "(0..=IntHeader::MAX_COMPACT_VALUE)")
+    )]
     pub(crate) bits: u8,
 }
 
@@ -127,9 +138,14 @@ impl CompactIntHeader {
     }
 }
 
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct ExtendedIntHeader {
     pub(crate) is_signed: bool,
+    #[cfg_attr(
+        any(test, feature = "testing"),
+        proptest(strategy = "(1..=IntHeader::MAX_EXTENDED_WIDTH)")
+    )]
     pub(crate) width: u8,
 }
 
@@ -145,6 +161,9 @@ impl ExtendedIntHeader {
 
 impl IntHeader {
     pub const MASK: u8 = 0b11111111;
+    pub const MAX_COMPACT_VALUE: u8 = Self::COMPACT_VALUE_BITS;
+    pub const MAX_EXTENDED_WIDTH: u8 = Self::EXTENDED_WIDTH_BITS + 1;
+
     pub(crate) const TYPE_BITS: u8 = 0b10000000;
 
     pub(crate) const SIGNEDNESS_BIT: u8 = 0b00100000;
@@ -153,30 +172,6 @@ impl IntHeader {
     pub(crate) const COMPACT_VALUE_BITS: u8 = 0b00011111;
 
     pub(crate) const EXTENDED_WIDTH_BITS: u8 = 0b00000111;
-}
-
-#[cfg(any(test, feature = "testing"))]
-impl proptest::arbitrary::Arbitrary for IntHeader {
-    type Parameters = ();
-    type Strategy = proptest::strategy::BoxedStrategy<Self>;
-
-    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        use proptest::strategy::Strategy;
-
-        u8::arbitrary()
-            .prop_map(|random_bits| {
-                let is_signed: bool = random_bits & Self::SIGNEDNESS_BIT != 0b0;
-                let is_compact: bool = random_bits & Self::COMPACT_VARIANT_BIT != 0b0;
-                if is_compact {
-                    let bits: u8 = random_bits & Self::COMPACT_VALUE_BITS;
-                    Self::Compact(CompactIntHeader { is_signed, bits })
-                } else {
-                    let width: u8 = 1 + (random_bits & Self::EXTENDED_WIDTH_BITS);
-                    Self::Extended(ExtendedIntHeader { is_signed, width })
-                }
-            })
-            .boxed()
-    }
 }
 
 #[cfg(test)]

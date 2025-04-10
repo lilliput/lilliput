@@ -1,3 +1,8 @@
+#[cfg(any(test, feature = "testing"))]
+use proptest::prelude::*;
+#[cfg(any(test, feature = "testing"))]
+use proptest_derive::Arbitrary;
+
 use crate::config::PackingMode;
 
 /// Represents a string.
@@ -34,6 +39,7 @@ use crate::config::PackingMode;
 ///   │ └─ Long variant
 ///   └─ String type
 /// ```
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum StringHeader {
     Compact(CompactStringHeader),
@@ -69,7 +75,7 @@ impl StringHeader {
 
     #[inline]
     pub fn as_compact_len(len: usize, packing_mode: PackingMode) -> Option<u8> {
-        if packing_mode.is_optimal() && len <= Self::COMPACT_MAX_LEN {
+        if packing_mode.is_optimal() && len <= Self::COMPACT_MAX_LEN as usize {
             Some(len as u8)
         } else {
             None
@@ -88,9 +94,14 @@ impl StringHeader {
     }
 }
 
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 #[repr(transparent)]
 pub struct CompactStringHeader {
+    #[cfg_attr(
+        any(test, feature = "testing"),
+        proptest(strategy = "(0..=StringHeader::COMPACT_MAX_LEN)")
+    )]
     pub(crate) len: u8,
 }
 
@@ -104,9 +115,14 @@ impl CompactStringHeader {
     }
 }
 
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 #[repr(transparent)]
 pub struct ExtendedStringHeader {
+    #[cfg_attr(
+        any(test, feature = "testing"),
+        proptest(strategy = "super::arbitrary_len()")
+    )]
     pub(crate) len: usize,
 }
 
@@ -129,27 +145,9 @@ impl StringHeader {
     pub(crate) const EXTENDED_LEN_WIDTH_BITS: u8 = 0b00000111;
 
     #[allow(dead_code)]
-    pub(crate) const COMPACT_MAX_LEN: usize = Self::COMPACT_LEN_BITS as usize;
+    pub(crate) const COMPACT_MAX_LEN: u8 = Self::COMPACT_LEN_BITS;
     #[allow(dead_code)]
-    pub(crate) const EXTENDED_MAX_LEN_WIDTH: usize = 1 + (Self::EXTENDED_LEN_WIDTH_BITS as usize);
-}
-
-#[cfg(any(test, feature = "testing"))]
-impl proptest::prelude::Arbitrary for StringHeader {
-    type Parameters = ();
-    type Strategy = proptest::strategy::BoxedStrategy<Self>;
-
-    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        use proptest::prelude::Strategy as _;
-        proptest::prop_oneof![
-            (0..=Self::COMPACT_LEN_BITS).prop_map(Self::compact),
-            proptest::num::u8::ANY.prop_map(|len| Self::extended(len as usize)),
-            proptest::num::u16::ANY.prop_map(|len| Self::extended(len as usize)),
-            proptest::num::u32::ANY.prop_map(|len| Self::extended(len as usize)),
-            proptest::num::u64::ANY.prop_map(|len| Self::extended(len as usize)),
-        ]
-        .boxed()
-    }
+    pub(crate) const EXTENDED_MAX_LEN_WIDTH: u8 = 1 + Self::EXTENDED_LEN_WIDTH_BITS;
 }
 
 #[cfg(test)]
@@ -171,7 +169,7 @@ mod tests {
         fn as_compact_len(len in usize::arbitrary(), packing_mode in PackingMode::arbitrary()) {
             let compact_len = StringHeader::as_compact_len(len, packing_mode);
             let is_optimal = packing_mode == PackingMode::Optimal;
-            let can_be_compact = len <= StringHeader::COMPACT_MAX_LEN;
+            let can_be_compact = len <= (StringHeader::COMPACT_MAX_LEN as usize);
 
             if is_optimal && can_be_compact {
                 prop_assert_eq!(compact_len, Some(len as u8));
