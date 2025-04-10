@@ -15,7 +15,7 @@ where
     // MARK: - Value
 
     pub fn encode_str(&mut self, value: &str) -> Result<()> {
-        self.encode_string_header(&self.header_for_str(value))?;
+        self.encode_string_header(&self.header_for_str_len(value.len()))?;
 
         // Push the value's actual bytes:
         self.push_bytes(value.as_bytes())?;
@@ -65,7 +65,7 @@ where
         }
     }
 
-    pub fn header_for_str(&self, str: &str) -> StringHeader {
-        StringHeader::for_len(str.len(), self.config.lengths.packing)
+    pub fn header_for_str_len(&self, len: usize) -> StringHeader {
+        StringHeader::for_len(len, self.config.lengths.packing)
     }
 }

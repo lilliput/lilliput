@@ -161,7 +161,7 @@ where
     where
         T: ?Sized + Serialize,
     {
-        let header = self.encoder.header_for_map(1);
+        let header = self.encoder.header_for_map_len(1);
         self.encoder.encode_map_header(&header)?;
 
         variant.serialize(&mut *self)?;
@@ -175,7 +175,7 @@ where
             return Err(Error::unknown_length());
         };
 
-        let header = self.encoder.header_for_seq(len);
+        let header = self.encoder.header_for_seq_len(len);
         self.encoder.encode_seq_header(&header)?;
 
         Ok(self)
@@ -200,12 +200,12 @@ where
         variant: &'static str,
         len: usize,
     ) -> Result<Self::SerializeTupleVariant> {
-        let outer_map_header = self.encoder.header_for_map(1);
+        let outer_map_header = self.encoder.header_for_map_len(1);
         self.encoder.encode_map_header(&outer_map_header)?;
 
         variant.serialize(&mut *self)?;
 
-        let inner_seq_header = self.encoder.header_for_seq(len);
+        let inner_seq_header = self.encoder.header_for_seq_len(len);
         self.encoder.encode_seq_header(&inner_seq_header)?;
 
         Ok(self)
@@ -216,7 +216,7 @@ where
             return Err(Error::unknown_length());
         };
 
-        let header = self.encoder.header_for_map(len);
+        let header = self.encoder.header_for_map_len(len);
         self.encoder.encode_map_header(&header)?;
 
         Ok(self)
@@ -233,12 +233,12 @@ where
         variant: &'static str,
         len: usize,
     ) -> Result<Self::SerializeStructVariant> {
-        let outer_map_header = self.encoder.header_for_map(1);
+        let outer_map_header = self.encoder.header_for_map_len(1);
         self.encoder.encode_map_header(&outer_map_header)?;
 
         variant.serialize(&mut *self)?;
 
-        let inner_map_header = self.encoder.header_for_map(len);
+        let inner_map_header = self.encoder.header_for_map_len(len);
         self.encoder.encode_map_header(&inner_map_header)?;
 
         Ok(self)
