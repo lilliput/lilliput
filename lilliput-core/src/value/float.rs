@@ -1,8 +1,14 @@
 use std::hash::{Hash, Hasher};
 
+#[cfg(any(test, feature = "testing"))]
+use proptest::prelude::*;
+#[cfg(any(test, feature = "testing"))]
+use proptest_derive::Arbitrary;
+
 use decorum::{constraint::IsFloat, proxy::Constrained};
 
 /// Represents a floating-point number.
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone)]
 pub enum FloatValue {
     F32(f32),
@@ -109,22 +115,6 @@ impl std::fmt::Display for FloatValue {
 impl FloatValue {
     fn canonical_total(self) -> Constrained<f64, IsFloat> {
         decorum::Total::assert(self.as_f64())
-    }
-}
-
-#[cfg(any(test, feature = "testing"))]
-impl proptest::prelude::Arbitrary for FloatValue {
-    type Parameters = ();
-    type Strategy = proptest::strategy::BoxedStrategy<Self>;
-
-    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        use proptest::strategy::Strategy;
-
-        proptest::prop_oneof![
-            proptest::num::f32::ANY.prop_map(FloatValue::F32),
-            proptest::num::f64::ANY.prop_map(FloatValue::F64),
-        ]
-        .boxed()
     }
 }
 

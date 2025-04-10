@@ -1,4 +1,10 @@
+#[cfg(any(test, feature = "testing"))]
+use proptest::prelude::*;
+#[cfg(any(test, feature = "testing"))]
+use proptest_derive::Arbitrary;
+
 /// Represents a unit value.
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct UnitValue;
 
@@ -17,17 +23,6 @@ impl std::fmt::Debug for UnitValue {
 impl std::fmt::Display for UnitValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "unit")
-    }
-}
-
-#[cfg(any(test, feature = "testing"))]
-impl proptest::prelude::Arbitrary for UnitValue {
-    type Parameters = ();
-    type Strategy = proptest::prelude::BoxedStrategy<Self>;
-
-    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        use proptest::prelude::*;
-        Just(UnitValue).boxed()
     }
 }
 

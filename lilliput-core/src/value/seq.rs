@@ -1,13 +1,31 @@
 #[cfg(any(test, feature = "testing"))]
 use proptest::{prelude::*, sample::SizeRange};
+#[cfg(any(test, feature = "testing"))]
+use proptest_derive::Arbitrary;
 
 use super::Value;
 
 pub type Seq = Vec<Value>;
 
+#[cfg(any(test, feature = "testing"))]
+pub(crate) fn arbitrary_seq() -> impl Strategy<Value = Seq> {
+    arbitrary_seq_with(Value::arbitrary(), 0..10)
+}
+
+#[cfg(any(test, feature = "testing"))]
+pub(crate) fn arbitrary_seq_with(
+    element: impl Strategy<Value = Value>,
+    size: impl Into<SizeRange>,
+) -> impl Strategy<Value = Seq> {
+    proptest::collection::vec(element, size.into()).prop_map(Seq::from_iter)
+}
+
 /// Represents a sequence of values.
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Default, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct SeqValue(pub Seq);
+pub struct SeqValue(
+    #[cfg_attr(any(test, feature = "testing"), proptest(strategy = "arbitrary_seq()"))] pub Seq,
+);
 
 impl SeqValue {
     pub fn as_slice(&self) -> &[Value] {
@@ -40,35 +58,6 @@ impl From<SeqValue> for Seq {
 impl std::fmt::Debug for SeqValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_list().entries(self.0.iter()).finish()
-    }
-}
-
-#[doc(hidden)]
-#[cfg(any(test, feature = "testing"))]
-pub struct SeqValueArbitraryParameters {
-    pub items: BoxedStrategy<Value>,
-    pub size: SizeRange,
-}
-
-#[cfg(any(test, feature = "testing"))]
-impl Default for SeqValueArbitraryParameters {
-    fn default() -> Self {
-        Self {
-            items: Value::arbitrary(),
-            size: (0..10).into(),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "testing"))]
-impl proptest::arbitrary::Arbitrary for SeqValue {
-    type Parameters = SeqValueArbitraryParameters;
-    type Strategy = proptest::strategy::BoxedStrategy<Self>;
-
-    fn arbitrary_with(args: Self::Parameters) -> Self::Strategy {
-        proptest::collection::vec(args.items, args.size)
-            .prop_map(Self)
-            .boxed()
     }
 }
 

@@ -1,3 +1,8 @@
+#[cfg(any(test, feature = "testing"))]
+use proptest::{prelude::*, sample::SizeRange};
+#[cfg(any(test, feature = "testing"))]
+use proptest_derive::Arbitrary;
+
 use super::Value;
 
 #[cfg(feature = "preserve_order")]
@@ -6,9 +11,26 @@ pub type Map = ordermap::OrderMap<Value, Value>;
 #[cfg(not(feature = "preserve_order"))]
 pub type Map = std::collections::BTreeMap<Value, Value>;
 
+#[cfg(any(test, feature = "testing"))]
+pub(crate) fn arbitrary_map() -> impl Strategy<Value = Map> {
+    arbitrary_map_with(Value::arbitrary(), Value::arbitrary(), 0..10)
+}
+
+#[cfg(any(test, feature = "testing"))]
+pub(crate) fn arbitrary_map_with(
+    key: impl Strategy<Value = Value>,
+    value: impl Strategy<Value = Value>,
+    size: impl Into<SizeRange>,
+) -> impl Strategy<Value = Map> {
+    proptest::collection::hash_map(key, value, size.into()).prop_map(Map::from_iter)
+}
+
 /// Represents a map of key-value pairs.
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Default, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct MapValue(pub Map);
+pub struct MapValue(
+    #[cfg_attr(any(test, feature = "testing"), proptest(strategy = "arbitrary_map()"))] pub Map,
+);
 
 impl From<Map> for MapValue {
     fn from(value: Map) -> Self {
@@ -31,20 +53,6 @@ impl From<MapValue> for Map {
 impl std::fmt::Debug for MapValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_map().entries(self.0.iter()).finish()
-    }
-}
-
-#[cfg(any(test, feature = "testing"))]
-impl proptest::arbitrary::Arbitrary for MapValue {
-    type Parameters = ();
-    type Strategy = proptest::strategy::BoxedStrategy<Self>;
-
-    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        use proptest::prelude::*;
-
-        proptest::collection::hash_map(Value::arbitrary(), Value::arbitrary(), 0..10)
-            .prop_map(|hash_map| MapValue(Map::from_iter(hash_map)))
-            .boxed()
     }
 }
 

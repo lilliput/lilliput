@@ -3,12 +3,18 @@ use std::{
     num::TryFromIntError,
 };
 
+#[cfg(any(test, feature = "testing"))]
+use proptest::prelude::*;
+#[cfg(any(test, feature = "testing"))]
+use proptest_derive::Arbitrary;
+
 mod signed;
 mod unsigned;
 
 pub use self::{signed::SignedIntValue, unsigned::UnsignedIntValue};
 
 /// Represents an integer number.
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone)]
 pub enum IntValue {
     Signed(SignedIntValue),
@@ -167,22 +173,6 @@ impl std::fmt::Display for IntValue {
             Self::Signed(value) => std::fmt::Display::fmt(value, f),
             Self::Unsigned(value) => std::fmt::Display::fmt(value, f),
         }
-    }
-}
-
-#[cfg(any(test, feature = "testing"))]
-impl proptest::prelude::Arbitrary for IntValue {
-    type Parameters = ();
-    type Strategy = proptest::strategy::BoxedStrategy<Self>;
-
-    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        use proptest::strategy::Strategy;
-
-        proptest::prop_oneof![
-            SignedIntValue::arbitrary().prop_map(IntValue::Signed),
-            UnsignedIntValue::arbitrary().prop_map(IntValue::Unsigned),
-        ]
-        .boxed()
     }
 }
 
