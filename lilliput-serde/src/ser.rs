@@ -8,6 +8,13 @@ use serde::{ser, Serialize};
 use crate::{Error, Result};
 
 #[derive(Default, Clone, Eq, PartialEq, Debug)]
+pub enum StructRepr {
+    #[default]
+    Seq,
+    Map,
+}
+
+#[derive(Default, Clone, Eq, PartialEq, Debug)]
 pub enum EnumVariantRepr {
     #[default]
     Index,
@@ -16,6 +23,7 @@ pub enum EnumVariantRepr {
 
 #[derive(Default, Clone, PartialEq, Debug)]
 pub struct SerializerConfig {
+    pub struct_repr: StructRepr,
     pub enum_variant_repr: EnumVariantRepr,
     pub encoder: EncoderConfig,
 }
