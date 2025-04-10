@@ -8,8 +8,16 @@ use serde::{ser, Serialize};
 use crate::{Error, Result};
 
 #[derive(Default, Clone, Eq, PartialEq, Debug)]
+pub enum EnumVariantRepr {
+    #[default]
+    Index,
+    Name,
+}
+
+#[derive(Default, Clone, PartialEq, Debug)]
 pub struct SerializerConfig {
-    pub encoding: EncodingConfig,
+    pub enum_variant_repr: EnumVariantRepr,
+    pub encoder: EncoderConfig,
 }
 
 pub struct Serializer<W> {
@@ -143,10 +151,13 @@ where
     fn serialize_unit_variant(
         self,
         _name: &'static str,
-        _variant_index: u32,
+        variant_index: u32,
         variant: &'static str,
     ) -> Result<()> {
-        self.serialize_str(variant)
+        match self.config.enum_variant_repr {
+            EnumVariantRepr::Index => self.serialize_u32(variant_index),
+            EnumVariantRepr::Name => self.serialize_str(variant),
+        }
     }
 
     fn serialize_newtype_struct<T>(self, _name: &'static str, value: &T) -> Result<()>
@@ -159,7 +170,7 @@ where
     fn serialize_newtype_variant<T>(
         self,
         _name: &'static str,
-        _variant_index: u32,
+        variant_index: u32,
         variant: &'static str,
         value: &T,
     ) -> Result<()>
@@ -169,7 +180,11 @@ where
         let header = self.encoder.header_for_map_len(1);
         self.encoder.encode_map_header(&header)?;
 
-        variant.serialize(&mut *self)?;
+        match self.config.enum_variant_repr {
+            EnumVariantRepr::Index => self.serialize_u32(variant_index)?,
+            EnumVariantRepr::Name => self.serialize_str(variant)?,
+        }
+
         value.serialize(&mut *self)?;
 
         Ok(())
@@ -201,14 +216,21 @@ where
     fn serialize_tuple_variant(
         self,
         _name: &'static str,
-        _variant_index: u32,
+        variant_index: u32,
         variant: &'static str,
         len: usize,
     ) -> Result<Self::SerializeTupleVariant> {
         let outer_map_header = self.encoder.header_for_map_len(1);
         self.encoder.encode_map_header(&outer_map_header)?;
 
-        variant.serialize(&mut *self)?;
+        match self.config.enum_variant_repr {
+            EnumVariantRepr::Index => {
+                self.serialize_u32(variant_index)?
+            }
+            EnumVariantRepr::Name => {
+                self.serialize_str(variant)?
+            }
+        }
 
         let inner_seq_header = self.encoder.header_for_seq_len(len);
         self.encoder.encode_seq_header(&inner_seq_header)?;
@@ -234,14 +256,21 @@ where
     fn serialize_struct_variant(
         self,
         _name: &'static str,
-        _variant_index: u32,
+        variant_index: u32,
         variant: &'static str,
         len: usize,
     ) -> Result<Self::SerializeStructVariant> {
         let outer_map_header = self.encoder.header_for_map_len(1);
         self.encoder.encode_map_header(&outer_map_header)?;
 
-        variant.serialize(&mut *self)?;
+        match self.config.enum_variant_repr {
+            EnumVariantRepr::Index => {
+                self.serialize_u32(variant_index)?
+            }
+            EnumVariantRepr::Name => {
+                self.serialize_str(variant)?
+            }
+        }
 
         let inner_map_header = self.encoder.header_for_map_len(len);
         self.encoder.encode_map_header(&inner_map_header)?;

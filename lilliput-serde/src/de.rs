@@ -396,33 +396,45 @@ where
     fn deserialize_enum<V>(
         self,
         _name: &'static str,
-        _variants: &'static [&'static str],
+        variants: &'static [&'static str],
         visitor: V,
     ) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
     {
         match self.decoder.peek_marker()? {
+            Marker::Int => {
+                let index = self.decoder.decode_u32()? as usize;
+                visitor.visit_enum(variants[index].into_deserializer())
+            }
             Marker::String => {
                 let mut scratch = vec![];
-                let string = self.decoder.decode_str(&mut scratch)?;
-                visitor.visit_enum(string.into_deserializer())
+                let str_ref = self.decoder.decode_str(&mut scratch)?;
+                visitor.visit_enum(str_ref.into_deserializer())
             }
             Marker::Map => {
                 let header = self.decoder.decode_map_header()?;
 
                 if header.len() != 1 {
-                    return Err(Error::custom("expected enum"));
+                    return Err(Error::custom("expected map of length 1"));
                 }
 
                 check_depth! {
                     this: self;
-                    let result = visitor.visit_enum(EnumAccess::new(self));
+                    let marker = self.decoder.peek_marker()?;
+                    let result = visitor.visit_enum(EnumAccess::new(self, variants, marker));
                 }
 
                 result
             }
-            _ => Err(Error::custom("expected enum")),
+            other => {
+                let pos = self.decoder.pos();
+                Err(Error::invalid_type(
+                    other.to_string(),
+                    "int, string or map".to_owned(),
+                    Some(pos),
+                ))
+            }
         }
     }
 
@@ -447,6 +459,11 @@ impl<'de, 'a, R> Deserializer<R>
 where
     R: Read<'de> + 'a,
 {
+    #[inline]
+    fn pos(&self) -> usize {
+        self.decoder.pos()
+    }
+
     #[inline]
     fn deserialize_float<V>(&mut self, visitor: V) -> Result<V::Value>
     where
@@ -562,14 +579,25 @@ where
 
 struct EnumAccess<'a, R> {
     de: &'a mut Deserializer<R>,
+    #[allow(dead_code)]
+    variants: &'static [&'static str],
+    peeked_marker: Marker,
 }
 
 impl<'a, R> EnumAccess<'a, R>
 where
     R: 'a,
 {
-    pub const fn new(de: &'a mut Deserializer<R>) -> Self {
-        EnumAccess { de }
+    pub fn new(
+        de: &'a mut Deserializer<R>,
+        variants: &'static [&'static str],
+        peeked_marker: Marker,
+    ) -> Self {
+        EnumAccess {
+            de,
+            variants,
+            peeked_marker,
+        }
     }
 }
 
@@ -585,7 +613,23 @@ where
     where
         V: de::DeserializeSeed<'de>,
     {
-        let value = seed.deserialize(&mut *self.de)?;
+        let value = match self.peeked_marker {
+            Marker::Int => {
+                let index = u32::deserialize(&mut *self.de)?;
+                seed.deserialize(index.into_deserializer())?
+            }
+            Marker::String => {
+                let str = <&str>::deserialize(&mut *self.de)?;
+                seed.deserialize(str.into_deserializer())?
+            }
+            other => {
+                return Err(Error::invalid_type(
+                    other.to_string(),
+                    "int, string".to_owned(),
+                    Some(self.de.pos()),
+                ))
+            }
+        };
 
         Ok((value, self))
     }
