@@ -1,3 +1,6 @@
+#[cfg(any(test, feature = "testing"))]
+use proptest::{prelude::*, sample::SizeRange};
+
 mod bool;
 mod bytes;
 mod float;
@@ -181,17 +184,23 @@ impl proptest::arbitrary::Arbitrary for Value {
         } = args;
 
         let leaf = prop_oneof![
+            IntValue::arbitrary().prop_map(Value::Int),
+            StringValue::arbitrary().prop_map(Value::String),
             FloatValue::arbitrary().prop_map(Value::Float),
             BytesValue::arbitrary().prop_map(Value::Bytes),
             BoolValue::arbitrary().prop_map(Value::Bool),
+            UnitValue::arbitrary().prop_map(Value::Unit),
             NullValue::arbitrary().prop_map(Value::Null),
         ];
-        leaf.prop_recursive(depth, desired_size, expected_branch_size, |inner| {
+
+        let len: SizeRange = (0..(expected_branch_size as usize)).into();
+
+        leaf.prop_recursive(depth, desired_size, expected_branch_size, move |inner| {
             prop_oneof![
-                // prop::collection::hash_map(inner.clone(), inner.clone(), 0..10)
-                //     .prop_map(|hash_map| { Value::Map(MapValue::from(Map::from_iter(hash_map))) }),
-                prop::collection::vec(inner, 0..10)
-                    .prop_map(|vec| { Value::Seq(SeqValue::from(vec)) }),
+                map::arbitrary_map_with(inner.clone(), inner.clone(), len.clone())
+                    .prop_map(|map| Value::Map(map.into())),
+                seq::arbitrary_seq_with(inner.clone(), len.clone())
+                    .prop_map(|seq| Value::Seq(seq.into())),
             ]
         })
         .boxed()
