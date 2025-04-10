@@ -15,7 +15,7 @@ use lilliput_core::{
     encoder::Encoder,
     header::{
         BoolHeader, BytesHeader, FloatHeader, Header, IntHeader, MapHeader, NullHeader, SeqHeader,
-        StringHeader,
+        StringHeader, UnitHeader,
     },
     io::{SliceReader, VecWriter},
     value::IntValue,
@@ -71,7 +71,7 @@ fn bench_roundtrip_with_samples(
                 let start = Instant::now();
 
                 for header in headers {
-                    let _ = black_box(encoder.encode_header(header));
+                    let _ = black_box(encoder.encode_header(black_box(header)));
                 }
 
                 // Calculate mean duration over the sampled headers:
@@ -234,7 +234,7 @@ fn bench_map(c: &mut Criterion, config: EncodingConfig) {
 fn bench_float(c: &mut Criterion, config: EncodingConfig) {
     fn samples_iter(samples: usize) -> impl Iterator<Item = Header> {
         sampling_values_iter::<u8>(samples)
-            .map(move |width| Header::Float(FloatHeader::new(((width % 8) + 1) as u8)))
+            .map(move |width| Header::Float(FloatHeader::new((width % 8) + 1)))
     }
 
     let mut g = c.benchmark_group("float");
@@ -281,9 +281,25 @@ fn bench_bool(c: &mut Criterion, config: EncodingConfig) {
     g.finish();
 }
 
+fn bench_unit(c: &mut Criterion, config: EncodingConfig) {
+    fn samples_iter(samples: usize) -> impl Iterator<Item = Header> {
+        std::iter::repeat_n(Header::Unit(UnitHeader), samples)
+    }
+
+    let mut g = c.benchmark_group("null");
+
+    g.significance_level(CRITERION_SIGNIFICANCE_LEVEL);
+    g.sample_size(CRITERION_SAMPLE_SIZE);
+
+    let samples: Vec<Header> = samples_iter(SAMPLES).collect();
+    bench_roundtrip_with_samples(&mut g, None, &samples, config);
+
+    g.finish();
+}
+
 fn bench_null(c: &mut Criterion, config: EncodingConfig) {
     fn samples_iter(samples: usize) -> impl Iterator<Item = Header> {
-        std::iter::repeat_n(Header::Null(NullHeader::default()), samples)
+        std::iter::repeat_n(Header::Null(NullHeader), samples)
     }
 
     let mut g = c.benchmark_group("null");
@@ -305,6 +321,7 @@ fn benchmark_with_config(c: &mut Criterion, config: EncodingConfig) {
     bench_float(c, config);
     bench_bytes(c, config);
     bench_bool(c, config);
+    bench_unit(c, config);
     bench_null(c, config);
 }
 

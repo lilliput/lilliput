@@ -14,7 +14,7 @@ use lilliput_core::{
     decoder::Decoder,
     encoder::Encoder,
     io::{SliceReader, VecWriter},
-    value::{BoolValue, FloatValue, IntValue, NullValue, Value},
+    value::{BoolValue, FloatValue, IntValue, NullValue, UnitValue, Value},
 };
 
 const CRITERION_SIGNIFICANCE_LEVEL: f64 = 0.1;
@@ -211,6 +211,22 @@ fn bench_bool(c: &mut Criterion, config: EncodingConfig) {
     g.finish();
 }
 
+fn bench_unit(c: &mut Criterion, config: EncodingConfig) {
+    fn samples_iter(samples: usize) -> impl Iterator<Item = Value> {
+        std::iter::repeat_n(Value::Unit(UnitValue), samples)
+    }
+
+    let mut g = c.benchmark_group("null");
+
+    g.significance_level(CRITERION_SIGNIFICANCE_LEVEL);
+    g.sample_size(CRITERION_SAMPLE_SIZE);
+
+    let samples: Vec<Value> = samples_iter(SAMPLES).collect();
+    bench_roundtrip_with_samples(&mut g, None, &samples, config);
+
+    g.finish();
+}
+
 fn bench_null(c: &mut Criterion, config: EncodingConfig) {
     fn samples_iter(samples: usize) -> impl Iterator<Item = Value> {
         std::iter::repeat_n(Value::Null(NullValue), samples)
@@ -231,6 +247,7 @@ fn benchmark_with_config(c: &mut Criterion, config: EncodingConfig) {
     bench_int(c, config);
     bench_float(c, config);
     bench_bool(c, config);
+    bench_unit(c, config);
     bench_null(c, config);
 }
 
