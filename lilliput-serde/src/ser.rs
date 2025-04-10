@@ -7,15 +7,20 @@ use serde::{ser, Serialize};
 
 use crate::{Error, Result};
 
+#[derive(Default, Clone, Eq, PartialEq, Debug)]
+pub struct SerializerConfig {
+    pub encoding: EncodingConfig,
+}
+
 pub struct Serializer<W> {
     pub(crate) encoder: Encoder<W>,
+    pub(crate) config: SerializerConfig,
 }
 
 impl<W> Serializer<W> {
-    pub fn from_writer(writer: W, config: EncodingConfig) -> Self {
-        Self {
-            encoder: Encoder::new(writer, config),
-        }
+    pub fn from_writer(writer: W, config: SerializerConfig) -> Self {
+        let encoder = Encoder::new(writer, config.encoding.clone());
+        Self { encoder, config }
     }
 }
 
@@ -25,7 +30,7 @@ where
 {
     let mut vec: Vec<u8> = Vec::new();
     let writer = StdIoWriter::new(&mut vec);
-    let config = EncodingConfig::default();
+    let config = SerializerConfig::default();
     let mut serializer = Serializer::from_writer(writer, config);
 
     value.serialize(&mut serializer)?;
@@ -39,7 +44,7 @@ where
     W: std::io::Write,
     T: ?Sized + Serialize,
 {
-    let config = EncodingConfig::default();
+    let config = SerializerConfig::default();
     let mut serializer = Serializer::from_writer(StdIoWriter::new(writer), config);
 
     value.serialize(&mut serializer)
