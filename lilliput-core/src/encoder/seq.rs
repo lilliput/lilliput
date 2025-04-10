@@ -15,7 +15,7 @@ where
     // MARK: - Value
 
     pub fn encode_seq(&mut self, value: &[Value]) -> Result<()> {
-        self.encode_seq_header(&self.header_for_seq(value))?;
+        self.encode_seq_header(&self.header_for_seq_len(value.len()))?;
 
         for value in value {
             self.encode_value(value)?;
@@ -64,7 +64,7 @@ where
         }
     }
 
-    pub fn header_for_seq(&self, seq: &[Value]) -> SeqHeader {
-        SeqHeader::for_len(seq.len(), self.config.lengths.packing)
+    pub fn header_for_seq_len(&self, len: usize) -> SeqHeader {
+        SeqHeader::for_len(len, self.config.lengths.packing)
     }
 }

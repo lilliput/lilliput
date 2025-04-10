@@ -59,7 +59,7 @@ where
         })
     }
 
-    pub fn header_for_bytes(&self, len: usize) -> BytesHeader {
+    pub fn header_for_bytes_len(&self, len: usize) -> BytesHeader {
         BytesHeader::for_len(len)
     }
 }

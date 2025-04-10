@@ -15,7 +15,7 @@ where
     // MARK: - Value
 
     pub fn encode_map(&mut self, value: &Map) -> Result<()> {
-        self.encode_map_header(&self.header_for_map(value))?;
+        self.encode_map_header(&self.header_for_map_len(value.len()))?;
 
         for (key, value) in value {
             self.encode_value(key)?;
@@ -65,7 +65,7 @@ where
         }
     }
 
-    pub fn header_for_map(&self, map: &Map) -> MapHeader {
-        MapHeader::for_len(map.len(), self.config.lengths.packing)
+    pub fn header_for_map_len(&self, len: usize) -> MapHeader {
+        MapHeader::for_len(len, self.config.lengths.packing)
     }
 }
