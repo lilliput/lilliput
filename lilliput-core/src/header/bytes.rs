@@ -21,7 +21,7 @@ pub struct BytesHeader {
 
 impl BytesHeader {
     #[inline]
-    pub fn new(len: usize) -> Self {
+    pub fn for_len(len: usize) -> Self {
         Self { len }
     }
 
@@ -56,7 +56,7 @@ impl proptest::prelude::Arbitrary for BytesHeader {
             proptest::num::u32::ANY.prop_map(|len| len as usize),
             proptest::num::u64::ANY.prop_map(|len| len as usize),
         ]
-        .prop_map(Self::new)
+        .prop_map(Self::for_len)
         .boxed()
     }
 }

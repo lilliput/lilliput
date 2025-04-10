@@ -50,7 +50,7 @@ where
         #[cfg(feature = "tracing")]
         tracing::debug!(byte = crate::binary::fmt_byte(byte), len = len);
 
-        Ok(BytesHeader::new(len))
+        Ok(BytesHeader::for_len(len))
     }
 
     // MARK: - Body

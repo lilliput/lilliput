@@ -12,7 +12,7 @@ where
     // MARK: - Value
 
     pub fn encode_bytes(&mut self, value: &[u8]) -> Result<()> {
-        self.encode_bytes_header(&BytesHeader::new(value.len()))?;
+        self.encode_bytes_header(&BytesHeader::for_len(value.len()))?;
 
         // Push the value's actual bytes:
         self.push_bytes(value)?;
@@ -60,6 +60,6 @@ where
     }
 
     pub fn header_for_bytes(&self, len: usize) -> BytesHeader {
-        BytesHeader::new(len)
+        BytesHeader::for_len(len)
     }
 }
