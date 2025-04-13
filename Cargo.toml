@@ -10,9 +10,15 @@ edition = "2021"
 rust-version = "1.74.0"
 
 [workspace.dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
 proptest = { version = "1.6.0" }
 proptest-derive = { version = "0.5.1" }
+rand = "0.9.0"
+rand_xorshift = "0.4.0"
 serde = { version = "1.0.197", default-features = false }
+test-log = { version = "0.2.17", features = ["trace"] }
+thiserror = "2.0.12"
+tracing = { version = "0.1.41" }
 
 [profile.test.package.proptest]
 opt-level = 3
