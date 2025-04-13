@@ -13,16 +13,16 @@ proptest = { workspace = true, optional = true }
 proptest-derive = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_bytes = { version = "0.11.17", default-features = false, optional = true }
-thiserror = "2.0.12"
-tracing = { version = "0.1.41", features = ["release_max_level_error"], optional = true }
+thiserror = { workspace = true }
+tracing = { workspace = true, features = ["release_max_level_error"], optional = true }
 
 [dev-dependencies]
-criterion = { version = "0.5", features = ["html_reports"] }
+criterion = { workspace = true }
 proptest = { workspace = true }
 proptest-derive = { workspace = true }
-rand = "0.9.0"
-rand_xorshift = "0.4.0"
-test-log = { version = "0.2.17", features = ["trace"] }
+rand = { workspace = true }
+rand_xorshift = { workspace = true }
+test-log = { workspace = true }
 
 [[bench]]
 name = "values"
