@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "lilliput-core",
+    "packed-float",
 ]
 resolver = "2"
 

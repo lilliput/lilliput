@@ -1,0 +1,20 @@
+[package]
+name = "packed-float"
+license = { workspace = true }
+edition = { workspace = true }
+rust-version = { workspace = true }
+version = "0.1.0"
+
+[dependencies]
+tracing = { workspace = true, features = ["release_max_level_error"], optional = true }
+
+[dev-dependencies]
+criterion = { workspace = true }
+proptest = { workspace = true }
+proptest-derive = { workspace = true }
+rand = { workspace = true }
+rand_xorshift = { workspace = true }
+test-log = { workspace = true }
+
+[features]
+tracing = ["dep:tracing"]
