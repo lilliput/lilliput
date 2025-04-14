@@ -6,6 +6,7 @@ mod extend;
 mod floats;
 mod native;
 mod repr;
+mod truncate;
 
 pub use self::be_bytes::{FpFromBeBytes, FpToBeBytes};
 pub use self::bits::{FpFromBits, FpToBits};
@@ -13,6 +14,7 @@ pub use self::classify::FpClassify;
 pub use self::extend::FpExtend;
 pub use self::floats::{F16, F24, F32, F40, F48, F56, F64, F8};
 pub use self::repr::FpRepr;
+pub use self::truncate::{FpTruncate, FpTruncateError};
 
 /// A packed representation of floating-point numbers.
 #[derive(Copy, Clone, PartialEq, Debug)]
