@@ -14,3 +14,20 @@ pub enum PackedFloat {
     F56(F56),
     F64(F64),
 }
+
+mod sealed {
+    pub trait Sealed {}
+}
+
+pub(crate) use self::sealed::Sealed;
+
+impl Sealed for F8 {}
+impl Sealed for F16 {}
+impl Sealed for F24 {}
+impl Sealed for F32 {}
+impl Sealed for F40 {}
+impl Sealed for F48 {}
+impl Sealed for F56 {}
+impl Sealed for F64 {}
+
+impl Sealed for PackedFloat {}
