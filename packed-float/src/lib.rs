@@ -2,6 +2,7 @@ mod be_bytes;
 mod bits;
 mod cmp;
 mod floats;
+mod native;
 
 pub use self::be_bytes::{FpFromBeBytes, FpToBeBytes};
 pub use self::bits::{FpFromBits, FpToBits};
