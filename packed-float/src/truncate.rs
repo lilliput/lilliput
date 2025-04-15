@@ -174,6 +174,15 @@ mod tests {
     use super::*;
 
     proptest! {
+        #[cfg(feature = "native-f16")]
+        #[test]
+        fn f64_to_f16_matches_native_behavior(native in f64::arbitrary()) {
+            let subject = F64::from(native);
+            let actual: F16 = subject.truncate();
+            let expected = F16::from(native as f16);
+            prop_assert_eq!(actual, expected);
+        }
+
         #[test]
         fn f64_to_f32_matches_native_behavior(native in f64::arbitrary()) {
             let subject = F64::from(native);
