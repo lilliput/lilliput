@@ -1,3 +1,5 @@
+#![cfg_attr(feature = "native-f16", feature(f16))]
+
 mod be_bytes;
 mod bits;
 mod classify;
