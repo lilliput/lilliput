@@ -19,3 +19,4 @@ test-log = { workspace = true }
 [features]
 tracing = ["dep:tracing"]
 native-f16 = []
+full = []

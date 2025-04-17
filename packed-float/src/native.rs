@@ -1,6 +1,8 @@
 use std::mem::transmute_copy;
 
-use crate::floats::{F16, F32, F64};
+#[cfg(feature = "native-f16")]
+use crate::floats::F16;
+use crate::floats::{F32, F64};
 
 #[cfg(feature = "native-f16")]
 impl From<f16> for F16 {
