@@ -6,25 +6,25 @@ use crate::repr::FpRepr;
 use crate::PackedFloat;
 
 pub trait FpClassify: Sized {
-    fn classify(self) -> FpCategory;
+    fn classify(&self) -> FpCategory;
 
-    fn is_zero(self) -> bool {
+    fn is_zero(&self) -> bool {
         matches!(self.classify(), FpCategory::Zero)
     }
 
-    fn is_nan(self) -> bool {
+    fn is_nan(&self) -> bool {
         matches!(self.classify(), FpCategory::Nan)
     }
 
-    fn is_infinite(self) -> bool {
+    fn is_infinite(&self) -> bool {
         matches!(self.classify(), FpCategory::Infinite)
     }
 
-    fn is_subnormal(self) -> bool {
+    fn is_subnormal(&self) -> bool {
         matches!(self.classify(), FpCategory::Subnormal)
     }
 
-    fn is_normal(self) -> bool {
+    fn is_normal(&self) -> bool {
         matches!(self.classify(), FpCategory::Normal)
     }
 }
@@ -32,7 +32,7 @@ pub trait FpClassify: Sized {
 macro_rules! impl_float_classify {
     ($t:ty) => {
         impl FpClassify for $t {
-            fn classify(self) -> FpCategory {
+            fn classify(&self) -> FpCategory {
                 let bits = self.to_bits();
                 let exponent_bits = bits & Self::EXPONENT_MASK;
                 let significand_bits = bits & Self::SIGNIFICAND_MASK;
@@ -59,7 +59,7 @@ impl_float_classify!(F56);
 impl_float_classify!(F64);
 
 impl FpClassify for PackedFloat {
-    fn classify(self) -> FpCategory {
+    fn classify(&self) -> FpCategory {
         match self {
             Self::F8(value) => value.classify(),
             Self::F16(value) => value.classify(),

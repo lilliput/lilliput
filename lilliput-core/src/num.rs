@@ -1,4 +1,7 @@
-use packed_float::{FpToBeBytes, FpTruncate, F16, F24, F32, F40, F48, F56, F64, F8};
+use packed_float::{
+    packed_native_precision_f32, packed_native_precision_f64, packed_optimal_precision_f32,
+    packed_optimal_precision_f64, FpToBeBytes, FpTruncate, F16, F24, F32, F40, F48, F56, F64, F8,
+};
 
 use crate::config::PackingMode;
 
@@ -51,8 +54,19 @@ impl WithPackedBeBytes for f32 {
     where
         F: FnOnce(&[u8]) -> T,
     {
-        // FIXME: add support for `f16` on nightly
-        self.with_be_bytes(f)
+        let non_packed = F32::from(*self);
+
+        let predicate = |value, packed| value == packed;
+        let width = packed_native_precision_f32(*self, predicate);
+
+        match width {
+            2 => {
+                let packed = FpTruncate::<F16>::truncate(non_packed);
+                f(&packed.to_be_bytes())
+            }
+            4 => f(&non_packed.to_be_bytes()),
+            _ => unreachable!(),
+        }
     }
 
     #[inline]
@@ -60,16 +74,26 @@ impl WithPackedBeBytes for f32 {
     where
         F: FnOnce(&[u8]) -> T,
     {
-        let native = F32::from(*self);
+        let non_packed = F32::from(*self);
 
-        if let Ok(optimal) = FpTruncate::<F8>::try_truncate(native) {
-            f(&optimal.to_be_bytes())
-        } else if let Ok(optimal) = FpTruncate::<F16>::try_truncate(native) {
-            f(&optimal.to_be_bytes())
-        } else if let Ok(optimal) = FpTruncate::<F24>::try_truncate(native) {
-            f(&optimal.to_be_bytes())
-        } else {
-            f(&native.to_be_bytes())
+        let predicate = |value, packed| value == packed;
+        let width = packed_optimal_precision_f32(*self, predicate);
+
+        match width {
+            1 => {
+                let packed = FpTruncate::<F8>::truncate(non_packed);
+                f(&packed.to_be_bytes())
+            }
+            2 => {
+                let packed = FpTruncate::<F16>::truncate(non_packed);
+                f(&packed.to_be_bytes())
+            }
+            3 => {
+                let packed = FpTruncate::<F24>::truncate(non_packed);
+                f(&packed.to_be_bytes())
+            }
+            4 => f(&non_packed.to_be_bytes()),
+            _ => unreachable!(),
         }
     }
 }
@@ -92,13 +116,22 @@ impl WithPackedBeBytes for f64 {
     where
         F: FnOnce(&[u8]) -> T,
     {
-        // FIXME: add support for `f16` on nightly
-        let as_f32 = *self as f32;
+        let non_packed = F64::from(*self);
 
-        if as_f32 as f64 == *self {
-            as_f32.with_native_packed_be_bytes(f)
-        } else {
-            self.with_be_bytes(f)
+        let predicate = |value, packed| value == packed;
+        let width = packed_native_precision_f64(*self, predicate);
+
+        match width {
+            2 => {
+                let packed = FpTruncate::<F16>::truncate(non_packed);
+                f(&packed.to_be_bytes())
+            }
+            4 => {
+                let packed = FpTruncate::<F32>::truncate(non_packed);
+                f(&packed.to_be_bytes())
+            }
+            8 => f(&non_packed.to_be_bytes()),
+            _ => unreachable!(),
         }
     }
 
@@ -107,24 +140,42 @@ impl WithPackedBeBytes for f64 {
     where
         F: FnOnce(&[u8]) -> T,
     {
-        let native = F64::from(*self);
+        let non_packed = F64::from(*self);
 
-        if let Ok(optimal) = FpTruncate::<F8>::try_truncate(native) {
-            f(&optimal.to_be_bytes())
-        } else if let Ok(optimal) = FpTruncate::<F16>::try_truncate(native) {
-            f(&optimal.to_be_bytes())
-        } else if let Ok(optimal) = FpTruncate::<F24>::try_truncate(native) {
-            f(&optimal.to_be_bytes())
-        } else if let Ok(optimal) = FpTruncate::<F32>::try_truncate(native) {
-            f(&optimal.to_be_bytes())
-        } else if let Ok(optimal) = FpTruncate::<F40>::try_truncate(native) {
-            f(&optimal.to_be_bytes())
-        } else if let Ok(optimal) = FpTruncate::<F48>::try_truncate(native) {
-            f(&optimal.to_be_bytes())
-        } else if let Ok(optimal) = FpTruncate::<F56>::try_truncate(native) {
-            f(&optimal.to_be_bytes())
-        } else {
-            f(&native.to_be_bytes())
+        let predicate = |value, packed| value == packed;
+        let width = packed_optimal_precision_f64(*self, predicate);
+
+        match width {
+            1 => {
+                let packed = FpTruncate::<F8>::truncate(non_packed);
+                f(&packed.to_be_bytes())
+            }
+            2 => {
+                let packed = FpTruncate::<F16>::truncate(non_packed);
+                f(&packed.to_be_bytes())
+            }
+            3 => {
+                let packed = FpTruncate::<F24>::truncate(non_packed);
+                f(&packed.to_be_bytes())
+            }
+            4 => {
+                let packed = FpTruncate::<F32>::truncate(non_packed);
+                f(&packed.to_be_bytes())
+            }
+            5 => {
+                let packed = FpTruncate::<F40>::truncate(non_packed);
+                f(&packed.to_be_bytes())
+            }
+            6 => {
+                let packed = FpTruncate::<F48>::truncate(non_packed);
+                f(&packed.to_be_bytes())
+            }
+            7 => {
+                let packed = FpTruncate::<F56>::truncate(non_packed);
+                f(&packed.to_be_bytes())
+            }
+            8 => f(&non_packed.to_be_bytes()),
+            _ => unreachable!(),
         }
     }
 }

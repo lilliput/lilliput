@@ -15,7 +15,7 @@ macro_rules! impl_float_from_bits {
                 const PADDED_BYTES: usize = (<$bits>::BITS / u8::BITS) as usize;
                 const PADDING: usize = (PADDED_BYTES - $bytes) as usize;
                 const MASK: $bits = (!0b0) >> PADDING;
-                debug_assert!(bits & !MASK == 0b0);
+                debug_assert_eq!(bits, bits & MASK);
 
                 Self(bits & MASK)
             }
@@ -67,14 +67,14 @@ mod tests {
 
     proptest! {
         #[test]
-        fn f8_from_to_bits_roundtrip(bits_before in (0_u8..=(!0b_0 >> 0))) {
+        fn f8_from_to_bits_roundtrip(bits_before in (0_u8..=!0b_0)) {
             let float = F8::from_bits(bits_before);
             let bits_after = float.to_bits();
             prop_assert_eq!(bits_before, bits_after);
         }
 
         #[test]
-        fn f16_from_to_bits_roundtrip(bits_before in (0_u16..=(!0b_0 >> 0))) {
+        fn f16_from_to_bits_roundtrip(bits_before in (0_u16..=!0b_0)) {
             let float = F16::from_bits(bits_before);
             let bits_after = float.to_bits();
             prop_assert_eq!(bits_before, bits_after);
@@ -88,7 +88,7 @@ mod tests {
         }
 
         #[test]
-        fn f32_from_to_bits_roundtrip(bits_before in (0_u32..=(!0b_0 >> 0))) {
+        fn f32_from_to_bits_roundtrip(bits_before in (0_u32..=!0b_0)) {
             let float = F32::from_bits(bits_before);
             let bits_after = float.to_bits();
             prop_assert_eq!(bits_before, bits_after);
@@ -116,7 +116,7 @@ mod tests {
         }
 
         #[test]
-        fn f64_from_to_bits_roundtrip(bits_before in (0_u64..=(!0b_0 >> 0))) {
+        fn f64_from_to_bits_roundtrip(bits_before in (0_u64..=!0b_0)) {
             let float = F64::from_bits(bits_before);
             let bits_after = float.to_bits();
             prop_assert_eq!(bits_before, bits_after);
