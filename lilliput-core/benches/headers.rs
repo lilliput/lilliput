@@ -283,7 +283,7 @@ fn bench_bool(c: &mut Criterion, config: EncodingConfig) {
 
 fn bench_unit(c: &mut Criterion, config: EncodingConfig) {
     fn samples_iter(samples: usize) -> impl Iterator<Item = Header> {
-        std::iter::repeat_n(Header::Unit(UnitHeader), samples)
+        std::iter::repeat(Header::Unit(UnitHeader)).take(samples)
     }
 
     let mut g = c.benchmark_group("null");
@@ -299,7 +299,7 @@ fn bench_unit(c: &mut Criterion, config: EncodingConfig) {
 
 fn bench_null(c: &mut Criterion, config: EncodingConfig) {
     fn samples_iter(samples: usize) -> impl Iterator<Item = Header> {
-        std::iter::repeat_n(Header::Null(NullHeader), samples)
+        std::iter::repeat(Header::Null(NullHeader)).take(samples)
     }
 
     let mut g = c.benchmark_group("null");
