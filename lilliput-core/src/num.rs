@@ -1,4 +1,4 @@
-use packed_float::{FpToBeBytes, FpTruncate, F16, F24, F32, F40, F48, F56, F64, F8};
+use lilliput_float::{FpToBeBytes, FpTruncate, F16, F24, F32, F40, F48, F56, F64, F8};
 
 use crate::config::PackingMode;
 

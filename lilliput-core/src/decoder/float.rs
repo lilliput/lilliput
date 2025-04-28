@@ -1,4 +1,4 @@
-use packed_float::{FpExtend as _, FpFromBeBytes as _, F16, F24, F32, F40, F48, F56, F64, F8};
+use lilliput_float::{FpExtend as _, FpFromBeBytes as _, F16, F24, F32, F40, F48, F56, F64, F8};
 
 use crate::{error::Result, header::FloatHeader, marker::Marker, value::FloatValue};
 
