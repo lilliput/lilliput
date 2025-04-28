@@ -14,9 +14,15 @@
 ///  │ └ Exponent (4 bits)
 ///  └ Sign (1 bit)
 ///  ```
-#[derive(Default, Copy, Clone, Debug)]
+#[derive(Default, Copy, Clone)]
 #[repr(transparent)]
 pub struct F8(pub(crate) u8);
+
+impl std::fmt::Debug for F8 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:08b}", self.0)
+    }
+}
 
 /// A bit-level representation of a 16-bit floating-point number.
 ///
@@ -34,9 +40,15 @@ pub struct F8(pub(crate) u8);
 ///  │ └ Exponent (5 bits)
 ///  └ Sign (1 bit)
 ///  ```
-#[derive(Default, Copy, Clone, Debug)]
+#[derive(Default, Copy, Clone)]
 #[repr(transparent)]
 pub struct F16(pub(crate) u16);
+
+impl std::fmt::Debug for F16 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:016b}", self.0)
+    }
+}
 
 /// A bit-level representation of a 24-bit floating-point number.
 ///
@@ -55,9 +67,15 @@ pub struct F16(pub(crate) u16);
 ///  │    └ Sign (1 bit)
 ///  └ Padding (8 bits)
 ///  ```
-#[derive(Default, Copy, Clone, Debug)]
+#[derive(Default, Copy, Clone)]
 #[repr(transparent)]
 pub struct F24(pub(crate) u32);
+
+impl std::fmt::Debug for F24 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:024b}", self.0)
+    }
+}
 
 /// A bit-level representation of a 32-bit floating-point number.
 ///
@@ -75,9 +93,15 @@ pub struct F24(pub(crate) u32);
 ///  │ └ Exponent (8 bits)
 ///  └ Sign (1 bit)
 ///  ```
-#[derive(Default, Copy, Clone, Debug)]
+#[derive(Default, Copy, Clone)]
 #[repr(transparent)]
 pub struct F32(pub(crate) u32);
+
+impl std::fmt::Debug for F32 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:032b}", self.0)
+    }
+}
 
 /// A bit-level representation of a 40-bit floating-point number.
 ///
@@ -96,9 +120,15 @@ pub struct F32(pub(crate) u32);
 ///  │    └ Sign (1 bit)
 ///  └ Padding (24 bits)
 ///  ```
-#[derive(Default, Copy, Clone, Debug)]
+#[derive(Default, Copy, Clone)]
 #[repr(transparent)]
 pub struct F40(pub(crate) u64);
+
+impl std::fmt::Debug for F40 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:040b}", self.0)
+    }
+}
 
 /// A bit-level representation of a 48-bit floating-point number.
 ///
@@ -117,9 +147,15 @@ pub struct F40(pub(crate) u64);
 ///  │    └ Sign (1 bit)
 ///  └ Padding (16 bits)
 ///  ```
-#[derive(Default, Copy, Clone, Debug)]
+#[derive(Default, Copy, Clone)]
 #[repr(transparent)]
 pub struct F48(pub(crate) u64);
+
+impl std::fmt::Debug for F48 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:048b}", self.0)
+    }
+}
 
 /// A bit-level representation of a 56-bit floating-point number.
 ///
@@ -138,9 +174,15 @@ pub struct F48(pub(crate) u64);
 ///  │    └ Sign (1 bit)
 ///  └ Padding (8 bits)
 ///  ```
-#[derive(Default, Copy, Clone, Debug)]
+#[derive(Default, Copy, Clone)]
 #[repr(transparent)]
 pub struct F56(pub(crate) u64);
+
+impl std::fmt::Debug for F56 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:056b}", self.0)
+    }
+}
 
 /// A bit-level representation of a 64-bit floating-point number.
 ///
@@ -158,6 +200,12 @@ pub struct F56(pub(crate) u64);
 ///  │ └ Exponent (10 bits)
 ///  └ Sign (1 bit)
 ///  ```
-#[derive(Default, Copy, Clone, Debug)]
+#[derive(Default, Copy, Clone)]
 #[repr(transparent)]
 pub struct F64(pub(crate) u64);
+
+impl std::fmt::Debug for F64 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:064b}", self.0)
+    }
+}
