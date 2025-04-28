@@ -66,23 +66,25 @@ mod tests {
         #[test]
         fn encode_decode_roundtrip(value in BoolValue::arbitrary(), config in EncodingConfig::arbitrary()) {
             let mut encoded: Vec<u8> = Vec::new();
-                let writer = VecWriter::new(&mut encoded);
-                let mut encoder = Encoder::new(writer, config);
-                encoder.encode_bool(value.0).unwrap();
-                prop_assert_eq!(encoded.len(), 1);
+            let writer = VecWriter::new(&mut encoded);
+            let mut encoder = Encoder::new(writer, config);
+            encoder.encode_bool(value.0).unwrap();
+            prop_assert_eq!(encoded.len(), 1);
 
-                let reader = SliceReader::new(&encoded);
-                let mut decoder = Decoder::new(reader);
-                let decoded = decoder.decode_bool().unwrap();
-                prop_assert_eq!(decoded, value.0);
+            prop_assert!(encoded.len() == 1);
 
-                let reader = SliceReader::new(&encoded);
-                let mut decoder = Decoder::new(reader);
-                let decoded = decoder.decode_value().unwrap();
-                let Value::Bool(decoded) = decoded else {
-                    panic!("expected bool value");
-                };
-                prop_assert_eq!(&decoded, &value);
+            let reader = SliceReader::new(&encoded);
+            let mut decoder = Decoder::new(reader);
+            let decoded = decoder.decode_bool().unwrap();
+            prop_assert_eq!(decoded, value.0);
+
+            let reader = SliceReader::new(&encoded);
+            let mut decoder = Decoder::new(reader);
+            let decoded = decoder.decode_value().unwrap();
+            let Value::Bool(decoded) = decoded else {
+                panic!("expected bool value");
+            };
+            prop_assert_eq!(&decoded, &value);
         }
     }
 }
