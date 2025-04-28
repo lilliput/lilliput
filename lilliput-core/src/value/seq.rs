@@ -105,6 +105,9 @@ mod tests {
             let mut encoder = Encoder::new(writer, config);
             encoder.encode_seq(&value.0).unwrap();
 
+            // the encoded length of a seq depends on the items
+            // contained within, so we're not checking it here.
+
             let reader = SliceReader::new(&encoded);
             let mut decoder = Decoder::new(reader);
             let decoded = decoder.decode_seq().unwrap();

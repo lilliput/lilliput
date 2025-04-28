@@ -104,6 +104,8 @@ mod tests {
             let mut encoder = Encoder::new(writer, config);
             encoder.encode_str(value.as_str()).unwrap();
 
+            prop_assert!(encoded.len() <= 1 + 8 + value.len());
+
             let reader = SliceReader::new(&encoded);
             let mut decoder = Decoder::new(reader);
             let decoded = decoder.decode_string().unwrap();

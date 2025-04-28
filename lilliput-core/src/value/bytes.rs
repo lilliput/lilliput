@@ -18,6 +18,14 @@ impl BytesValue {
     pub fn into_vec(self) -> Vec<u8> {
         self.0
     }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
 impl From<Vec<u8>> for BytesValue {
@@ -93,6 +101,8 @@ mod tests {
             let writer = VecWriter::new(&mut encoded);
             let mut encoder = Encoder::new(writer, config);
             encoder.encode_bytes(value.as_slice()).unwrap();
+
+            prop_assert!(encoded.len() <= 1 + 8 + value.len());
 
             let reader = SliceReader::new(&encoded);
             let mut decoder = Decoder::new(reader);

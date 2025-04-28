@@ -203,6 +203,8 @@ mod tests {
             let mut encoder = Encoder::new(writer, config);
             encoder.encode_map_header(&header).unwrap();
 
+            prop_assert!(encoded.len() <= 1 + 8);
+
             let reader = SliceReader::new(&encoded);
             let mut decoder = Decoder::new(reader);
             let decoded = decoder.decode_map_header().unwrap();
