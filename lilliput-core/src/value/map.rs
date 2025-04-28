@@ -32,6 +32,24 @@ pub struct MapValue(
     #[cfg_attr(any(test, feature = "testing"), proptest(strategy = "arbitrary_map()"))] pub Map,
 );
 
+impl MapValue {
+    pub fn as_map_ref(&self) -> &Map {
+        &self.0
+    }
+
+    pub fn into_map(self) -> Map {
+        self.0
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}
+
 impl From<Map> for MapValue {
     fn from(value: Map) -> Self {
         Self(value)
