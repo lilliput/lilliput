@@ -1,5 +1,7 @@
+use std::num::FpCategory;
+
 use crate::{
-    error::Result, header::FloatHeader, io::Write, num::WithPackedBeBytes, value::FloatValue,
+    error::Result, header::FloatHeader, io::Write, num::WithPackedBeBytesIf as _, value::FloatValue,
 };
 
 use super::Encoder;
@@ -11,7 +13,23 @@ where
     // MARK: - Value
 
     pub fn encode_f32(&mut self, value: f32) -> Result<()> {
-        value.with_packed_be_bytes(self.config.float_packing, |bytes| {
+        let abs_max_eps = (self.max_float_epsilon.max_eps_f32)(value).abs();
+        debug_assert!(abs_max_eps.is_finite());
+
+        let predicate = |before: &f32, after: &f32| {
+            let may_have_truncation_error = matches!(
+                before.classify(),
+                FpCategory::Normal | FpCategory::Subnormal
+            );
+
+            if may_have_truncation_error {
+                (before - after).abs() <= abs_max_eps
+            } else {
+                true
+            }
+        };
+
+        value.with_packed_be_bytes_if(self.config.float_packing, predicate, |bytes| {
             self.encode_float_header(&FloatHeader::new(bytes.len() as u8))?;
 
             // Push the value itself:
@@ -20,7 +38,23 @@ where
     }
 
     pub fn encode_f64(&mut self, value: f64) -> Result<()> {
-        value.with_packed_be_bytes(self.config.float_packing, |bytes| {
+        let abs_max_eps = (self.max_float_epsilon.max_eps_f64)(value).abs();
+        debug_assert!(abs_max_eps.is_finite());
+
+        let predicate = |before: &f64, after: &f64| {
+            let may_have_truncation_error = matches!(
+                before.classify(),
+                FpCategory::Normal | FpCategory::Subnormal
+            );
+
+            if may_have_truncation_error {
+                (before - after).abs() <= abs_max_eps
+            } else {
+                true
+            }
+        };
+
+        value.with_packed_be_bytes_if(self.config.float_packing, predicate, |bytes| {
             self.encode_float_header(&FloatHeader::new(bytes.len() as u8))?;
 
             // Push the value itself:
@@ -49,13 +83,5 @@ where
 
         // Push the value's header:
         self.push_byte(byte)
-    }
-
-    pub fn header_for_f32(&self, value: f32) -> FloatHeader {
-        FloatHeader::for_f32(value, self.config.int_packing)
-    }
-
-    pub fn header_for_f64(&self, value: f64) -> FloatHeader {
-        FloatHeader::for_f64(value, self.config.int_packing)
     }
 }
