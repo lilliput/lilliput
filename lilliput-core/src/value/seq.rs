@@ -35,6 +35,14 @@ impl SeqValue {
     pub fn into_vec(self) -> Seq {
         self.0
     }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
 impl From<Seq> for SeqValue {

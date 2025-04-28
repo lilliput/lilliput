@@ -16,6 +16,14 @@ impl StringValue {
     pub fn into_string(self) -> String {
         self.0
     }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
 impl From<String> for StringValue {
