@@ -15,7 +15,7 @@ serde = { workspace = true, optional = true }
 serde_bytes = { version = "0.11.17", default-features = false, optional = true }
 thiserror = { workspace = true }
 tracing = { workspace = true, features = ["release_max_level_error"], optional = true }
-packed-float = { version = "0.1.0", path = "../packed-float" }
+lilliput-float = { version = "0.1.0", path = "../lilliput-float" }
 
 [dev-dependencies]
 criterion = { workspace = true }
