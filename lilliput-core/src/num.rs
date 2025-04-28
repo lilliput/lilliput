@@ -1,7 +1,4 @@
-use packed_float::{
-    packed_native_precision_f32, packed_native_precision_f64, packed_optimal_precision_f32,
-    packed_optimal_precision_f64, FpToBeBytes, FpTruncate, F16, F24, F32, F40, F48, F56, F64, F8,
-};
+use packed_float::{FpToBeBytes, FpTruncate, F16, F24, F32, F40, F48, F56, F64, F8};
 
 use crate::config::PackingMode;
 
@@ -36,69 +33,36 @@ pub trait WithPackedBeBytes {
     }
 }
 
-impl WithPackedBeBytes for f32 {
-    #[inline]
+pub trait WithPackedBeBytesIf {
     fn with_be_bytes<T, F>(&self, f: F) -> T
     where
-        F: FnOnce(&[u8]) -> T,
-    {
-        let bytes = self.to_be_bytes();
-        let width = bytes.len();
-        debug_assert_eq!(width, bytes.len());
+        F: FnOnce(&[u8]) -> T;
 
-        f(&bytes)
-    }
+    fn with_native_packed_be_bytes_if<T, P, F>(&self, predicate: P, f: F) -> T
+    where
+        P: Fn(&Self, &Self) -> bool,
+        F: FnOnce(&[u8]) -> T;
+
+    fn with_optimal_packed_be_bytes_if<T, P, F>(&self, predicate: P, f: F) -> T
+    where
+        P: Fn(&Self, &Self) -> bool,
+        F: FnOnce(&[u8]) -> T;
 
     #[inline]
-    fn with_native_packed_be_bytes<T, F>(&self, f: F) -> T
+    fn with_packed_be_bytes_if<T, P, F>(&self, packing_mode: PackingMode, predicate: P, f: F) -> T
     where
+        P: Fn(&Self, &Self) -> bool,
         F: FnOnce(&[u8]) -> T,
     {
-        let non_packed = F32::from(*self);
-
-        let predicate = |value, packed| value == packed;
-        let width = packed_native_precision_f32(*self, predicate);
-
-        match width {
-            2 => {
-                let packed = FpTruncate::<F16>::truncate(non_packed);
-                f(&packed.to_be_bytes())
-            }
-            4 => f(&non_packed.to_be_bytes()),
-            _ => unreachable!(),
-        }
-    }
-
-    #[inline]
-    fn with_optimal_packed_be_bytes<T, F>(&self, f: F) -> T
-    where
-        F: FnOnce(&[u8]) -> T,
-    {
-        let non_packed = F32::from(*self);
-
-        let predicate = |value, packed| value == packed;
-        let width = packed_optimal_precision_f32(*self, predicate);
-
-        match width {
-            1 => {
-                let packed = FpTruncate::<F8>::truncate(non_packed);
-                f(&packed.to_be_bytes())
-            }
-            2 => {
-                let packed = FpTruncate::<F16>::truncate(non_packed);
-                f(&packed.to_be_bytes())
-            }
-            3 => {
-                let packed = FpTruncate::<F24>::truncate(non_packed);
-                f(&packed.to_be_bytes())
-            }
-            4 => f(&non_packed.to_be_bytes()),
-            _ => unreachable!(),
+        match packing_mode {
+            PackingMode::None => self.with_be_bytes(f),
+            PackingMode::Native => self.with_native_packed_be_bytes_if(predicate, f),
+            PackingMode::Optimal => self.with_optimal_packed_be_bytes_if(predicate, f),
         }
     }
 }
 
-impl WithPackedBeBytes for f64 {
+impl WithPackedBeBytesIf for f32 {
     #[inline]
     fn with_be_bytes<T, F>(&self, f: F) -> T
     where
@@ -112,70 +76,137 @@ impl WithPackedBeBytes for f64 {
     }
 
     #[inline]
-    fn with_native_packed_be_bytes<T, F>(&self, f: F) -> T
+    fn with_native_packed_be_bytes_if<T, P, F>(&self, predicate: P, f: F) -> T
     where
+        P: Fn(&Self, &Self) -> bool,
+        F: FnOnce(&[u8]) -> T,
+    {
+        let non_packed = F32::from(*self);
+
+        #[allow(unused_variables)]
+        let predicate = |value: F32, packed: F32| {
+            let value: f32 = value.into();
+            let packed: f32 = packed.into();
+            predicate(&value, &packed)
+        };
+
+        #[cfg(feature = "native-f16")]
+        if let Some(packed) = FpTruncate::<F16>::truncate_if(non_packed, predicate) {
+            f(&packed.to_be_bytes())
+        } else {
+            f(&non_packed.to_be_bytes())
+        }
+
+        #[cfg(not(feature = "native-f16"))]
+        f(&non_packed.to_be_bytes())
+    }
+
+    #[inline]
+    fn with_optimal_packed_be_bytes_if<T, P, F>(&self, predicate: P, f: F) -> T
+    where
+        P: Fn(&Self, &Self) -> bool,
+        F: FnOnce(&[u8]) -> T,
+    {
+        let non_packed = F32::from(*self);
+
+        let predicate = |value: F32, packed: F32| {
+            let value: f32 = value.into();
+            let packed: f32 = packed.into();
+            predicate(&value, &packed)
+        };
+
+        if let Some(packed) = FpTruncate::<F16>::truncate_if(non_packed, predicate) {
+            if let Some(packed) = FpTruncate::<F8>::truncate_if(non_packed, predicate) {
+                f(&packed.to_be_bytes())
+            } else {
+                f(&packed.to_be_bytes())
+            }
+        } else if let Some(packed) = FpTruncate::<F24>::truncate_if(non_packed, predicate) {
+            f(&packed.to_be_bytes())
+        } else {
+            f(&non_packed.to_be_bytes())
+        }
+    }
+}
+
+impl WithPackedBeBytesIf for f64 {
+    #[inline]
+    fn with_be_bytes<T, F>(&self, f: F) -> T
+    where
+        F: FnOnce(&[u8]) -> T,
+    {
+        let bytes = self.to_be_bytes();
+        let width = bytes.len();
+        debug_assert_eq!(width, bytes.len());
+
+        f(&bytes)
+    }
+
+    #[inline]
+    fn with_native_packed_be_bytes_if<T, P, F>(&self, predicate: P, f: F) -> T
+    where
+        P: Fn(&Self, &Self) -> bool,
         F: FnOnce(&[u8]) -> T,
     {
         let non_packed = F64::from(*self);
 
-        let predicate = |value, packed| value == packed;
-        let width = packed_native_precision_f64(*self, predicate);
+        let predicate = |value: F64, packed: F64| {
+            let value: f64 = value.into();
+            let packed: f64 = packed.into();
+            predicate(&value, &packed)
+        };
 
-        match width {
-            2 => {
-                let packed = FpTruncate::<F16>::truncate(non_packed);
+        if let Some(packed) = FpTruncate::<F32>::truncate_if(non_packed, predicate) {
+            #[cfg(feature = "native-f16")]
+            if let Some(packed) = FpTruncate::<F16>::truncate_if(non_packed, predicate) {
+                f(&packed.to_be_bytes())
+            } else {
                 f(&packed.to_be_bytes())
             }
-            4 => {
-                let packed = FpTruncate::<F32>::truncate(non_packed);
-                f(&packed.to_be_bytes())
-            }
-            8 => f(&non_packed.to_be_bytes()),
-            _ => unreachable!(),
+
+            #[cfg(not(feature = "native-f16"))]
+            f(&packed.to_be_bytes())
+        } else {
+            f(&non_packed.to_be_bytes())
         }
     }
 
     #[inline]
-    fn with_optimal_packed_be_bytes<T, F>(&self, f: F) -> T
+    fn with_optimal_packed_be_bytes_if<T, P, F>(&self, predicate: P, f: F) -> T
     where
+        P: Fn(&Self, &Self) -> bool,
         F: FnOnce(&[u8]) -> T,
     {
         let non_packed = F64::from(*self);
 
-        let predicate = |value, packed| value == packed;
-        let width = packed_optimal_precision_f64(*self, predicate);
+        let predicate = |value: F64, packed: F64| {
+            let value: f64 = value.into();
+            let packed: f64 = packed.into();
+            predicate(&value, &packed)
+        };
 
-        match width {
-            1 => {
-                let packed = FpTruncate::<F8>::truncate(non_packed);
+        if let Some(packed) = FpTruncate::<F32>::truncate_if(non_packed, predicate) {
+            if let Some(packed) = FpTruncate::<F16>::truncate_if(non_packed, predicate) {
+                if let Some(packed) = FpTruncate::<F8>::truncate_if(non_packed, predicate) {
+                    f(&packed.to_be_bytes())
+                } else {
+                    f(&packed.to_be_bytes())
+                }
+            } else if let Some(packed) = FpTruncate::<F24>::truncate_if(non_packed, predicate) {
+                f(&packed.to_be_bytes())
+            } else {
                 f(&packed.to_be_bytes())
             }
-            2 => {
-                let packed = FpTruncate::<F16>::truncate(non_packed);
+        } else if let Some(packed) = FpTruncate::<F48>::truncate_if(non_packed, predicate) {
+            if let Some(packed) = FpTruncate::<F40>::truncate_if(non_packed, predicate) {
+                f(&packed.to_be_bytes())
+            } else {
                 f(&packed.to_be_bytes())
             }
-            3 => {
-                let packed = FpTruncate::<F24>::truncate(non_packed);
-                f(&packed.to_be_bytes())
-            }
-            4 => {
-                let packed = FpTruncate::<F32>::truncate(non_packed);
-                f(&packed.to_be_bytes())
-            }
-            5 => {
-                let packed = FpTruncate::<F40>::truncate(non_packed);
-                f(&packed.to_be_bytes())
-            }
-            6 => {
-                let packed = FpTruncate::<F48>::truncate(non_packed);
-                f(&packed.to_be_bytes())
-            }
-            7 => {
-                let packed = FpTruncate::<F56>::truncate(non_packed);
-                f(&packed.to_be_bytes())
-            }
-            8 => f(&non_packed.to_be_bytes()),
-            _ => unreachable!(),
+        } else if let Some(packed) = FpTruncate::<F56>::truncate_if(non_packed, predicate) {
+            f(&packed.to_be_bytes())
+        } else {
+            f(&non_packed.to_be_bytes())
         }
     }
 }

@@ -3,8 +3,6 @@ use proptest::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 
-use crate::{config::PackingMode, num::WithPackedBeBytes};
-
 /// Represents a floating-point number.
 ///
 /// # Binary representation
@@ -33,22 +31,8 @@ impl FloatHeader {
         Self { width }
     }
 
-    pub fn for_f32(value: f32, packing_mode: PackingMode) -> Self {
-        value.with_packed_be_bytes(packing_mode, Self::for_float_be_bytes)
-    }
-
-    pub fn for_f64(value: f64, packing_mode: PackingMode) -> Self {
-        value.with_packed_be_bytes(packing_mode, Self::for_float_be_bytes)
-    }
-
     pub fn width(&self) -> u8 {
         self.width
-    }
-
-    fn for_float_be_bytes(be_bytes: &[u8]) -> FloatHeader {
-        let width = be_bytes.len();
-        assert!((1..=8).contains(&width));
-        FloatHeader::new(width as u8)
     }
 }
 
@@ -76,30 +60,6 @@ mod tests {
     use super::*;
 
     proptest::proptest! {
-        #[test]
-        fn for_f32(value in f32::arbitrary(), packing_mode in PackingMode::arbitrary()) {
-            let header = FloatHeader::for_f32(value, packing_mode);
-            let width = header.width();
-
-            match packing_mode {
-                PackingMode::None => prop_assert!(width == 4),
-                PackingMode::Native => prop_assert!([4].contains(&width)),
-                PackingMode::Optimal => prop_assert!((1..=4).contains(&width)),
-            }
-        }
-
-        #[test]
-        fn for_f64(value in f64::arbitrary(), packing_mode in PackingMode::arbitrary()) {
-            let header = FloatHeader::for_f64(value, packing_mode);
-            let width = header.width();
-
-            match packing_mode {
-                PackingMode::None => prop_assert!(width == 8),
-                PackingMode::Native => prop_assert!([4, 8].contains(&width)),
-                PackingMode::Optimal => prop_assert!((1..=8).contains(&width)),
-            }
-        }
-
         #[test]
         fn encode_decode_roundtrip(header in FloatHeader::arbitrary(), config in EncodingConfig::arbitrary()) {
             let mut encoded: Vec<u8> = Vec::new();

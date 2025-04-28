@@ -133,6 +133,24 @@ mod tests {
 
     use super::*;
 
+    fn non_normal_or_subnormal_f32() -> impl Strategy<Value = f32> {
+        proptest::prop_oneof![
+            proptest::num::f32::SIGNALING_NAN,
+            proptest::num::f32::QUIET_NAN,
+            proptest::num::f32::INFINITE,
+            proptest::num::f32::ZERO,
+        ]
+    }
+
+    fn non_normal_or_subnormal_f64() -> impl Strategy<Value = f64> {
+        proptest::prop_oneof![
+            proptest::num::f64::SIGNALING_NAN,
+            proptest::num::f64::QUIET_NAN,
+            proptest::num::f64::INFINITE,
+            proptest::num::f64::ZERO,
+        ]
+    }
+
     #[test]
     fn display() {
         assert_eq!(format!("{}", FloatValue::from(4.2_f32)), "4.2");
@@ -170,6 +188,30 @@ mod tests {
                 panic!("expected float value");
             };
             prop_assert_eq!(&decoded, &value);
+        }
+
+        #[test]
+        fn non_normal_or_subnormal_f32_encodes_optimally(value in non_normal_or_subnormal_f32()) {
+            let config = EncodingConfig::optimal_packing();
+
+            let mut encoded: Vec<u8> = Vec::new();
+            let writer = VecWriter::new(&mut encoded);
+            let mut encoder = Encoder::new(writer, config);
+            encoder.encode_f32(value).unwrap();
+
+            prop_assert!(encoded.len() == 2, "value should optimally pack to single byte");
+        }
+
+        #[test]
+        fn non_normal_or_subnormal_f64_encodes_optimally(value in non_normal_or_subnormal_f64()) {
+            let config = EncodingConfig::optimal_packing();
+
+            let mut encoded: Vec<u8> = Vec::new();
+            let writer = VecWriter::new(&mut encoded);
+            let mut encoder = Encoder::new(writer, config);
+            encoder.encode_f64(value).unwrap();
+
+            prop_assert!(encoded.len() == 2, "value should optimally pack to single byte");
         }
     }
 }
