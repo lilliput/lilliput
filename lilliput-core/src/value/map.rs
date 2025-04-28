@@ -95,9 +95,9 @@ mod tests {
         map.insert(Value::Null(NullValue), Value::Null(NullValue));
         let value = MapValue::from(map);
 
-        assert_eq!(format!("{:?}", value), "{null: null}");
+        assert_eq!(format!("{value:?}"), "{null: null}");
         assert_eq!(
-            format!("{:#?}", value),
+            format!("{value:#?}"),
             "{\n    Null(\n        null,\n    ): Null(\n        null,\n    ),\n}"
         );
     }

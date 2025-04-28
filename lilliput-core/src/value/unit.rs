@@ -43,13 +43,13 @@ mod tests {
 
     #[test]
     fn display() {
-        assert_eq!(format!("{}", UnitValue), "unit");
+        assert_eq!(format!("{UnitValue}"), "unit");
     }
 
     #[test]
     fn debug() {
-        assert_eq!(format!("{:?}", UnitValue), "unit");
-        assert_eq!(format!("{:#?}", UnitValue), "unit");
+        assert_eq!(format!("{UnitValue:?}"), "unit");
+        assert_eq!(format!("{UnitValue:#?}"), "unit");
     }
 
     proptest! {

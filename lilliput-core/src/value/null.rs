@@ -43,13 +43,13 @@ mod tests {
 
     #[test]
     fn display() {
-        assert_eq!(format!("{}", NullValue), "null");
+        assert_eq!(format!("{NullValue}"), "null");
     }
 
     #[test]
     fn debug() {
-        assert_eq!(format!("{:?}", NullValue), "null");
-        assert_eq!(format!("{:#?}", NullValue), "null");
+        assert_eq!(format!("{NullValue:?}"), "null");
+        assert_eq!(format!("{NullValue:#?}"), "null");
     }
 
     proptest! {

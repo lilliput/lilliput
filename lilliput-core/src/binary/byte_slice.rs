@@ -40,7 +40,7 @@ impl std::fmt::Display for BytesSlice<'_> {
             if index > 0 {
                 write!(f, ", ")?;
             }
-            write!(f, "{:0>2x}", byte)?;
+            write!(f, "{byte:0>2x}")?;
         }
         write!(f, "]")?;
         Ok(())
@@ -55,9 +55,9 @@ impl std::fmt::Debug for BytesSlice<'_> {
                 write!(f, ", ")?;
             }
             if f.alternate() {
-                write!(f, "{:#08b}", byte)?;
+                write!(f, "{byte:#08b}")?;
             } else {
-                write!(f, "{:08b}", byte)?;
+                write!(f, "{byte:08b}")?;
             }
         }
         write!(f, "]")?;
@@ -74,7 +74,7 @@ impl std::fmt::LowerHex for BytesSlice<'_> {
             if index > 0 {
                 write!(f, " ")?;
             }
-            write!(f, "{:0>2x}", byte)?;
+            write!(f, "{byte:0>2x}")?;
         }
         Ok(())
     }
@@ -89,7 +89,7 @@ impl std::fmt::UpperHex for BytesSlice<'_> {
             if index > 0 {
                 write!(f, " ")?;
             }
-            write!(f, "{:0>2X}", byte)?;
+            write!(f, "{byte:0>2X}")?;
         }
         Ok(())
     }
@@ -104,7 +104,7 @@ impl std::fmt::Octal for BytesSlice<'_> {
             if index > 0 {
                 write!(f, " ")?;
             }
-            write!(f, "{:0>3o}", byte)?;
+            write!(f, "{byte:0>3o}")?;
         }
         Ok(())
     }
@@ -119,7 +119,7 @@ impl std::fmt::Binary for BytesSlice<'_> {
             if index > 0 {
                 write!(f, " ")?;
             }
-            write!(f, "{:08b}", byte)?;
+            write!(f, "{byte:08b}")?;
         }
         Ok(())
     }
