@@ -156,6 +156,8 @@ mod tests {
             let mut encoder = Encoder::new(writer, config);
             encoder.encode_float_value(&value).unwrap();
 
+            prop_assert!(encoded.len() <= 1 + 8);
+
             let reader = SliceReader::new(&encoded);
             let mut decoder = Decoder::new(reader);
             let decoded = decoder.decode_float_value().unwrap();

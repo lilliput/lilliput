@@ -60,6 +60,8 @@ mod tests {
             let mut encoder = Encoder::new(writer, config);
             encoder.encode_null().unwrap();
 
+            prop_assert!(encoded.len() == 1);
+
             let reader = SliceReader::new(&encoded);
             let mut decoder = Decoder::new(reader);
             decoder.decode_null().unwrap();

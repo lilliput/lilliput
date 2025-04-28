@@ -50,6 +50,8 @@ mod tests {
             let mut encoder = Encoder::new(writer, config);
             encoder.encode_unit_header(&header).unwrap();
 
+            prop_assert!(encoded.len() == 1);
+
             let reader = SliceReader::new(&encoded);
             let mut decoder = Decoder::new(reader);
             let decoded = decoder.decode_unit_header().unwrap();
