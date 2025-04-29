@@ -332,7 +332,7 @@ impl<'de> serde::Deserialize<'de> for Value {
             where
                 E: serde::de::Error,
             {
-                Ok(Value::Null(NullValue::default()))
+                Ok(Value::Null(NullValue))
             }
 
             fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
@@ -346,7 +346,7 @@ impl<'de> serde::Deserialize<'de> for Value {
             where
                 E: serde::de::Error,
             {
-                Ok(Value::Unit(UnitValue::default()))
+                Ok(Value::Unit(UnitValue))
             }
 
             fn visit_newtype_struct<D>(self, deserializer: D) -> Result<Self::Value, D::Error>

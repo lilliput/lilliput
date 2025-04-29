@@ -25,6 +25,7 @@ struct Struct<T> {
     pub b: T,
 }
 
+#[allow(clippy::enum_variant_names)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 #[derive(Default, Copy, Clone, Eq, PartialEq, Debug, Serialize, Deserialize)]
 enum Enum<T> {
@@ -65,7 +66,7 @@ where
     }
 }
 
-fn roundtrip<'de, T>(value: &T) -> Result<T, Error>
+fn roundtrip<T>(value: &T) -> Result<T, Error>
 where
     T: Serialize + DeserializeOwned,
 {

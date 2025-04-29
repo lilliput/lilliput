@@ -455,9 +455,9 @@ where
     }
 }
 
-impl<'de, 'a, R> Deserializer<R>
+impl<'de, R> Deserializer<R>
 where
-    R: Read<'de> + 'a,
+    R: Read<'de>,
 {
     #[inline]
     fn pos(&self) -> usize {
