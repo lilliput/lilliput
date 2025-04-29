@@ -44,7 +44,7 @@ impl<'de> serde::Deserialize<'de> for UnitValue {
     {
         struct UnitValueVisitor;
 
-        impl<'de> serde::de::Visitor<'de> for UnitValueVisitor {
+        impl serde::de::Visitor<'_> for UnitValueVisitor {
             type Value = UnitValue;
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

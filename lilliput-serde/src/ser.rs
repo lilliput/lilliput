@@ -35,7 +35,7 @@ pub struct Serializer<W> {
 
 impl<W> Serializer<W> {
     pub fn from_writer(writer: W, config: SerializerConfig) -> Self {
-        let encoder = Encoder::new(writer, config.encoding.clone());
+        let encoder = Encoder::new(writer, config.encoding);
         Self { encoder, config }
     }
 }

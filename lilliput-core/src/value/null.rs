@@ -44,7 +44,7 @@ impl<'de> serde::Deserialize<'de> for NullValue {
     {
         struct NullValueVisitor;
 
-        impl<'de> serde::de::Visitor<'de> for NullValueVisitor {
+        impl serde::de::Visitor<'_> for NullValueVisitor {
             type Value = NullValue;
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
