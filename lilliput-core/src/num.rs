@@ -7,11 +7,13 @@ pub mod zigzag;
 
 use zigzag::ToZigZag;
 
-pub trait WithPackedBeBytes {
+pub trait WithBeBytes {
     fn with_be_bytes<T, F>(&self, f: F) -> T
     where
         F: FnOnce(&[u8]) -> T;
+}
 
+pub trait WithPackedBeBytes: WithBeBytes {
     fn with_native_packed_be_bytes<T, F>(&self, f: F) -> T
     where
         F: FnOnce(&[u8]) -> T;
@@ -33,11 +35,7 @@ pub trait WithPackedBeBytes {
     }
 }
 
-pub trait WithPackedBeBytesIf {
-    fn with_be_bytes<T, F>(&self, f: F) -> T
-    where
-        F: FnOnce(&[u8]) -> T;
-
+pub trait WithPackedBeBytesIf: WithBeBytes {
     fn with_native_packed_be_bytes_if<T, P, F>(&self, predicate: P, f: F) -> T
     where
         P: Fn(&Self, &Self) -> bool,
@@ -62,7 +60,7 @@ pub trait WithPackedBeBytesIf {
     }
 }
 
-impl WithPackedBeBytesIf for f32 {
+impl WithBeBytes for f32 {
     #[inline]
     fn with_be_bytes<T, F>(&self, f: F) -> T
     where
@@ -74,7 +72,9 @@ impl WithPackedBeBytesIf for f32 {
 
         f(&bytes)
     }
+}
 
+impl WithPackedBeBytesIf for f32 {
     #[inline]
     fn with_native_packed_be_bytes_if<T, P, F>(&self, predicate: P, f: F) -> T
     where
@@ -129,7 +129,7 @@ impl WithPackedBeBytesIf for f32 {
     }
 }
 
-impl WithPackedBeBytesIf for f64 {
+impl WithBeBytes for f64 {
     #[inline]
     fn with_be_bytes<T, F>(&self, f: F) -> T
     where
@@ -141,7 +141,9 @@ impl WithPackedBeBytesIf for f64 {
 
         f(&bytes)
     }
+}
 
+impl WithPackedBeBytesIf for f64 {
     #[inline]
     fn with_native_packed_be_bytes_if<T, P, F>(&self, predicate: P, f: F) -> T
     where
@@ -213,7 +215,7 @@ impl WithPackedBeBytesIf for f64 {
 
 macro_rules! impl_with_packed_be_bytes_for_unsigned_int {
     ($t:ty) => {
-        impl WithPackedBeBytes for $t {
+        impl WithBeBytes for $t {
             #[inline]
             fn with_be_bytes<T, F>(&self, f: F) -> T
             where
@@ -225,7 +227,9 @@ macro_rules! impl_with_packed_be_bytes_for_unsigned_int {
 
                 f(&bytes)
             }
+        }
 
+        impl WithPackedBeBytes for $t {
             #[inline]
             fn with_native_packed_be_bytes<T, F>(&self, f: F) -> T
             where
@@ -286,7 +290,7 @@ impl_with_packed_be_bytes_for_unsigned_int!(usize);
 
 macro_rules! impl_with_packed_be_bytes_for_signed_int {
     ($t:ty) => {
-        impl WithPackedBeBytes for $t
+        impl WithBeBytes for $t
         where
             $t: ToZigZag,
         {
@@ -297,7 +301,12 @@ macro_rules! impl_with_packed_be_bytes_for_signed_int {
             {
                 self.to_zig_zag().with_be_bytes(f)
             }
+        }
 
+        impl WithPackedBeBytes for $t
+        where
+            $t: ToZigZag,
+        {
             #[inline]
             fn with_native_packed_be_bytes<T, F>(&self, f: F) -> T
             where
