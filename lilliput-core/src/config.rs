@@ -1,6 +1,6 @@
-use float::FloatEncoderConfig;
-use int::IntEncoderConfig;
-use length::LengthEncoderConfig;
+pub use float::FloatEncoderConfig;
+pub use int::IntEncoderConfig;
+pub use length::LengthEncoderConfig;
 
 mod float;
 mod int;

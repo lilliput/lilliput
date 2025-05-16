@@ -13,8 +13,19 @@ pub mod marker;
 pub mod value;
 
 mod binary;
-mod num;
 mod sealed;
+
+pub(crate) mod num;
+
+/// Internal names, not for external use.
+///
+/// # WARNING
+///
+/// The contents of this module are NOT subject to semver.
+#[doc(hidden)]
+pub mod plumbing {
+    pub use super::num::*;
+}
 
 #[derive(Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub enum Profile {
