@@ -16,6 +16,10 @@ rand = { workspace = true }
 rand_xorshift = { workspace = true }
 test-log = { workspace = true }
 
+[[bench]]
+name = "packing"
+harness = false
+
 [features]
 tracing = ["dep:tracing"]
 native-f16 = []

@@ -26,11 +26,11 @@ rand_xorshift = { workspace = true }
 test-log = { workspace = true }
 
 [[bench]]
-name = "values"
+name = "headers"
 harness = false
 
 [[bench]]
-name = "headers"
+name = "values"
 harness = false
 
 [features]
