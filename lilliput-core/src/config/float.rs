@@ -1,30 +1,32 @@
+pub use lilliput_float::PackedFloatValidator;
+
 use super::PackingMode;
 
-#[derive(Clone, PartialEq, Debug)]
-pub struct MaxFloatEpsilon {
-    pub max_eps_f32: fn(f32) -> f32,
-    pub max_eps_f64: fn(f64) -> f64,
+#[derive(Default, Clone, PartialEq, Debug)]
+pub struct PackedFloatValidation {
+    pub f32: PackedFloatValidator<f32>,
+    pub f64: PackedFloatValidator<f64>,
 }
 
-impl Default for MaxFloatEpsilon {
-    fn default() -> Self {
-        Self::exact()
-    }
-}
-
-impl MaxFloatEpsilon {
-    pub fn new(max_eps_f32: fn(f32) -> f32, max_eps_f64: fn(f64) -> f64) -> Self {
-        Self {
-            max_eps_f32,
-            max_eps_f64,
-        }
+impl PackedFloatValidation {
+    pub fn with_f32(mut self, validator: PackedFloatValidator<f32>) -> Self {
+        self.f32 = validator;
+        self
     }
 
-    pub fn exact() -> Self {
-        Self {
-            max_eps_f32: |_| 0.0,
-            max_eps_f64: |_| 0.0,
-        }
+    pub fn with_f64(mut self, validator: PackedFloatValidator<f64>) -> Self {
+        self.f64 = validator;
+        self
+    }
+
+    pub fn with_relative(self, max_eps: f64) -> Self {
+        self.with_f32(PackedFloatValidator::Relative(max_eps as f32))
+            .with_f64(PackedFloatValidator::Relative(max_eps))
+    }
+
+    pub fn with_absolute(self, max_eps: f64) -> Self {
+        self.with_f32(PackedFloatValidator::Absolute(max_eps as f32))
+            .with_f64(PackedFloatValidator::Absolute(max_eps))
     }
 }
 
@@ -34,9 +36,9 @@ pub struct FloatEncoderConfig {
     pub packing: PackingMode,
     #[cfg_attr(
         any(test, feature = "testing"),
-        proptest(value = "MaxFloatEpsilon::exact()")
+        proptest(value = "PackedFloatValidation::default()")
     )]
-    pub max_epsilon: MaxFloatEpsilon,
+    pub validation: PackedFloatValidation,
 }
 
 impl FloatEncoderConfig {
@@ -45,8 +47,8 @@ impl FloatEncoderConfig {
         self
     }
 
-    pub fn with_max_epsilon(mut self, max_epsilon: MaxFloatEpsilon) -> Self {
-        self.max_epsilon = max_epsilon;
+    pub fn with_validation(mut self, validation: PackedFloatValidation) -> Self {
+        self.validation = validation;
         self
     }
 }

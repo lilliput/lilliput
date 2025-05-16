@@ -1,7 +1,6 @@
-use std::num::FpCategory;
-
 use crate::{
-    error::Result, header::FloatHeader, io::Write, num::WithPackedBeBytesIf as _, value::FloatValue,
+    error::Result, header::FloatHeader, io::Write, num::WithValidatedPackedBeBytes as _,
+    value::FloatValue,
 };
 
 use super::Encoder;
@@ -13,23 +12,9 @@ where
     // MARK: - Value
 
     pub fn encode_f32(&mut self, value: f32) -> Result<()> {
-        let abs_max_eps = (self.config.floats.max_epsilon.max_eps_f32)(value).abs();
-        debug_assert!(abs_max_eps.is_finite());
+        let validator = self.config.floats.validation.f32.clone();
 
-        let predicate = |before: &f32, after: &f32| {
-            let may_have_truncation_error = matches!(
-                before.classify(),
-                FpCategory::Normal | FpCategory::Subnormal
-            );
-
-            if may_have_truncation_error {
-                (before - after).abs() <= abs_max_eps
-            } else {
-                true
-            }
-        };
-
-        value.with_packed_be_bytes_if(self.config.floats.packing, predicate, |bytes| {
+        value.with_validated_packed_be_bytes(self.config.floats.packing, &validator, |bytes| {
             self.encode_float_header(&FloatHeader::new(bytes.len() as u8))?;
 
             // Push the value itself:
@@ -38,23 +23,9 @@ where
     }
 
     pub fn encode_f64(&mut self, value: f64) -> Result<()> {
-        let abs_max_eps = (self.config.floats.max_epsilon.max_eps_f64)(value).abs();
-        debug_assert!(abs_max_eps.is_finite());
+        let validator = self.config.floats.validation.f64.clone();
 
-        let predicate = |before: &f64, after: &f64| {
-            let may_have_truncation_error = matches!(
-                before.classify(),
-                FpCategory::Normal | FpCategory::Subnormal
-            );
-
-            if may_have_truncation_error {
-                (before - after).abs() <= abs_max_eps
-            } else {
-                true
-            }
-        };
-
-        value.with_packed_be_bytes_if(self.config.floats.packing, predicate, |bytes| {
+        value.with_validated_packed_be_bytes(self.config.floats.packing, &validator, |bytes| {
             self.encode_float_header(&FloatHeader::new(bytes.len() as u8))?;
 
             // Push the value itself:
