@@ -1,9 +1,11 @@
+use serde::{ser, Serialize};
+
+pub use lilliput_core::config::{EncoderConfig, PackingMode};
+
 use lilliput_core::{
-    config::EncodingConfig,
     encoder::Encoder,
     io::{StdIoWriter, Write},
 };
-use serde::{ser, Serialize};
 
 use crate::{Error, Result};
 
@@ -28,6 +30,23 @@ pub struct SerializerConfig {
     pub encoder: EncoderConfig,
 }
 
+impl SerializerConfig {
+    pub fn with_struct_repr(mut self, struct_repr: StructRepr) -> Self {
+        self.struct_repr = struct_repr;
+        self
+    }
+
+    pub fn with_enum_variant_repr(mut self, enum_variant_repr: EnumVariantRepr) -> Self {
+        self.enum_variant_repr = enum_variant_repr;
+        self
+    }
+
+    pub fn with_encoder(mut self, encoder: EncoderConfig) -> Self {
+        self.encoder = encoder;
+        self
+    }
+}
+
 pub struct Serializer<W> {
     pub(crate) encoder: Encoder<W>,
     pub(crate) config: SerializerConfig,
@@ -44,9 +63,15 @@ pub fn to_vec<T>(value: &T) -> Result<Vec<u8>>
 where
     T: ?Sized + Serialize,
 {
+    to_vec_with_config(value, SerializerConfig::default())
+}
+
+pub fn to_vec_with_config<T>(value: &T, config: SerializerConfig) -> Result<Vec<u8>>
+where
+    T: ?Sized + Serialize,
+{
     let mut vec: Vec<u8> = Vec::new();
     let writer = StdIoWriter::new(&mut vec);
-    let config = SerializerConfig::default();
     let mut serializer = Serializer::from_writer(writer, config);
 
     value.serialize(&mut serializer)?;
@@ -60,7 +85,15 @@ where
     W: std::io::Write,
     T: ?Sized + Serialize,
 {
-    let config = SerializerConfig::default();
+    to_writer_with_config(writer, value, SerializerConfig::default())
+}
+
+#[cfg(feature = "std")]
+pub fn to_writer_with_config<W, T>(writer: W, value: &T, config: SerializerConfig) -> Result<()>
+where
+    W: std::io::Write,
+    T: ?Sized + Serialize,
+{
     let mut serializer = Serializer::from_writer(StdIoWriter::new(writer), config);
 
     value.serialize(&mut serializer)
@@ -232,12 +265,8 @@ where
         self.encoder.encode_map_header(&outer_map_header)?;
 
         match self.config.enum_variant_repr {
-            EnumVariantRepr::Index => {
-                self.serialize_u32(variant_index)?
-            }
-            EnumVariantRepr::Name => {
-                self.serialize_str(variant)?
-            }
+            EnumVariantRepr::Index => self.serialize_u32(variant_index)?,
+            EnumVariantRepr::Name => self.serialize_str(variant)?,
         }
 
         let inner_seq_header = self.encoder.header_for_seq_len(len);
@@ -272,12 +301,8 @@ where
         self.encoder.encode_map_header(&outer_map_header)?;
 
         match self.config.enum_variant_repr {
-            EnumVariantRepr::Index => {
-                self.serialize_u32(variant_index)?
-            }
-            EnumVariantRepr::Name => {
-                self.serialize_str(variant)?
-            }
+            EnumVariantRepr::Index => self.serialize_u32(variant_index)?,
+            EnumVariantRepr::Name => self.serialize_str(variant)?,
         }
 
         let inner_map_header = self.encoder.header_for_map_len(len);
