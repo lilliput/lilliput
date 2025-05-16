@@ -184,7 +184,7 @@ mod tests {
         decoder::Decoder,
         encoder::Encoder,
         io::{SliceReader, VecWriter},
-        num::zigzag::ToZigZag as _,
+        num::ToZigZag as _,
     };
 
     use super::*;

@@ -15,9 +15,6 @@ pub enum FpTruncateError {
 pub trait FpTruncate<T>: Sized + Sealed {
     fn truncate(self) -> (Self, T);
     fn try_truncate(self) -> Result<(Self, T), FpTruncateError>;
-    fn truncate_if<F>(self, predicate: F) -> Option<T>
-    where
-        F: FnOnce(Self, Self) -> bool;
 }
 
 // Source: https://github.com/rust-lang/compiler-builtins/blob/3dea633a80d32da75e923a940d16ce98cce74822/src/float/trunc.rs#L4
@@ -207,19 +204,6 @@ macro_rules! impl_float_truncate {
                     (false, Subnormal, Zero) => Err(FpTruncateError::Underflow),
                     (false, _, _) => unreachable!(),
                 }
-            }
-
-            fn truncate_if<F>(self, predicate: F) -> Option<$dst>
-            where
-                F: FnOnce($src, $src) -> bool
-            {
-                let (truncated, packed) = self.try_truncate().ok()?;
-
-                if !predicate(self, truncated) {
-                    return None;
-                }
-
-                Some(packed)
             }
         }
     };
