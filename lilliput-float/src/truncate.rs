@@ -24,6 +24,36 @@ macro_rules! impl_float_truncate {
             impl_float_truncate!($src => $dst);
         )*
     };
+    (F64 => F32) => {
+        impl FpTruncate<F32> for F64 {
+            fn truncate(self) -> (F64, F32) {
+                let value: f64 = self.into();
+
+                let dst_val = value as f32;
+                let src_val = dst_val as f64;
+
+                (F64::from(src_val), F32::from(dst_val))
+            }
+
+            fn try_truncate(self) -> Result<(F64, F32), FpTruncateError> {
+                let (src, dst): (F64, F32) = self.truncate();
+
+                let before = self.classify();
+                let after = dst.classify();
+
+                use FpCategory::*;
+
+                match (before == after, before, after) {
+                    (true, _, _) => Ok((src, dst)),
+                    (false, Normal, Infinite) => Err(FpTruncateError::Overflow),
+                    (false, Normal, Subnormal) => Err(FpTruncateError::Underflow),
+                    (false, Normal, Zero) => Err(FpTruncateError::Underflow),
+                    (false, Subnormal, Zero) => Err(FpTruncateError::Underflow),
+                    (false, _, _) => unreachable!(),
+                }
+            }
+        }
+    };
     ($src:ty => $dst:ty) => {
         impl FpTruncate<$dst> for $src {
             fn truncate(self) -> ($src, $dst) {
