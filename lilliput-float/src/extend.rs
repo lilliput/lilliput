@@ -14,6 +14,15 @@ macro_rules! impl_float_extend {
             impl_float_extend!($src => $dst);
         )*
     };
+    (F32 => F64) => {
+        impl FpExtend<F64> for F32 {
+            fn extend(self) -> F64 {
+                let value: f32 = self.into();
+
+                F64::from(value as f64)
+            }
+        }
+    };
     ($src:ty => $dst:ty) => {
         impl FpExtend<$dst> for $src {
             fn extend(self) -> $dst {
