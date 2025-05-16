@@ -115,14 +115,14 @@ where
     where
         T: Signed + WithPackedBeBytes,
     {
-        IntHeader::for_signed(value, self.config.int_packing)
+        IntHeader::for_signed(value, self.config.ints.packing)
     }
 
     pub fn header_for_unsigned_int<T>(&self, value: T) -> IntHeader
     where
         T: Unsigned + WithPackedBeBytes,
     {
-        IntHeader::for_unsigned(value, self.config.int_packing)
+        IntHeader::for_unsigned(value, self.config.ints.packing)
     }
 
     #[inline]
@@ -130,7 +130,7 @@ where
     where
         S: Signed + WithPackedBeBytes,
     {
-        let packing_mode = self.config.int_packing;
+        let packing_mode = self.config.ints.packing;
         value.with_packed_be_bytes(packing_mode, |bytes| {
             let header = IntHeader::for_int_be_bytes(true, bytes, packing_mode);
 
@@ -152,7 +152,7 @@ where
     where
         U: Unsigned + WithPackedBeBytes,
     {
-        let packing_mode = self.config.int_packing;
+        let packing_mode = self.config.ints.packing;
         value.with_packed_be_bytes(packing_mode, |bytes| {
             let header = IntHeader::for_int_be_bytes(false, bytes, packing_mode);
 

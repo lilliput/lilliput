@@ -62,7 +62,7 @@ fn bench_roundtrip_with_samples(
                 scratch.clear();
 
                 let writer = VecWriter::new(&mut scratch);
-                let mut encoder = Encoder::new(writer, config);
+                let mut encoder = Encoder::new(writer, config.clone());
 
                 let start = Instant::now();
 
@@ -146,28 +146,28 @@ fn bench_int(c: &mut Criterion, config: EncoderConfig) {
     g.sample_size(CRITERION_SAMPLE_SIZE);
 
     let samples: Vec<Value> = samples_iter::<u8>(SAMPLES).collect();
-    bench_roundtrip_with_samples(&mut g, Some("u8"), &samples, config);
+    bench_roundtrip_with_samples(&mut g, Some("u8"), &samples, config.clone());
 
     let samples: Vec<Value> = samples_iter::<u16>(SAMPLES).collect();
-    bench_roundtrip_with_samples(&mut g, Some("u16"), &samples, config);
+    bench_roundtrip_with_samples(&mut g, Some("u16"), &samples, config.clone());
 
     let samples: Vec<Value> = samples_iter::<u32>(SAMPLES).collect();
-    bench_roundtrip_with_samples(&mut g, Some("u32"), &samples, config);
+    bench_roundtrip_with_samples(&mut g, Some("u32"), &samples, config.clone());
 
     let samples: Vec<Value> = samples_iter::<u64>(SAMPLES).collect();
-    bench_roundtrip_with_samples(&mut g, Some("u64"), &samples, config);
+    bench_roundtrip_with_samples(&mut g, Some("u64"), &samples, config.clone());
 
     let samples: Vec<Value> = samples_iter::<i8>(SAMPLES).collect();
-    bench_roundtrip_with_samples(&mut g, Some("i8"), &samples, config);
+    bench_roundtrip_with_samples(&mut g, Some("i8"), &samples, config.clone());
 
     let samples: Vec<Value> = samples_iter::<i16>(SAMPLES).collect();
-    bench_roundtrip_with_samples(&mut g, Some("i16"), &samples, config);
+    bench_roundtrip_with_samples(&mut g, Some("i16"), &samples, config.clone());
 
     let samples: Vec<Value> = samples_iter::<i32>(SAMPLES).collect();
-    bench_roundtrip_with_samples(&mut g, Some("i32"), &samples, config);
+    bench_roundtrip_with_samples(&mut g, Some("i32"), &samples, config.clone());
 
     let samples: Vec<Value> = samples_iter::<i64>(SAMPLES).collect();
-    bench_roundtrip_with_samples(&mut g, Some("i64"), &samples, config);
+    bench_roundtrip_with_samples(&mut g, Some("i64"), &samples, config.clone());
 
     g.finish();
 }
@@ -187,10 +187,10 @@ fn bench_float(c: &mut Criterion, config: EncoderConfig) {
     g.sample_size(CRITERION_SAMPLE_SIZE);
 
     let samples: Vec<Value> = samples_iter::<f32>(SAMPLES).collect();
-    bench_roundtrip_with_samples(&mut g, Some("f32"), &samples, config);
+    bench_roundtrip_with_samples(&mut g, Some("f32"), &samples, config.clone());
 
     let samples: Vec<Value> = samples_iter::<f64>(SAMPLES).collect();
-    bench_roundtrip_with_samples(&mut g, Some("f64"), &samples, config);
+    bench_roundtrip_with_samples(&mut g, Some("f64"), &samples, config.clone());
 
     g.finish();
 }
@@ -244,11 +244,11 @@ fn bench_null(c: &mut Criterion, config: EncoderConfig) {
 }
 
 fn benchmark_with_config(c: &mut Criterion, config: EncoderConfig) {
-    bench_int(c, config);
-    bench_float(c, config);
-    bench_bool(c, config);
-    bench_unit(c, config);
-    bench_null(c, config);
+    bench_int(c, config.clone());
+    bench_float(c, config.clone());
+    bench_bool(c, config.clone());
+    bench_unit(c, config.clone());
+    bench_null(c, config.clone());
 }
 
 fn benchmark_default_config(c: &mut Criterion) {

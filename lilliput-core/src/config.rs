@@ -1,3 +1,11 @@
+use float::FloatEncoderConfig;
+use int::IntEncoderConfig;
+use length::LengthEncoderConfig;
+
+mod float;
+mod int;
+mod length;
+
 #[cfg_attr(any(test, feature = "testing"), derive(proptest_derive::Arbitrary))]
 #[derive(Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 #[repr(u8)]
@@ -13,48 +21,20 @@ impl PackingMode {
         self == Self::Optimal
     }
 }
-
 #[cfg_attr(any(test, feature = "testing"), derive(proptest_derive::Arbitrary))]
-#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
+#[derive(Default, Clone, PartialEq, Debug)]
 pub struct EncoderConfig {
-    pub len_packing: PackingMode,
-    pub int_packing: PackingMode,
-    pub float_packing: PackingMode,
+    pub lengths: LengthEncoderConfig,
+    pub ints: IntEncoderConfig,
+    pub floats: FloatEncoderConfig,
 }
 
 impl EncoderConfig {
-    pub fn no_packing() -> Self {
-        Self {
-            len_packing: PackingMode::None,
-            int_packing: PackingMode::None,
-            float_packing: PackingMode::None,
-        }
-    }
-
-    pub fn native_packing() -> Self {
-        Self {
-            len_packing: PackingMode::Native,
-            int_packing: PackingMode::Native,
-            float_packing: PackingMode::Native,
-        }
-    }
-
-    pub fn optimal_packing() -> Self {
-        Self {
-            len_packing: PackingMode::Optimal,
-            int_packing: PackingMode::Optimal,
-            float_packing: PackingMode::Optimal,
-        }
-    }
-}
-
-impl Default for EncoderConfig {
-    fn default() -> Self {
-        Self {
-            len_packing: PackingMode::Optimal,
-            int_packing: PackingMode::Optimal,
-            float_packing: PackingMode::Native,
-        }
+    pub fn with_packing(mut self, packing: PackingMode) -> Self {
+        self.lengths = self.lengths.with_packing(packing);
+        self.ints = self.ints.with_packing(packing);
+        self.floats = self.floats.with_packing(packing);
+        self
     }
 }
 

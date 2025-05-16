@@ -43,7 +43,7 @@ where
                 self.push_byte(byte)
             }
             StringHeader::Extended(ExtendedStringHeader { len }) => {
-                len.with_packed_be_bytes(self.config.len_packing, |bytes| {
+                len.with_packed_be_bytes(self.config.lengths.packing, |bytes| {
                     let width = bytes.len() as u8;
 
                     byte |= (width - 1) & StringHeader::EXTENDED_LEN_WIDTH_BITS;
@@ -66,6 +66,6 @@ where
     }
 
     pub fn header_for_str(&self, str: &str) -> StringHeader {
-        StringHeader::for_len(str.len(), self.config.len_packing)
+        StringHeader::for_len(str.len(), self.config.lengths.packing)
     }
 }

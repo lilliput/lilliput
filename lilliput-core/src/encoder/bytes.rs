@@ -30,7 +30,7 @@ where
         let len = header.len();
 
         // The bytes header only supports native packing:
-        let packing_mode = self.config.len_packing.min(PackingMode::Native);
+        let packing_mode = self.config.lengths.packing.min(PackingMode::Native);
 
         len.with_packed_be_bytes(packing_mode, |bytes| {
             let width = bytes.len();

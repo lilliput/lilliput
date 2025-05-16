@@ -43,7 +43,7 @@ where
                 self.push_byte(byte)
             }
             MapHeader::Extended(ExtendedMapHeader { len }) => {
-                len.with_packed_be_bytes(self.config.len_packing, |bytes| {
+                len.with_packed_be_bytes(self.config.lengths.packing, |bytes| {
                     let width = bytes.len() as u8;
 
                     byte |= (width - 1) & MapHeader::EXTENDED_LEN_WIDTH_BITS;
@@ -66,6 +66,6 @@ where
     }
 
     pub fn header_for_map(&self, map: &Map) -> MapHeader {
-        MapHeader::for_len(map.len(), self.config.len_packing)
+        MapHeader::for_len(map.len(), self.config.lengths.packing)
     }
 }

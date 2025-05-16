@@ -124,7 +124,7 @@ mod tests {
     use test_log::test;
 
     use crate::{
-        config::EncoderConfig,
+        config::{EncoderConfig, PackingMode},
         decoder::Decoder,
         encoder::Encoder,
         io::{SliceReader, VecWriter},
@@ -192,7 +192,7 @@ mod tests {
 
         #[test]
         fn non_normal_or_subnormal_f32_encodes_optimally(value in non_normal_or_subnormal_f32()) {
-            let config = EncoderConfig::optimal_packing();
+            let config = EncoderConfig::default().with_packing(PackingMode::Optimal);
 
             let mut encoded: Vec<u8> = Vec::new();
             let writer = VecWriter::new(&mut encoded);
@@ -204,7 +204,7 @@ mod tests {
 
         #[test]
         fn non_normal_or_subnormal_f64_encodes_optimally(value in non_normal_or_subnormal_f64()) {
-            let config = EncoderConfig::optimal_packing();
+            let config = EncoderConfig::default().with_packing(PackingMode::Optimal);
 
             let mut encoded: Vec<u8> = Vec::new();
             let writer = VecWriter::new(&mut encoded);
