@@ -10,7 +10,7 @@ use rand::{
 use rand_xorshift::XorShiftRng;
 
 use lilliput_core::{
-    config::EncodingConfig,
+    config::EncoderConfig,
     decoder::Decoder,
     encoder::Encoder,
     io::{SliceReader, VecWriter},
@@ -42,7 +42,7 @@ fn bench_roundtrip_with_samples(
     g: &mut BenchmarkGroup<'_, WallTime>,
     label: Option<&str>,
     samples: &[Value],
-    config: EncodingConfig,
+    config: EncoderConfig,
 ) {
     let samples_len = samples.len();
 
@@ -131,7 +131,7 @@ fn bench_roundtrip_with_samples(
     });
 }
 
-fn bench_int(c: &mut Criterion, config: EncodingConfig) {
+fn bench_int(c: &mut Criterion, config: EncoderConfig) {
     fn samples_iter<T>(samples: usize) -> impl Iterator<Item = Value>
     where
         StandardUniform: Distribution<T>,
@@ -172,7 +172,7 @@ fn bench_int(c: &mut Criterion, config: EncodingConfig) {
     g.finish();
 }
 
-fn bench_float(c: &mut Criterion, config: EncodingConfig) {
+fn bench_float(c: &mut Criterion, config: EncoderConfig) {
     fn samples_iter<T>(samples: usize) -> impl Iterator<Item = Value>
     where
         StandardUniform: Distribution<T>,
@@ -195,7 +195,7 @@ fn bench_float(c: &mut Criterion, config: EncodingConfig) {
     g.finish();
 }
 
-fn bench_bool(c: &mut Criterion, config: EncodingConfig) {
+fn bench_bool(c: &mut Criterion, config: EncoderConfig) {
     fn samples_iter(samples: usize) -> impl Iterator<Item = Value> {
         sampling_values_iter::<bool>(samples).map(move |value| Value::Bool(BoolValue::from(value)))
     }
@@ -211,7 +211,7 @@ fn bench_bool(c: &mut Criterion, config: EncodingConfig) {
     g.finish();
 }
 
-fn bench_unit(c: &mut Criterion, config: EncodingConfig) {
+fn bench_unit(c: &mut Criterion, config: EncoderConfig) {
     fn samples_iter(samples: usize) -> impl Iterator<Item = Value> {
         std::iter::repeat(Value::Unit(UnitValue)).take(samples)
     }
@@ -227,7 +227,7 @@ fn bench_unit(c: &mut Criterion, config: EncodingConfig) {
     g.finish();
 }
 
-fn bench_null(c: &mut Criterion, config: EncodingConfig) {
+fn bench_null(c: &mut Criterion, config: EncoderConfig) {
     fn samples_iter(samples: usize) -> impl Iterator<Item = Value> {
         std::iter::repeat(Value::Null(NullValue)).take(samples)
     }
@@ -243,7 +243,7 @@ fn bench_null(c: &mut Criterion, config: EncodingConfig) {
     g.finish();
 }
 
-fn benchmark_with_config(c: &mut Criterion, config: EncodingConfig) {
+fn benchmark_with_config(c: &mut Criterion, config: EncoderConfig) {
     bench_int(c, config);
     bench_float(c, config);
     bench_bool(c, config);
@@ -252,7 +252,7 @@ fn benchmark_with_config(c: &mut Criterion, config: EncodingConfig) {
 }
 
 fn benchmark_default_config(c: &mut Criterion) {
-    benchmark_with_config(c, EncodingConfig::default());
+    benchmark_with_config(c, EncoderConfig::default());
 }
 
 criterion_group!(default_config, benchmark_default_config);

@@ -16,13 +16,13 @@ impl PackingMode {
 
 #[cfg_attr(any(test, feature = "testing"), derive(proptest_derive::Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
-pub struct EncodingConfig {
+pub struct EncoderConfig {
     pub len_packing: PackingMode,
     pub int_packing: PackingMode,
     pub float_packing: PackingMode,
 }
 
-impl EncodingConfig {
+impl EncoderConfig {
     pub fn no_packing() -> Self {
         Self {
             len_packing: PackingMode::None,
@@ -48,7 +48,7 @@ impl EncodingConfig {
     }
 }
 
-impl Default for EncodingConfig {
+impl Default for EncoderConfig {
     fn default() -> Self {
         Self {
             len_packing: PackingMode::Optimal,
@@ -60,4 +60,4 @@ impl Default for EncodingConfig {
 
 #[cfg_attr(any(test, feature = "testing"), derive(proptest_derive::Arbitrary))]
 #[derive(Default, Copy, Clone, Eq, PartialEq, Hash, Debug)]
-pub struct DecodingConfig {}
+pub struct DecoderConfig {}

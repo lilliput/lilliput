@@ -1,4 +1,4 @@
-use crate::{config::EncodingConfig, error::Result, header::Header, io::Write, value::Value};
+use crate::{config::EncoderConfig, error::Result, header::Header, io::Write, value::Value};
 
 mod bool;
 mod bytes;
@@ -42,12 +42,12 @@ impl MaxFloatEpsilon {
 pub struct Encoder<W> {
     writer: W,
     pos: usize,
-    config: EncodingConfig,
+    config: EncoderConfig,
     max_float_epsilon: MaxFloatEpsilon,
 }
 
 impl<W> Encoder<W> {
-    pub fn new(writer: W, config: EncodingConfig) -> Self {
+    pub fn new(writer: W, config: EncoderConfig) -> Self {
         Encoder {
             writer,
             pos: 0,
@@ -129,7 +129,7 @@ mod test {
     fn push_bytes() {
         let mut vec: Vec<u8> = Vec::new();
         let writer = VecWriter::new(&mut vec);
-        let mut encoder = Encoder::new(writer, EncodingConfig::default());
+        let mut encoder = Encoder::new(writer, EncoderConfig::default());
 
         encoder.push_bytes(&[]).unwrap();
         encoder.push_bytes(&[1]).unwrap();
@@ -142,7 +142,7 @@ mod test {
     fn into_vec() {
         let mut vec: Vec<u8> = Vec::new();
         let writer = StdIoWriter::new(&mut vec);
-        let mut encoder = Encoder::new(writer, EncodingConfig::default());
+        let mut encoder = Encoder::new(writer, EncoderConfig::default());
         encoder.push_bytes(&[1, 2, 3]).unwrap();
 
         assert_eq!(vec, vec![1, 2, 3]);

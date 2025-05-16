@@ -124,7 +124,7 @@ mod tests {
     use test_log::test;
 
     use crate::{
-        config::EncodingConfig,
+        config::EncoderConfig,
         decoder::Decoder,
         encoder::Encoder,
         io::{SliceReader, VecWriter},
@@ -168,7 +168,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn encode_decode_roundtrip(value in FloatValue::arbitrary(), config in EncodingConfig::arbitrary()) {
+        fn encode_decode_roundtrip(value in FloatValue::arbitrary(), config in EncoderConfig::arbitrary()) {
             let mut encoded: Vec<u8> = Vec::new();
             let writer = VecWriter::new(&mut encoded);
             let mut encoder = Encoder::new(writer, config);
@@ -192,7 +192,7 @@ mod tests {
 
         #[test]
         fn non_normal_or_subnormal_f32_encodes_optimally(value in non_normal_or_subnormal_f32()) {
-            let config = EncodingConfig::optimal_packing();
+            let config = EncoderConfig::optimal_packing();
 
             let mut encoded: Vec<u8> = Vec::new();
             let writer = VecWriter::new(&mut encoded);
@@ -204,7 +204,7 @@ mod tests {
 
         #[test]
         fn non_normal_or_subnormal_f64_encodes_optimally(value in non_normal_or_subnormal_f64()) {
-            let config = EncodingConfig::optimal_packing();
+            let config = EncoderConfig::optimal_packing();
 
             let mut encoded: Vec<u8> = Vec::new();
             let writer = VecWriter::new(&mut encoded);

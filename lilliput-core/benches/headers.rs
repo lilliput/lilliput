@@ -10,7 +10,7 @@ use rand::{
 use rand_xorshift::XorShiftRng;
 
 use lilliput_core::{
-    config::{EncodingConfig, PackingMode},
+    config::{EncoderConfig, PackingMode},
     decoder::Decoder,
     encoder::Encoder,
     header::{
@@ -46,7 +46,7 @@ fn bench_roundtrip_with_samples(
     g: &mut BenchmarkGroup<'_, WallTime>,
     label: Option<&str>,
     headers: &[Header],
-    config: EncodingConfig,
+    config: EncoderConfig,
 ) {
     let headers_len = headers.len();
 
@@ -129,7 +129,7 @@ fn bench_roundtrip_with_samples(
     });
 }
 
-fn bench_int(c: &mut Criterion, config: EncodingConfig) {
+fn bench_int(c: &mut Criterion, config: EncoderConfig) {
     fn samples_iter<T>(samples: usize) -> impl Iterator<Item = Header>
     where
         StandardUniform: Distribution<T>,
@@ -180,7 +180,7 @@ fn bench_int(c: &mut Criterion, config: EncodingConfig) {
     g.finish();
 }
 
-fn bench_string(c: &mut Criterion, config: EncodingConfig) {
+fn bench_string(c: &mut Criterion, config: EncoderConfig) {
     fn samples_iter(samples: usize, packing_mode: PackingMode) -> impl Iterator<Item = Header> {
         sampling_values_iter::<u32>(samples)
             .map(move |len| Header::String(StringHeader::for_len(len as usize, packing_mode)))
@@ -197,7 +197,7 @@ fn bench_string(c: &mut Criterion, config: EncodingConfig) {
     g.finish();
 }
 
-fn bench_seq(c: &mut Criterion, config: EncodingConfig) {
+fn bench_seq(c: &mut Criterion, config: EncoderConfig) {
     fn samples_iter(samples: usize, packing_mode: PackingMode) -> impl Iterator<Item = Header> {
         sampling_values_iter::<u32>(samples)
             .map(move |len| Header::Seq(SeqHeader::for_len(len as usize, packing_mode)))
@@ -214,7 +214,7 @@ fn bench_seq(c: &mut Criterion, config: EncodingConfig) {
     g.finish();
 }
 
-fn bench_map(c: &mut Criterion, config: EncodingConfig) {
+fn bench_map(c: &mut Criterion, config: EncoderConfig) {
     fn samples_iter(samples: usize, packing_mode: PackingMode) -> impl Iterator<Item = Header> {
         sampling_values_iter::<u32>(samples)
             .map(move |len| Header::Map(MapHeader::for_len(len as usize, packing_mode)))
@@ -231,7 +231,7 @@ fn bench_map(c: &mut Criterion, config: EncodingConfig) {
     g.finish();
 }
 
-fn bench_float(c: &mut Criterion, config: EncodingConfig) {
+fn bench_float(c: &mut Criterion, config: EncoderConfig) {
     fn samples_iter(samples: usize) -> impl Iterator<Item = Header> {
         sampling_values_iter::<u8>(samples)
             .map(move |width| Header::Float(FloatHeader::new((width % 8) + 1)))
@@ -248,7 +248,7 @@ fn bench_float(c: &mut Criterion, config: EncodingConfig) {
     g.finish();
 }
 
-fn bench_bytes(c: &mut Criterion, config: EncodingConfig) {
+fn bench_bytes(c: &mut Criterion, config: EncoderConfig) {
     fn samples_iter(samples: usize) -> impl Iterator<Item = Header> {
         sampling_values_iter::<u32>(samples)
             .map(move |len| Header::Bytes(BytesHeader::for_len(len as usize)))
@@ -265,7 +265,7 @@ fn bench_bytes(c: &mut Criterion, config: EncodingConfig) {
     g.finish();
 }
 
-fn bench_bool(c: &mut Criterion, config: EncodingConfig) {
+fn bench_bool(c: &mut Criterion, config: EncoderConfig) {
     fn samples_iter(samples: usize) -> impl Iterator<Item = Header> {
         sampling_values_iter::<bool>(samples).map(move |value| Header::Bool(BoolHeader::new(value)))
     }
@@ -281,7 +281,7 @@ fn bench_bool(c: &mut Criterion, config: EncodingConfig) {
     g.finish();
 }
 
-fn bench_unit(c: &mut Criterion, config: EncodingConfig) {
+fn bench_unit(c: &mut Criterion, config: EncoderConfig) {
     fn samples_iter(samples: usize) -> impl Iterator<Item = Header> {
         std::iter::repeat(Header::Unit(UnitHeader)).take(samples)
     }
@@ -297,7 +297,7 @@ fn bench_unit(c: &mut Criterion, config: EncodingConfig) {
     g.finish();
 }
 
-fn bench_null(c: &mut Criterion, config: EncodingConfig) {
+fn bench_null(c: &mut Criterion, config: EncoderConfig) {
     fn samples_iter(samples: usize) -> impl Iterator<Item = Header> {
         std::iter::repeat(Header::Null(NullHeader)).take(samples)
     }
@@ -313,7 +313,7 @@ fn bench_null(c: &mut Criterion, config: EncodingConfig) {
     g.finish();
 }
 
-fn benchmark_with_config(c: &mut Criterion, config: EncodingConfig) {
+fn benchmark_with_config(c: &mut Criterion, config: EncoderConfig) {
     bench_int(c, config);
     bench_string(c, config);
     bench_seq(c, config);
@@ -326,7 +326,7 @@ fn benchmark_with_config(c: &mut Criterion, config: EncodingConfig) {
 }
 
 fn benchmark_default_config(c: &mut Criterion) {
-    benchmark_with_config(c, EncodingConfig::default());
+    benchmark_with_config(c, EncoderConfig::default());
 }
 
 criterion_group!(default_config, benchmark_default_config);
