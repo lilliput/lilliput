@@ -188,7 +188,7 @@ impl std::fmt::Debug for F56 {
 ///
 /// The bits are laid out as follows:
 /// - Sign bit: 1 bit
-/// - Exponent width: 1 bits
+/// - Exponent width: 11 bits
 /// - Significand precision: 53 bits (52 explicitly stored)
 ///
 /// ```plain
@@ -196,8 +196,8 @@ impl std::fmt::Debug for F56 {
 /// ┌─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬╴╴╴┬─┐
 /// └─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴╴╴╴┴─┘
 ///  │ ├─────────────────┘ ├───────────────────────────────────╴╴╴─┘
-///  │ │                   └ Significand (45 bits)
-///  │ └ Exponent (10 bits)
+///  │ │                   └ Significand (53 bits)
+///  │ └ Exponent (11 bits)
 ///  └ Sign (1 bit)
 ///  ```
 #[derive(Default, Copy, Clone)]
