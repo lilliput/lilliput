@@ -10,40 +10,11 @@ mod seq;
 mod string;
 mod unit;
 
-#[derive(Clone, Debug)]
-pub struct MaxFloatEpsilon {
-    pub max_eps_f32: fn(f32) -> f32,
-    pub max_eps_f64: fn(f64) -> f64,
-}
-
-impl Default for MaxFloatEpsilon {
-    fn default() -> Self {
-        Self::exact()
-    }
-}
-
-impl MaxFloatEpsilon {
-    pub fn new(max_eps_f32: fn(f32) -> f32, max_eps_f64: fn(f64) -> f64) -> Self {
-        Self {
-            max_eps_f32,
-            max_eps_f64,
-        }
-    }
-
-    pub fn exact() -> Self {
-        Self {
-            max_eps_f32: |_| 0.0,
-            max_eps_f64: |_| 0.0,
-        }
-    }
-}
-
 #[derive(Debug)]
 pub struct Encoder<W> {
     writer: W,
     pos: usize,
     config: EncoderConfig,
-    max_float_epsilon: MaxFloatEpsilon,
 }
 
 impl<W> Encoder<W> {
@@ -52,7 +23,6 @@ impl<W> Encoder<W> {
             writer,
             pos: 0,
             config,
-            max_float_epsilon: MaxFloatEpsilon::default(),
         }
     }
 

@@ -13,7 +13,7 @@ where
     // MARK: - Value
 
     pub fn encode_f32(&mut self, value: f32) -> Result<()> {
-        let abs_max_eps = (self.max_float_epsilon.max_eps_f32)(value).abs();
+        let abs_max_eps = (self.config.floats.max_epsilon.max_eps_f32)(value).abs();
         debug_assert!(abs_max_eps.is_finite());
 
         let predicate = |before: &f32, after: &f32| {
@@ -29,7 +29,7 @@ where
             }
         };
 
-        value.with_packed_be_bytes_if(self.config.float_packing, predicate, |bytes| {
+        value.with_packed_be_bytes_if(self.config.floats.packing, predicate, |bytes| {
             self.encode_float_header(&FloatHeader::new(bytes.len() as u8))?;
 
             // Push the value itself:
@@ -38,7 +38,7 @@ where
     }
 
     pub fn encode_f64(&mut self, value: f64) -> Result<()> {
-        let abs_max_eps = (self.max_float_epsilon.max_eps_f64)(value).abs();
+        let abs_max_eps = (self.config.floats.max_epsilon.max_eps_f64)(value).abs();
         debug_assert!(abs_max_eps.is_finite());
 
         let predicate = |before: &f64, after: &f64| {
@@ -54,7 +54,7 @@ where
             }
         };
 
-        value.with_packed_be_bytes_if(self.config.float_packing, predicate, |bytes| {
+        value.with_packed_be_bytes_if(self.config.floats.packing, predicate, |bytes| {
             self.encode_float_header(&FloatHeader::new(bytes.len() as u8))?;
 
             // Push the value itself:
