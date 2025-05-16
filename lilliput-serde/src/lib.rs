@@ -20,4 +20,7 @@ mod ser;
 mod tests;
 
 pub use de::{from_reader, from_slice, Deserializer};
-pub use ser::{to_vec, to_writer, Serializer};
+pub use ser::{
+    to_vec, to_vec_with_config, to_writer, to_writer_with_config, EncoderConfig, PackingMode,
+    Serializer, SerializerConfig,
+};
