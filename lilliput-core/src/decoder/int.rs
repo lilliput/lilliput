@@ -6,7 +6,7 @@ use crate::{
     error::{Error, Result},
     header::{CompactIntHeader, ExtendedIntHeader, IntHeader},
     marker::Marker,
-    num::zigzag::FromZigZag,
+    num::FromZigZag,
     value::{IntValue, SignedIntValue, UnsignedIntValue},
 };
 

@@ -8,7 +8,7 @@ use proptest::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 
-use crate::num::int::{TryFromInt, TryIntoInt as _};
+use crate::num::{TryFromInt, TryIntoInt as _};
 
 use super::UnsignedIntValue;
 
