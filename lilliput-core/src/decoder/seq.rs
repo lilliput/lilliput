@@ -62,6 +62,22 @@ where
         }
     }
 
+    // MARK: - Skip
+
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
+    pub fn skip_seq_value_of(&mut self, header: SeqHeader) -> Result<()> {
+        let len: usize = match header {
+            SeqHeader::Compact(header) => header.len().into(),
+            SeqHeader::Extended(header) => header.len(),
+        };
+
+        for _ in 0..len {
+            self.skip_value()?; // item
+        }
+
+        Ok(())
+    }
+
     // MARK: - Body
 
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]

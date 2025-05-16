@@ -33,6 +33,15 @@ where
         Ok(NullHeader)
     }
 
+    // MARK: - Skip
+
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
+    pub fn skip_null_value_of(&mut self, header: NullHeader) -> Result<()> {
+        let _ = header;
+
+        Ok(())
+    }
+
     // MARK: - Body
 
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]

@@ -141,6 +141,18 @@ where
         }
     }
 
+    // MARK: - Skip
+
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
+    pub fn skip_int_value_of(&mut self, header: IntHeader) -> Result<()> {
+        let header = match header {
+            IntHeader::Compact(_) => return Ok(()),
+            IntHeader::Extended(header) => header,
+        };
+
+        self.reader.skip(header.width().into())
+    }
+
     // MARK: - Body
 
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]

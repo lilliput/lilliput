@@ -33,6 +33,15 @@ where
         Ok(UnitHeader)
     }
 
+    // MARK: - Skip
+
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
+    pub fn skip_unit_value_of(&mut self, header: UnitHeader) -> Result<()> {
+        let _ = header;
+
+        Ok(())
+    }
+
     // MARK: - Body
 
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]

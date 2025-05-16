@@ -86,6 +86,18 @@ where
         }
     }
 
+    // MARK: - Skip
+
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
+    pub fn skip_string_value_of(&mut self, header: StringHeader) -> Result<()> {
+        let len: usize = match header {
+            StringHeader::Compact(header) => header.len().into(),
+            StringHeader::Extended(header) => header.len(),
+        };
+
+        self.reader.skip(len)
+    }
+
     // MARK: - Body
 
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]

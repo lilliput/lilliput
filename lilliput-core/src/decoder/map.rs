@@ -58,6 +58,23 @@ where
         }
     }
 
+    // MARK: - Skip
+
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
+    pub fn skip_map_value_of(&mut self, header: MapHeader) -> Result<()> {
+        let len: usize = match header {
+            MapHeader::Compact(header) => header.len().into(),
+            MapHeader::Extended(header) => header.len(),
+        };
+
+        for _ in 0..len {
+            self.skip_value()?; // key
+            self.skip_value()?; // value
+        }
+
+        Ok(())
+    }
+
     // MARK: - Body
 
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
