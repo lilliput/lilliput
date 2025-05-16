@@ -34,6 +34,43 @@ where
 pub trait Read<'r> {
     fn peek_one(&mut self) -> Result<u8>;
 
+    fn skip_one(&mut self) -> Result<()> {
+        match self.read_one() {
+            Ok(_) => Ok(()),
+            Err(err) => Err(err),
+        }
+    }
+
+    fn skip(&mut self, len: usize) -> Result<()> {
+        let mut to_read = len;
+
+        let mut bytes: [u8; 8] = [0b0; 8];
+        while to_read >= 8 {
+            self.read_into(&mut bytes)?;
+            to_read -= 8;
+        }
+
+        let mut bytes: [u8; 4] = [0b0; 4];
+        while to_read >= 4 {
+            self.read_into(&mut bytes)?;
+            to_read -= 4;
+        }
+
+        let mut bytes: [u8; 2] = [0b0; 2];
+        while to_read >= 2 {
+            self.read_into(&mut bytes)?;
+            to_read -= 2;
+        }
+
+        let mut bytes: [u8; 1] = [0b0; 1];
+        while to_read >= 1 {
+            self.read_into(&mut bytes)?;
+            to_read -= 1;
+        }
+
+        Ok(())
+    }
+
     fn read_one(&mut self) -> Result<u8> {
         let mut bytes: [u8; 1] = [0b0];
         self.read_into(&mut bytes)?;
