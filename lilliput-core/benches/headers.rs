@@ -94,7 +94,7 @@ fn bench_roundtrip_with_samples(
         let mut buf = Vec::with_capacity(CAPACITY);
 
         let writer = VecWriter::new(&mut buf);
-        let mut encoder = Encoder::new(writer, config);
+        let mut encoder = Encoder::new(writer, config.clone());
 
         for header in headers {
             let _ = encoder.encode_header(header);

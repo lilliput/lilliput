@@ -21,6 +21,7 @@ impl PackingMode {
         self == Self::Optimal
     }
 }
+
 #[cfg_attr(any(test, feature = "testing"), derive(proptest_derive::Arbitrary))]
 #[derive(Default, Clone, PartialEq, Debug)]
 pub struct EncoderConfig {
