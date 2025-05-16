@@ -15,7 +15,7 @@ where
     {
         let header: BoolHeader = self.decode_bool_header()?;
 
-        Ok(header.value())
+        self.decode_bool_of(header)
     }
 
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
@@ -35,6 +35,16 @@ where
         tracing::debug!(byte = crate::binary::fmt_byte(byte), value = value);
 
         Ok(BoolHeader::new(value))
+    }
+
+    // MARK: - Skip
+
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
+    pub fn skip_bool_value_of(&mut self, _header: BoolHeader) -> Result<()>
+    where
+        R: Read<'de>,
+    {
+        self.reader.skip_one()
     }
 
     // MARK: - Body

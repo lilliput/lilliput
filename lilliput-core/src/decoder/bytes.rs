@@ -53,6 +53,16 @@ where
         Ok(BytesHeader::for_len(len))
     }
 
+    // MARK: - Skip
+
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
+    pub fn skip_bytes_value_of(&mut self, header: BytesHeader) -> Result<()>
+    where
+        R: Read<'de>,
+    {
+        self.reader.skip(header.len())
+    }
+
     // MARK: - Body
 
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]

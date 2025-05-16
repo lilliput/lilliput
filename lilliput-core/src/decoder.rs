@@ -40,16 +40,20 @@ impl<'de, R> Decoder<R>
 where
     R: Read<'de>,
 {
-    // MARK: - Any Values
-
-    pub fn peek_marker(&mut self) -> Result<Marker> {
-        self.peek_byte().map(Marker::detect)
-    }
+    // MARK: - Value
 
     pub fn decode_value(&mut self) -> Result<Value> {
         let header = self.decode_header()?;
         self.decode_value_of(header)
     }
+
+    // MARK: - Marker
+
+    pub fn peek_marker(&mut self) -> Result<Marker> {
+        self.peek_byte().map(Marker::detect)
+    }
+
+    // MARK: - Header
 
     pub fn decode_header(&mut self) -> Result<Header> {
         match self.peek_marker()? {
@@ -64,6 +68,31 @@ where
             Marker::Null => self.decode_null_header().map(From::from),
         }
     }
+
+    // MARK: - Skip
+
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
+    pub fn skip_value(&mut self) -> Result<()> {
+        let header = self.decode_header()?;
+        self.skip_value_of(header)
+    }
+
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
+    pub fn skip_value_of(&mut self, header: Header) -> Result<()> {
+        match header {
+            Header::Int(header) => self.skip_int_value_of(header),
+            Header::String(header) => self.skip_string_value_of(header),
+            Header::Seq(header) => self.skip_seq_value_of(header),
+            Header::Map(header) => self.skip_map_value_of(header),
+            Header::Float(header) => self.skip_float_value_of(header),
+            Header::Bytes(header) => self.skip_bytes_value_of(header),
+            Header::Bool(header) => self.skip_bool_value_of(header),
+            Header::Unit(header) => self.skip_unit_value_of(header),
+            Header::Null(header) => self.skip_null_value_of(header),
+        }
+    }
+
+    // MARK: - Body
 
     pub fn decode_value_of(&mut self, header: Header) -> Result<Value> {
         match header {

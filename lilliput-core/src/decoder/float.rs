@@ -43,6 +43,13 @@ where
         Ok(FloatHeader::new(width))
     }
 
+    // MARK: - Skip
+
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
+    pub fn skip_float_value_of(&mut self, header: FloatHeader) -> Result<()> {
+        self.reader.skip(header.width().into())
+    }
+
     // MARK: - Body
 
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
