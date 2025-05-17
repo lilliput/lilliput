@@ -1,4 +1,7 @@
-use crate::{FpTruncate, PackedFloat, PackedFloatValidator, F16, F24, F32, F40, F48, F56, F64, F8};
+use crate::{
+    FpClassify, FpTruncate, PackedFloat, PackedFloatValidator, F16, F24, F32, F40, F48, F56, F64,
+    F8,
+};
 
 pub trait FpPack {
     type Validator;
@@ -11,17 +14,18 @@ macro_rules! truncate_validated {
     ($src:ty => $dst:ty, $native:expr, $validate:expr) => {{
         let (native, validate) = ($native, $validate);
 
-        let non_packed: $src = native.into();
+        let non_packed_src: $src = native.into();
+        let (packed_src, packed_dst): ($src, $dst) = non_packed_src.truncate();
 
-        FpTruncate::<$dst>::try_truncate(non_packed)
-            .ok()
-            .and_then(|(truncated, packed)| {
-                if (validate)(non_packed, truncated) {
-                    Some(packed)
-                } else {
-                    None
-                }
-            })
+        if (validate)(non_packed_src, packed_src) {
+            if packed_dst.classify() == packed_src.classify() {
+                Some(packed_dst)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
     }};
 }
 

@@ -21,7 +21,7 @@ pub use self::floats::{F16, F24, F32, F40, F48, F56, F64, F8};
 pub use self::pack::FpPack;
 pub use self::packed::PackedFloat;
 pub use self::repr::FpRepr;
-pub use self::truncate::{FpTruncate, FpTruncateError};
+pub use self::truncate::FpTruncate;
 pub use self::validator::PackedFloatValidator;
 
 mod sealed {
