@@ -1,20 +1,10 @@
-use std::num::FpCategory;
-
 use crate::bits::{FpFromBits, FpToBits};
-use crate::classify::FpClassify;
 use crate::floats::{F16, F24, F32, F40, F48, F56, F64, F8};
 use crate::repr::FpRepr;
 use crate::sealed::Sealed;
 
-#[derive(Clone, Eq, PartialEq, Debug)]
-pub enum FpTruncateError {
-    Overflow,
-    Underflow,
-}
-
 pub trait FpTruncate<T>: Sized + Sealed {
     fn truncate(self) -> (Self, T);
-    fn try_truncate(self) -> Result<(Self, T), FpTruncateError>;
 }
 
 // Source: https://github.com/rust-lang/compiler-builtins/blob/3dea633a80d32da75e923a940d16ce98cce74822/src/float/trunc.rs#L4
@@ -33,24 +23,6 @@ macro_rules! impl_float_truncate {
                 let src_val = dst_val as f64;
 
                 (F64::from(src_val), F32::from(dst_val))
-            }
-
-            fn try_truncate(self) -> Result<(F64, F32), FpTruncateError> {
-                let (src, dst): (F64, F32) = self.truncate();
-
-                let before = self.classify();
-                let after = dst.classify();
-
-                use FpCategory::*;
-
-                match (before == after, before, after) {
-                    (true, _, _) => Ok((src, dst)),
-                    (false, Normal, Infinite) => Err(FpTruncateError::Overflow),
-                    (false, Normal, Subnormal) => Err(FpTruncateError::Underflow),
-                    (false, Normal, Zero) => Err(FpTruncateError::Underflow),
-                    (false, Subnormal, Zero) => Err(FpTruncateError::Underflow),
-                    (false, _, _) => unreachable!(),
-                }
             }
         }
     };
@@ -217,24 +189,6 @@ macro_rules! impl_float_truncate {
 
                 (src_val, dst_val)
             }
-
-            fn try_truncate(self) -> Result<($src, $dst), FpTruncateError> {
-                let (src, dst): ($src, $dst) = self.truncate();
-
-                let before = self.classify();
-                let after = dst.classify();
-
-                use FpCategory::*;
-
-                match (before == after, before, after) {
-                    (true, _, _) => Ok((src, dst)),
-                    (false, Normal, Infinite) => Err(FpTruncateError::Overflow),
-                    (false, Normal, Subnormal) => Err(FpTruncateError::Underflow),
-                    (false, Normal, Zero) => Err(FpTruncateError::Underflow),
-                    (false, Subnormal, Zero) => Err(FpTruncateError::Underflow),
-                    (false, _, _) => unreachable!(),
-                }
-            }
         }
     };
 }
@@ -258,7 +212,11 @@ impl_float_truncate!(F64 => [F8, F16, F24, F32, F40, F48, F56]);
 
 #[cfg(test)]
 mod tests {
+    use std::num::FpCategory;
+
     use proptest::prelude::*;
+
+    use crate::FpClassify as _;
 
     use super::*;
 
