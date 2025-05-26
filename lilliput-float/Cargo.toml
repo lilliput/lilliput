@@ -22,5 +22,4 @@ harness = false
 
 [features]
 tracing = ["dep:tracing"]
-native-f16 = []
 full = []

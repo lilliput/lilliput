@@ -46,4 +46,3 @@ serde = [
 testing = [
     "proptest", "proptest-derive"
 ]
-native-f16 = []

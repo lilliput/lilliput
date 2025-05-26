@@ -77,18 +77,6 @@ impl_float_repr!(F64, bytes: [u8; 8], bits: u64, sign: 1, exponent: 11, signific
 mod tests {
     use super::*;
 
-    #[cfg(feature = "native-f16")]
-    #[test]
-    fn f16_matches_native_behavior() {
-        assert_eq!(F16::ZERO, F16::from(0.0_f16));
-        assert_eq!(F16::ONE, F16::from(1.0_f16));
-        assert_eq!(F16::MIN, F16::from(f16::MIN));
-        assert_eq!(F16::MAX, F16::from(f16::MAX));
-        assert_eq!(F16::MIN_POSITIVE, F16::from(f16::MIN_POSITIVE));
-        assert_eq!(F16::INFINITY, F16::from(f16::INFINITY));
-        assert_eq!(F16::NEG_INFINITY, F16::from(f16::NEG_INFINITY));
-    }
-
     #[test]
     fn f32_matches_native_behavior() {
         assert_eq!(F32::ZERO, F32::from(0.0_f32));

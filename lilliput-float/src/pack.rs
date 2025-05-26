@@ -44,14 +44,6 @@ impl FpPack for F32 {
             validator.validate(value, packed)
         };
 
-        #[cfg(feature = "native-f16")]
-        if let Some(packed) = truncate_validated!(F32 => F16, non_packed, validate) {
-            PackedFloat::F16(packed)
-        } else {
-            PackedFloat::F32(self)
-        }
-
-        #[cfg(not(feature = "native-f16"))]
         PackedFloat::F32(self)
     }
 
@@ -96,14 +88,6 @@ impl FpPack for F64 {
         };
 
         if let Some(packed) = truncate_validated!(F64 => F32, non_packed, validate) {
-            #[cfg(feature = "native-f16")]
-            if let Some(packed) = truncate_validated!(F64 => F16, non_packed, validate) {
-                PackedFloat::F16(packed)
-            } else {
-                PackedFloat::F32(packed)
-            }
-
-            #[cfg(not(feature = "native-f16"))]
             PackedFloat::F32(packed)
         } else {
             PackedFloat::F64(self)
