@@ -6,40 +6,6 @@ use proptest_derive::Arbitrary;
 use crate::config::PackingMode;
 
 /// Represents a sequence of values.
-///
-/// # Binary representation
-///
-/// ```plain
-/// 0b001XXXXX <INTEGER>? [VALUE,*]
-///   ├─┘│├──┘ ├───────┘  ├───────┘
-///   │  ││    └─ Length? └─ Values
-///   │  │└─ <depends on variant>
-///   │  └─ Variant
-///   └─ Seq type
-/// ```
-///
-/// ## Compact variant
-///
-/// ```plain
-/// 0b0011XXXX [VALUE,*]
-///   ├─┘│├──┘ ├───────┘
-///   │  ││    └─ Values
-///   │  │└─ Number of elements
-///   │  └─ Compact variant
-///   └─ Seq type
-/// ```
-///
-/// ## Extended variant
-///
-/// ```plain
-/// 0b00100XXX <INTEGER> [VALUE,*]
-///   ├─┘││├─┘ ├───────┘ ├───────┘
-///   │  │││   └─ Length └─ Values
-///   │  ││└─ Width of length in bytes
-///   │  │└─ Reserved bit
-///   │  └─ Extended variant
-///   └─ Seq type
-/// ```
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum SeqHeader {

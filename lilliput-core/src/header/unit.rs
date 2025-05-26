@@ -4,14 +4,6 @@ use proptest::prelude::*;
 use proptest_derive::Arbitrary;
 
 /// Represents a unit value.
-///
-/// # Binary representation
-///
-/// ```plain
-/// 0b00000001
-///   ├──────┘
-///   └─ Unit Type
-/// ```
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Default, Copy, Clone, Eq, PartialEq, Debug)]
 pub struct UnitHeader;

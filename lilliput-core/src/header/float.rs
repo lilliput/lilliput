@@ -4,15 +4,6 @@ use proptest::prelude::*;
 use proptest_derive::Arbitrary;
 
 /// Represents a floating-point number.
-///
-/// # Binary representation
-///
-/// ```plain
-/// 0b00001XXX <FLOAT>
-///   ├───┘├─┘  └─ Value
-///   │    └─ Width in bytes, minus 1
-///   └─ Float Type
-/// ```
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct FloatHeader {

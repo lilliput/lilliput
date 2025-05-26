@@ -6,39 +6,6 @@ use proptest_derive::Arbitrary;
 use crate::config::PackingMode;
 
 /// Represents a map of key-value pairs.
-///
-/// # Binary representation
-///
-/// ```plain
-/// 0b0001XXXX <INTEGER>? [KEY:VALUE,*]
-///   ├──┘│├─┘ ├───────┘  ├───────────┘
-///   │   ││   └─ Length? └─ Key-value pairs
-///   │   │└─ <depends on variant>
-///   │   └─ Variant
-///   └─ Map type
-/// ```
-///
-/// ## Compact variant
-///
-/// ```plain
-/// 0b00011XXX [KEY:VALUE,*]
-///   ├──┘│├─┘ ├───────────┘
-///   │   ││   └─ Key-value pairs
-///   │   │└─ Length
-///   │   └─ Compact variant
-///   └─ Map type
-/// ```
-///
-/// ## Extended variant
-///
-/// ```plain
-/// 0b00010XXX <INTEGER> [KEY:VALUE,*]
-///   ├──┘│├─┘ ├───────┘ ├───────────┘
-///   │   ││   └─ Length └─ Key-value pairs
-///   │   │└─ Number of bytes in length
-///   │   └─ Extended variant
-///   └─ Map type
-/// ```
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum MapHeader {

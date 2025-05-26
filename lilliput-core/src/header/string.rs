@@ -6,39 +6,6 @@ use proptest_derive::Arbitrary;
 use crate::config::PackingMode;
 
 /// Represents a string.
-///
-/// # Binary representation
-///
-/// ```plain
-/// 0b01XXXXXX
-///   ├┘│├───┘
-///   │ │└─ <depends on variant>
-///   │ └─ Short variant / Long variant
-///   └─ String Type
-/// ```
-///
-/// ## Short variant
-///
-/// ```plain
-/// 0b010XXXXX [CHAR,*]
-///   ├┘│├───┘ ├──────┘
-///   │ ││     └─ Characters
-///   │ │└─ Length
-///   │ └─ Short variant
-///   └─ String type
-/// ```
-///
-/// ## Long variant
-///
-/// ```plain
-/// 0b01100XXX <INTEGER> [CHAR,*]
-///   ├┘│├┘├─┘ ├───────┘ ├──────┘
-///   │ ││ │   └─ Length └─ Characters
-///   │ ││ └─ Number of bytes in <Length> - 1
-///   │ │└─ Empty padding bits
-///   │ └─ Long variant
-///   └─ String type
-/// ```
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum StringHeader {
