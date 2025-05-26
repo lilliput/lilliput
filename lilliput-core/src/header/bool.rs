@@ -4,14 +4,6 @@ use proptest::prelude::*;
 use proptest_derive::Arbitrary;
 
 /// Represents a boolean.
-///
-/// # Binary representation
-///
-/// ```plain
-/// 0b0000001X
-///   ├─────┘└─ Value (0 = false, 1 = true)
-///   └─ Data Type
-/// ```
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct BoolHeader {

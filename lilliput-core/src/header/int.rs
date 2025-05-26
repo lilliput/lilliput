@@ -8,41 +8,6 @@ use num_traits::{Signed, Unsigned};
 use crate::{config::PackingMode, num::WithPackedBeBytes};
 
 /// Represents an integer number.
-///
-/// # Binary representation
-///
-/// ```plain
-/// 0b1XXXXXXX <INTEGER>?
-///   │││├───┘
-///   │││└─ <depends on variant>
-///   ││└─ Signedness
-///   │└─ Variant
-///   └─ Integer type
-/// ```
-///
-/// ## Short variant
-///
-/// ```plain
-/// 0b11XXXXXX
-///   │││├───┘
-///   │││└─ Value
-///   ││└─ Signedness
-///   │└─ Compact variant
-///   └─ Integer type
-/// ```
-///
-/// ## Long variant
-///
-/// ```plain
-/// 0b10X00XXX <INTEGER>
-///   │││├┘├─┘ ├───────┘
-///   ││││ │   └─ Value
-///   ││││ └─ Width
-///   │││└─ Reserved bits
-///   ││└─ Signedness
-///   │└─ Extended variant
-///   └─ Integer type
-/// ```
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum IntHeader {

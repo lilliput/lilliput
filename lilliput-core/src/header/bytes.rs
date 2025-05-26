@@ -4,21 +4,6 @@ use proptest::prelude::*;
 use proptest_derive::Arbitrary;
 
 /// Represents a byte sequence.
-///
-/// # Binary representation
-///
-/// ```plain
-/// 0b000001XX <INTEGER> [ BYTE, … ]
-///   ├────┘├┘  └─ Length  └─ Bytes
-///   │     └─ Length width exponent
-///   └─ Bytes type
-/// ```
-///
-/// The byte-width of the length value is obtained by:
-///
-/// ```plain
-/// width = 2 ^ exponent
-/// ```
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct BytesHeader {
