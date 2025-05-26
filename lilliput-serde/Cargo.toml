@@ -9,8 +9,6 @@ rust-version = "1.71.0"
 [dependencies]
 lilliput-core = { path = "../lilliput-core", features = ["serde", "testing"] }
 indexmap = { version = "2.2.3", optional = true }
-nom = "8.0.0"
-nom_locate = "5.0.0"
 num-traits = "0.2.19"
 serde = { workspace = true }
 
