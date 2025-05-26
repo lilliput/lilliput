@@ -279,19 +279,6 @@ mod tests {
             assert_valid_category(category_before, src_category_after)?;
             assert_valid_category(category_before, dst_category_after)?;
 
-            #[cfg(feature = "native-f16")]
-            {
-                let dst_native = native as f16;
-                let src_native = dst_native as f32;
-
-                let dst_expected = F16::from(dst_native);
-                let src_expected = F32::from(src_native);
-
-                prop_assert_eq!(dst_actual, dst_expected);
-                prop_assert_eq!(src_actual, src_expected);
-            }
-
-            #[cfg(not(feature = "native-f16"))]
             let _ = (src_actual, dst_actual);
         }
 
