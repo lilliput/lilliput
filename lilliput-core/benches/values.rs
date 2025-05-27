@@ -65,7 +65,7 @@ fn bench_roundtrip_with_samples(
                 scratch.clear();
 
                 let writer = VecWriter::new(&mut scratch);
-                let mut encoder = Encoder::new_with_config(writer, config.clone());
+                let mut encoder = Encoder::new(writer, config.clone());
 
                 let start = Instant::now();
 
@@ -90,7 +90,7 @@ fn bench_roundtrip_with_samples(
         let mut buf = Vec::with_capacity(CAPACITY);
 
         let writer = VecWriter::new(&mut buf);
-        let mut encoder = Encoder::new_with_config(writer, config);
+        let mut encoder = Encoder::new(writer, config);
 
         for sample in samples {
             encoder.encode_value(sample).unwrap();

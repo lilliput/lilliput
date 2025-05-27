@@ -22,12 +22,12 @@ pub struct Encoder<W> {
 
 impl<W> Encoder<W> {
     /// Creates a encoder from `writer`.
-        Self::new_with_config(writer, EncoderConfig::default())
     pub fn from_writer(writer: W) -> Self {
+        Self::new(writer, EncoderConfig::default())
     }
 
     /// Creates a encoder from `writer`, configured by `config`.
-    pub fn new_with_config(writer: W, config: EncoderConfig) -> Self {
+    pub fn new(writer: W, config: EncoderConfig) -> Self {
         Encoder {
             writer,
             pos: 0,
