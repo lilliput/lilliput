@@ -18,7 +18,7 @@ pub struct Serializer<W> {
 }
 
 impl<W> Serializer<W> {
-    pub fn from_writer(writer: W, config: SerializerConfig) -> Self {
+    pub fn new(writer: W, config: SerializerConfig) -> Self {
         let encoder = Encoder::new(writer, config.encoder.clone());
         Self { encoder, config }
     }
@@ -37,7 +37,7 @@ where
 {
     let mut vec: Vec<u8> = Vec::new();
     let writer = StdIoWriter::new(&mut vec);
-    let mut serializer = Serializer::from_writer(writer, config);
+    let mut serializer = Serializer::new(writer, config);
 
     value.serialize(&mut serializer)?;
 
@@ -59,7 +59,7 @@ where
     W: std::io::Write,
     T: ?Sized + Serialize,
 {
-    let mut serializer = Serializer::from_writer(StdIoWriter::new(writer), config);
+    let mut serializer = Serializer::new(StdIoWriter::new(writer), config);
 
     value.serialize(&mut serializer)
 }
