@@ -1,3 +1,5 @@
+//! Serializers for serializing lilliput-encoded values.
+
 use serde::{ser, Serialize};
 
 pub use lilliput_core::config::{EncoderConfig, PackingMode};
@@ -12,22 +14,26 @@ use crate::{
     error::{Error, Result},
 };
 
+/// An serializer for serializing lilliput values.
 pub struct Serializer<W> {
     pub(crate) encoder: Encoder<W>,
     pub(crate) config: SerializerConfig,
 }
 
 impl<W> Serializer<W> {
+    /// Creates a serializer from `writer`.
     pub fn from_writer(writer: W) -> Self {
         Self::new(writer, SerializerConfig::default())
     }
 
+    /// Creates a serializer from `writer`, configured by `config`.
     pub fn new(writer: W, config: SerializerConfig) -> Self {
         let encoder = Encoder::new(writer, config.encoder.clone());
         Self { encoder, config }
     }
 }
 
+/// Serializes `value` into a `Vec<u8>`.
 pub fn to_vec<T>(value: &T) -> Result<Vec<u8>>
 where
     T: ?Sized + Serialize,
@@ -35,6 +41,7 @@ where
     to_vec_with_config(value, SerializerConfig::default())
 }
 
+/// Serializes `value` into a `Vec<u8>`, configured by `config`.
 pub fn to_vec_with_config<T>(value: &T, config: SerializerConfig) -> Result<Vec<u8>>
 where
     T: ?Sized + Serialize,
@@ -48,6 +55,7 @@ where
     Ok(vec)
 }
 
+/// Serializes `value` into `writer`.
 #[cfg(feature = "std")]
 pub fn to_writer<W, T>(writer: W, value: &T) -> Result<()>
 where
@@ -57,6 +65,7 @@ where
     to_writer_with_config(writer, value, SerializerConfig::default())
 }
 
+/// Serializes `value` into `writer`, configured by `config`.
 #[cfg(feature = "std")]
 pub fn to_writer_with_config<W, T>(writer: W, value: &T, config: SerializerConfig) -> Result<()>
 where
