@@ -1,3 +1,5 @@
+//! Deserializers for deserializing lilliput-encoded values.
+
 use serde::{
     de::{self, Error as _, IntoDeserializer as _},
     Deserialize, Deserializer as _,
@@ -12,6 +14,7 @@ use lilliput_core::{
 
 use crate::error::{Error, Result};
 
+/// A deserializer for deserializing lilliput values.
 pub struct Deserializer<R> {
     decoder: Decoder<R>,
     scratch: Vec<u8>,
@@ -21,6 +24,7 @@ pub struct Deserializer<R> {
 }
 
 impl<R> Deserializer<R> {
+    /// Creates a deserializer from a `reader`.
     pub fn from_reader(reader: R) -> Self {
         Deserializer {
             decoder: Decoder::from_reader(reader),
@@ -51,6 +55,7 @@ impl<R> Deserializer<R> {
     }
 }
 
+/// Deserializes an instance of `T` from `bytes`.
 pub fn from_slice<'de, T>(bytes: &'de [u8]) -> Result<T>
 where
     T: 'de + Deserialize<'de>,
@@ -59,6 +64,7 @@ where
     T::deserialize(&mut Deserializer::from_reader(reader))
 }
 
+/// Deserializes an instance of `T` from `reader`.
 #[cfg(feature = "std")]
 pub fn from_reader<R, T>(reader: R) -> Result<T>
 where

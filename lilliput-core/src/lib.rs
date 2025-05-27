@@ -32,6 +32,7 @@ pub mod plumbing {
     pub use super::num::*;
 }
 
+/// The crates's prelude.
 pub mod prelude {
     pub use crate::{
         config::*, decoder::*, encoder::*, error::Error, header::*, io::*, marker::*, value::*,
