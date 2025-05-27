@@ -1,5 +1,7 @@
 [package]
 name = "lilliput-float"
+description = "IEEE-754-compliant float-packing implementation, used in lilliput-core"
+repository = { workspace = true }
 license = { workspace = true }
 edition = "2021"
 rust-version = "1.71.0"

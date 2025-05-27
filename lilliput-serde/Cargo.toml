@@ -1,8 +1,11 @@
 [package]
 name = "lilliput-serde"
-version = "0.0.0"
+description = "A serializer and deserializer of the lilliput data format, for serde"
+repository = { workspace = true }
+license = { workspace = true }
 edition = "2021"
 rust-version = "1.71.0"
+version = "0.0.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

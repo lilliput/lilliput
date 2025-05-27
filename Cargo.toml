@@ -7,6 +7,7 @@ members = [
 resolver = "2"
 
 [workspace.package]
+repository = "https://github.com/regexident/lilliput"
 license = "MIT OR Apache-2.0"
 edition = "2021"
 
