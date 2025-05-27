@@ -19,26 +19,6 @@ where
     // MARK: - Value
 
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
-    pub fn decode_u8(&mut self) -> Result<u8> {
-        self.decode_unsigned_int()
-    }
-
-    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
-    pub fn decode_u16(&mut self) -> Result<u16> {
-        self.decode_unsigned_int()
-    }
-
-    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
-    pub fn decode_u32(&mut self) -> Result<u32> {
-        self.decode_unsigned_int()
-    }
-
-    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
-    pub fn decode_u64(&mut self) -> Result<u64> {
-        self.decode_unsigned_int()
-    }
-
-    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_i8(&mut self) -> Result<i8> {
         self.decode_signed_int()
     }
@@ -56,6 +36,26 @@ where
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_i64(&mut self) -> Result<i64> {
         self.decode_signed_int()
+    }
+
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
+    pub fn decode_u8(&mut self) -> Result<u8> {
+        self.decode_unsigned_int()
+    }
+
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
+    pub fn decode_u16(&mut self) -> Result<u16> {
+        self.decode_unsigned_int()
+    }
+
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
+    pub fn decode_u32(&mut self) -> Result<u32> {
+        self.decode_unsigned_int()
+    }
+
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
+    pub fn decode_u64(&mut self) -> Result<u64> {
+        self.decode_unsigned_int()
     }
 
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]

@@ -345,7 +345,7 @@ mod tests {
         fn encode_decode_roundtrip(value in UnsignedIntValue::arbitrary(), config in EncoderConfig::arbitrary()) {
             let mut encoded: Vec<u8> = Vec::new();
             let writer = VecWriter::new(&mut encoded);
-            let mut encoder = Encoder::new(writer, config);
+            let mut encoder = Encoder::new_with_config(writer, config);
             encoder.encode_unsigned_int_value(&value).unwrap();
 
             prop_assert!(encoded.len() <= 1 + 8);

@@ -214,7 +214,7 @@ mod tests {
         fn encode_decode_roundtrip(value in FloatValue::arbitrary(), config in EncoderConfig::arbitrary()) {
             let mut encoded: Vec<u8> = Vec::new();
             let writer = VecWriter::new(&mut encoded);
-            let mut encoder = Encoder::new(writer, config);
+            let mut encoder = Encoder::new_with_config(writer, config);
             encoder.encode_float_value(&value).unwrap();
 
             prop_assert!(encoded.len() <= 1 + 8);
@@ -239,7 +239,7 @@ mod tests {
 
             let mut encoded: Vec<u8> = Vec::new();
             let writer = VecWriter::new(&mut encoded);
-            let mut encoder = Encoder::new(writer, config);
+            let mut encoder = Encoder::new_with_config(writer, config);
             encoder.encode_f32(value).unwrap();
 
             prop_assert!(encoded.len() == 2, "value should optimally pack to single byte");
@@ -251,7 +251,7 @@ mod tests {
 
             let mut encoded: Vec<u8> = Vec::new();
             let writer = VecWriter::new(&mut encoded);
-            let mut encoder = Encoder::new(writer, config);
+            let mut encoder = Encoder::new_with_config(writer, config);
             encoder.encode_f64(value).unwrap();
 
             prop_assert!(encoded.len() == 2, "value should optimally pack to single byte");
