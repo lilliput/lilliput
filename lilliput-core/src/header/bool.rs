@@ -23,7 +23,7 @@ impl BoolHeader {
 }
 
 impl BoolHeader {
-    pub const MASK: u8 = 0b0000011;
+    pub(crate) const MASK: u8 = 0b0000011;
     pub(crate) const TYPE_BITS: u8 = 0b0000010;
 
     pub(crate) const VALUE_BIT: u8 = 0b0000001;

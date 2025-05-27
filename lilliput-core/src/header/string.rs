@@ -40,15 +40,6 @@ impl StringHeader {
         }
     }
 
-    #[inline]
-    pub fn as_compact_len(len: usize, packing_mode: PackingMode) -> Option<u8> {
-        if packing_mode.is_optimal() && len <= Self::COMPACT_MAX_LEN as usize {
-            Some(len as u8)
-        } else {
-            None
-        }
-    }
-
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
@@ -57,6 +48,15 @@ impl StringHeader {
         match self {
             Self::Compact(compact) => compact.len().into(),
             Self::Extended(extended) => extended.len(),
+        }
+    }
+
+    #[inline]
+    fn as_compact_len(len: usize, packing_mode: PackingMode) -> Option<u8> {
+        if packing_mode.is_optimal() && len <= Self::COMPACT_MAX_LEN as usize {
+            Some(len as u8)
+        } else {
+            None
         }
     }
 }
@@ -104,7 +104,7 @@ impl ExtendedStringHeader {
 }
 
 impl StringHeader {
-    pub const MASK: u8 = 0b01111111;
+    pub(crate) const MASK: u8 = 0b01111111;
     pub(crate) const TYPE_BITS: u8 = 0b01000000;
 
     pub(crate) const COMPACT_VARIANT_BIT: u8 = 0b00100000;
