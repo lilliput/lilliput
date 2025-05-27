@@ -2,7 +2,8 @@
 
 Lilliput is an object serialization specification like JSON, but binary, with a focus on compactness.
 
-While JSON aims to provide a short, yet human readable object representation, Lilliput gives up readability for the sake of the following features:
+While JSON aims to provide a short, yet human readable object representation,
+lilliput gives up readability for the sake of the following features:
 
 1. Compact binary representation
 2. Fast streaming serialization/deserialization
@@ -10,6 +11,10 @@ While JSON aims to provide a short, yet human readable object representation, Li
 4. Zero-copy/alloc wherever possible
 5. Good inline compression
 6. Type-safety
+
+## [Specification](./spec)
+
+Specification of the lilliput binary data format.
 
 ## [lilliput-serde](./lilliput-serde)
 
