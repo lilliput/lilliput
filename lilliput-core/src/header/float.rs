@@ -3,7 +3,7 @@ use proptest::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 
-/// Represents a floating-point number.
+/// Header representing a floating-point number.
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct FloatHeader {
@@ -15,6 +15,7 @@ pub struct FloatHeader {
 }
 
 impl FloatHeader {
+    /// Creates a header from a floating-point value's byte-width.
     pub fn new(width: u8) -> Self {
         assert!(width >= 1);
         assert!(width <= 8);
@@ -22,6 +23,7 @@ impl FloatHeader {
         Self { width }
     }
 
+    /// Returns the associated value's byte-width.
     pub fn width(&self) -> u8 {
         self.width
     }

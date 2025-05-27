@@ -14,6 +14,7 @@ where
 {
     // MARK: - Value
 
+    /// Decodes a sequence value.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_seq(&mut self) -> Result<Seq> {
         let header = self.decode_seq_header()?;
@@ -21,6 +22,7 @@ where
         self.decode_seq_of(header)
     }
 
+    /// Decodes a sequence value, as a `SeqValue`.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_seq_value(&mut self) -> Result<SeqValue> {
         let header = self.decode_seq_header()?;
@@ -30,6 +32,7 @@ where
 
     // MARK: - Header
 
+    /// Decodes a sequence value's header.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_seq_header(&mut self) -> Result<SeqHeader> {
         let byte = self.pull_byte_expecting(Marker::Seq)?;
@@ -64,6 +67,7 @@ where
 
     // MARK: - Skip
 
+    /// Skips the sequence value for a given `header`.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn skip_seq_value_of(&mut self, header: SeqHeader) -> Result<()> {
         let len: usize = match header {
@@ -80,6 +84,7 @@ where
 
     // MARK: - Body
 
+    /// Decodes sequence value for a given `header`, as a `SeqValue`.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_seq_value_of(&mut self, header: SeqHeader) -> Result<SeqValue> {
         self.decode_seq_of(header).map(From::from)
@@ -87,6 +92,7 @@ where
 
     // MARK: - Private
 
+    /// Decodes sequence value for a given `header`.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     fn decode_seq_of(&mut self, header: SeqHeader) -> Result<Seq> {
         let mut seq = Seq::default();

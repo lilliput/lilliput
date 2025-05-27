@@ -14,6 +14,7 @@ where
 {
     // MARK: - Value
 
+    /// Decodes a byte array value, as a slice reference.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_bytes<'s>(
         &'s mut self,
@@ -24,6 +25,7 @@ where
         self.decode_bytes_of(header, scratch)
     }
 
+    /// Decodes a byte array value, as an owned buffer.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_bytes_buf(&mut self) -> Result<Vec<u8>> {
         let header = self.decode_bytes_header()?;
@@ -31,6 +33,7 @@ where
         self.decode_bytes_buf_of(header)
     }
 
+    /// Decodes a byte array value, as a `BytesValue`.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_bytes_value(&mut self) -> Result<BytesValue> {
         self.decode_bytes_buf().map(From::from)
@@ -38,6 +41,7 @@ where
 
     // MARK: - Header
 
+    /// Decodes a byte array value's header.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_bytes_header(&mut self) -> Result<BytesHeader> {
         let byte = self.pull_byte_expecting(Marker::Bytes)?;
@@ -55,6 +59,7 @@ where
 
     // MARK: - Skip
 
+    /// Skips the byte array value for a given `header`.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn skip_bytes_value_of(&mut self, header: BytesHeader) -> Result<()>
     where
@@ -65,6 +70,7 @@ where
 
     // MARK: - Body
 
+    /// Decodes byte array value for a given `header`, as a `BytesValue`.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_bytes_value_of(&mut self, header: BytesHeader) -> Result<BytesValue> {
         self.decode_bytes_buf_of(header).map(From::from)
@@ -72,6 +78,7 @@ where
 
     // MARK: - Private
 
+    /// Decodes byte array value for a given `header`, using a scratch buffer.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     fn decode_bytes_of<'s>(
         &'s mut self,
@@ -81,6 +88,7 @@ where
         self.pull_bytes(header.len(), scratch)
     }
 
+    /// Decodes byte array value for a given `header`, returning an owned buffer.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     fn decode_bytes_buf_of(&mut self, header: BytesHeader) -> Result<Vec<u8>> {
         let mut buf = Vec::new();

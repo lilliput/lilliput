@@ -7,15 +7,18 @@ use num_traits::{Signed, Unsigned};
 
 use crate::{config::PackingMode, num::WithPackedBeBytes};
 
-/// Represents an integer number.
+/// Header representing an integer number.
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum IntHeader {
+    /// Compact header.
     Compact(CompactIntHeader),
+    /// Extended header.
     Extended(ExtendedIntHeader),
 }
 
 impl IntHeader {
+    /// Creates a compact header.
     #[inline]
     pub fn compact(is_signed: bool, bits: u8) -> Self {
         assert!(bits <= Self::COMPACT_VALUE_BITS);
@@ -23,6 +26,7 @@ impl IntHeader {
         Self::Compact(CompactIntHeader { is_signed, bits })
     }
 
+    /// Creates an extended header.
     #[inline]
     pub fn extended(is_signed: bool, width: u8) -> Self {
         assert!(width >= 1);
@@ -31,6 +35,7 @@ impl IntHeader {
         Self::Extended(ExtendedIntHeader { is_signed, width })
     }
 
+    /// Creates a header for a given signed `value`, for a given `packing_mode`.
     #[inline]
     pub fn for_signed<T>(value: T, packing_mode: PackingMode) -> Self
     where
@@ -41,6 +46,7 @@ impl IntHeader {
         })
     }
 
+    /// Creates a header for a given unsigned `value`, for a given `packing_mode`.
     #[inline]
     pub fn for_unsigned<T>(value: T, packing_mode: PackingMode) -> Self
     where
@@ -51,6 +57,7 @@ impl IntHeader {
         })
     }
 
+    /// Returns the extended byte-width, or `None` if compact.
     pub fn extended_width(&self) -> Option<u8> {
         match self {
             Self::Compact(_) => None,
@@ -82,6 +89,7 @@ impl IntHeader {
     }
 }
 
+/// Compact header representing an integer number.
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct CompactIntHeader {
@@ -94,15 +102,18 @@ pub struct CompactIntHeader {
 }
 
 impl CompactIntHeader {
+    /// Returns the associated value's compact representation.
     pub fn bits(&self) -> u8 {
         self.bits
     }
 
+    /// Returns `true`, if the associated value's type is signed, otherwise `false`.
     pub fn is_signed(&self) -> bool {
         self.is_signed
     }
 }
 
+/// Extended header representing an integer number.
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct ExtendedIntHeader {
@@ -115,10 +126,12 @@ pub struct ExtendedIntHeader {
 }
 
 impl ExtendedIntHeader {
+    /// Returns the associated value's byte-width.
     pub fn width(&self) -> u8 {
         self.width
     }
 
+    /// Returns `true`, if the associated value's type is signed, otherwise `false`.
     pub fn is_signed(&self) -> bool {
         self.is_signed
     }

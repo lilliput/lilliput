@@ -3,12 +3,13 @@ use proptest::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 
-/// Represents a unit value.
+/// Header representing a unit value.
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Default, Copy, Clone, Eq, PartialEq, Debug)]
 pub struct UnitHeader;
 
 impl UnitHeader {
+    /// Creates a new header for a null value.
     #[inline]
     pub fn new() -> Self {
         Self

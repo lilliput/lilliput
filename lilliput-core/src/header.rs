@@ -1,3 +1,5 @@
+//! Value headers.
+
 mod bool;
 mod bytes;
 mod float;
@@ -37,6 +39,7 @@ pub(crate) fn arbitrary_len() -> impl Strategy<Value = usize> {
     ]
 }
 
+/// A value's header.
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum Header {
@@ -143,6 +146,7 @@ impl From<NullHeader> for Header {
 }
 
 impl Header {
+    /// Returns the header's type marker.
     pub fn marker(&self) -> Marker {
         match self {
             Header::Int(_) => Marker::Int,

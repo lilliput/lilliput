@@ -8,6 +8,7 @@ where
 {
     // MARK: - Value
 
+    /// Decodes a null value.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_null(&mut self) -> Result<()> {
         self.decode_null_header()?;
@@ -15,6 +16,7 @@ where
         Ok(())
     }
 
+    /// Decodes a null value, as a `NullValue`.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_null_value(&mut self) -> Result<NullValue> {
         self.decode_null().map(|_| NullValue)
@@ -22,6 +24,7 @@ where
 
     // MARK: - Header
 
+    /// Decodes a null value's header.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_null_header(&mut self) -> Result<NullHeader> {
         #[allow(unused_variables)]
@@ -35,6 +38,7 @@ where
 
     // MARK: - Skip
 
+    /// Skips the null value for a given `header`.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn skip_null_value_of(&mut self, header: NullHeader) -> Result<()> {
         let _ = header;
@@ -44,6 +48,7 @@ where
 
     // MARK: - Body
 
+    /// Decodes null value for a given `header`, as a `NullValue`.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_null_value_of(&mut self, header: NullHeader) -> Result<NullValue> {
         let _ = header;

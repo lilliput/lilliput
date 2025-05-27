@@ -10,18 +10,21 @@ where
 {
     // MARK: - Value
 
+    /// Decodes a 32-bit floating-point value.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_f32(&mut self) -> Result<f32> {
         let header = self.decode_float_header()?;
         Ok(self.decode_float_value_of(header)?.into())
     }
 
+    /// Decodes a 64-bit floating-point value.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_f64(&mut self) -> Result<f64> {
         let header = self.decode_float_header()?;
         Ok(self.decode_float_value_of(header)?.into())
     }
 
+    /// Decodes a floating-point value, as a `FloatValue`.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_float_value(&mut self) -> Result<FloatValue> {
         let header = self.decode_float_header()?;
@@ -31,6 +34,7 @@ where
 
     // MARK: - Header
 
+    /// Decodes a floating-point value's header.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_float_header(&mut self) -> Result<FloatHeader> {
         let byte = self.pull_byte_expecting(Marker::Float)?;
@@ -45,6 +49,7 @@ where
 
     // MARK: - Skip
 
+    /// Skips the floating-point value for a given `header`.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn skip_float_value_of(&mut self, header: FloatHeader) -> Result<()> {
         self.reader.skip(header.width().into())
@@ -52,6 +57,7 @@ where
 
     // MARK: - Body
 
+    /// Decodes floating-point value for a given `header`, as a `FloatValue`.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_float_value_of(&mut self, header: FloatHeader) -> Result<FloatValue> {
         match header.width() {

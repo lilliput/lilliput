@@ -1,3 +1,7 @@
+//! Low-level implementation of encoding/decoding logic for lilliput format.
+
+#![warn(missing_docs)]
+
 extern crate alloc;
 
 #[cfg(feature = "std")]
@@ -15,6 +19,7 @@ pub mod value;
 mod binary;
 mod sealed;
 
+#[doc(hidden)]
 pub(crate) mod num;
 
 /// Internal names, not for external use.

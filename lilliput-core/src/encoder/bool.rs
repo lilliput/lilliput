@@ -8,12 +8,14 @@ where
 {
     // MARK: - Value
 
+    /// Encodes a boolean value.
     #[inline]
     pub fn encode_bool(&mut self, value: bool) -> Result<()> {
         let header = self.header_for_bool(value);
         self.encode_bool_header(&header)
     }
 
+    /// Encodes a boolean value, from a `BoolValue`.
     #[inline]
     pub fn encode_bool_value(&mut self, value: &BoolValue) -> Result<()> {
         self.encode_bool(value.0)
@@ -21,6 +23,7 @@ where
 
     // MARK: - Header
 
+    /// Encodes a boolean value's header.
     #[inline]
     pub fn encode_bool_header(&mut self, header: &BoolHeader) -> Result<()> {
         let mut byte = BoolHeader::TYPE_BITS;
@@ -37,6 +40,7 @@ where
         self.push_byte(byte)
     }
 
+    /// Creates a header for `value`.
     #[inline]
     pub fn header_for_bool(&self, value: bool) -> BoolHeader {
         BoolHeader::new(value)

@@ -9,18 +9,22 @@ use proptest_derive::Arbitrary;
 pub struct StringValue(pub String);
 
 impl StringValue {
+    /// Returns a reference to the internal string.
     pub fn as_str(&self) -> &str {
         &self.0
     }
 
+    /// Returns the internal string, consuming `self`.
     pub fn into_string(self) -> String {
         self.0
     }
 
+    /// Returns the length of the internal string.
     pub fn len(&self) -> usize {
         self.0.len()
     }
 
+    /// Returns `true`, if the internal string is empty, otherwise `false`.
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }

@@ -11,11 +11,14 @@ use decorum::{constraint::IsFloat, proxy::Constrained};
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone)]
 pub enum FloatValue {
+    /// 32-bit value.
     F32(f32),
+    /// 64-bit value.
     F64(f64),
 }
 
 impl FloatValue {
+    /// Returns the value as a `f32`.
     pub fn as_f32(self) -> f32 {
         match self {
             FloatValue::F32(value) => value,
@@ -23,6 +26,7 @@ impl FloatValue {
         }
     }
 
+    /// Returns the value as a `f64`.
     pub fn as_f64(self) -> f64 {
         match self {
             FloatValue::F32(value) => value as f64,

@@ -18,46 +18,55 @@ where
 {
     // MARK: - Value
 
+    /// Decodes a 8-bit signed integer value.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_i8(&mut self) -> Result<i8> {
         self.decode_signed_int()
     }
 
+    /// Decodes a 16-bit signed integer value.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_i16(&mut self) -> Result<i16> {
         self.decode_signed_int()
     }
 
+    /// Decodes a 32-bit signed integer value.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_i32(&mut self) -> Result<i32> {
         self.decode_signed_int()
     }
 
+    /// Decodes a 64-bit signed integer value.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_i64(&mut self) -> Result<i64> {
         self.decode_signed_int()
     }
 
+    /// Decodes a 8-bit unsigned integer value.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_u8(&mut self) -> Result<u8> {
         self.decode_unsigned_int()
     }
 
+    /// Decodes a 16-bit unsigned integer value.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_u16(&mut self) -> Result<u16> {
         self.decode_unsigned_int()
     }
 
+    /// Decodes a 32-bit unsigned integer value.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_u32(&mut self) -> Result<u32> {
         self.decode_unsigned_int()
     }
 
+    /// Decodes a 64-bit unsigned integer value.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_u64(&mut self) -> Result<u64> {
         self.decode_unsigned_int()
     }
 
+    /// Decodes a signed integer value.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_signed_int<T>(&mut self) -> Result<T>
     where
@@ -70,6 +79,7 @@ where
             .map_err(|_| Error::number_out_of_range(Some(pos)))
     }
 
+    /// Decodes a unsigned integer value.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_unsigned_int<T>(&mut self) -> Result<T>
     where
@@ -82,6 +92,7 @@ where
             .map_err(|_| Error::number_out_of_range(Some(pos)))
     }
 
+    /// Decodes a signed integer value, as a `SignedIntValue`.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_signed_int_value(&mut self) -> Result<SignedIntValue> {
         let pos = self.pos;
@@ -91,6 +102,7 @@ where
             .map_err(|_| Error::number_out_of_range(Some(pos)))
     }
 
+    /// Decodes a unsigned integer value, as a `UnsignedIntValue`.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_unsigned_int_value(&mut self) -> Result<UnsignedIntValue> {
         let pos = self.pos;
@@ -100,6 +112,7 @@ where
             .map_err(|_| Error::number_out_of_range(Some(pos)))
     }
 
+    /// Decodes a integer value, as an `IntValue`.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_int_value(&mut self) -> Result<IntValue> {
         let header = self.decode_int_header()?;
@@ -108,6 +121,7 @@ where
 
     // MARK: - Header
 
+    /// Decodes a integer value's header.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_int_header(&mut self) -> Result<IntHeader> {
         let byte = self.pull_byte_expecting(Marker::Int)?;
@@ -143,6 +157,7 @@ where
 
     // MARK: - Skip
 
+    /// Skips the integer value for a given `header`.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn skip_int_value_of(&mut self, header: IntHeader) -> Result<()> {
         let header = match header {
@@ -155,6 +170,7 @@ where
 
     // MARK: - Body
 
+    /// Decodes integer value for a given `header`, as an `IntValue`.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_int_value_of(&mut self, header: IntHeader) -> Result<IntValue> {
         let (is_signed, width): (bool, usize) = match header {

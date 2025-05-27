@@ -11,6 +11,7 @@ where
 {
     // MARK: - Value
 
+    /// Encodes a 32-bit floating-point value.
     pub fn encode_f32(&mut self, value: f32) -> Result<()> {
         let validator = self.config.floats.validation.f32.clone();
 
@@ -22,6 +23,7 @@ where
         })
     }
 
+    /// Encodes a 64-bit floating-point value.
     pub fn encode_f64(&mut self, value: f64) -> Result<()> {
         let validator = self.config.floats.validation.f64.clone();
 
@@ -33,6 +35,7 @@ where
         })
     }
 
+    /// Encodes a floating-point value, from a `FloatValue`.
     pub fn encode_float_value(&mut self, value: &FloatValue) -> Result<()> {
         match value {
             FloatValue::F32(value) => self.encode_f32(*value),
@@ -42,6 +45,7 @@ where
 
     // MARK: - Header
 
+    /// Encodes a floating-point value's header.
     pub fn encode_float_header(&mut self, header: &FloatHeader) -> Result<()> {
         let width = header.width();
 

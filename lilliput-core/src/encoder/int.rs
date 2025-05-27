@@ -17,38 +17,47 @@ where
 {
     // MARK: - Value
 
+    /// Encodes a 8-bit signed integer value.
     pub fn encode_i8(&mut self, value: i8) -> Result<()> {
         self.encode_signed_int(value)
     }
 
+    /// Encodes a 16-bit signed integer value.
     pub fn encode_i16(&mut self, value: i16) -> Result<()> {
         self.encode_signed_int(value)
     }
 
+    /// Encodes a 32-bit signed integer value.
     pub fn encode_i32(&mut self, value: i32) -> Result<()> {
         self.encode_signed_int(value)
     }
 
+    /// Encodes a 64-bit signed integer value.
     pub fn encode_i64(&mut self, value: i64) -> Result<()> {
         self.encode_signed_int(value)
     }
 
+    /// Encodes a 8-bit unsigned integer value.
     pub fn encode_u8(&mut self, value: u8) -> Result<()> {
         self.encode_unsigned_int(value)
     }
 
+    /// Encodes a 16-bit unsigned integer value.
     pub fn encode_u16(&mut self, value: u16) -> Result<()> {
         self.encode_unsigned_int(value)
     }
 
+    /// Encodes a 32-bit unsigned integer value.
     pub fn encode_u32(&mut self, value: u32) -> Result<()> {
         self.encode_unsigned_int(value)
     }
 
+    /// Encodes a 64-bit unsigned integer value.
     pub fn encode_u64(&mut self, value: u64) -> Result<()> {
         self.encode_unsigned_int(value)
     }
 
+    /// Encodes a signed integer value, from a `SignedIntValue`.
     pub fn encode_signed_int_value(&mut self, value: &SignedIntValue) -> Result<()> {
         match value {
             SignedIntValue::I8(value) => self.encode_signed_int(*value),
@@ -58,6 +67,7 @@ where
         }
     }
 
+    /// Encodes an unsigned integer value, from a `UnsignedIntValue`.
     pub fn encode_unsigned_int_value(&mut self, value: &UnsignedIntValue) -> Result<()> {
         match value {
             UnsignedIntValue::U8(value) => self.encode_unsigned_int(*value),
@@ -67,6 +77,7 @@ where
         }
     }
 
+    /// Encodes an integer value, from a `IntValue`.
     pub fn encode_int_value(&mut self, value: &IntValue) -> Result<()> {
         match value {
             IntValue::Signed(value) => self.encode_signed_int_value(value),
@@ -76,6 +87,7 @@ where
 
     // MARK: - Header
 
+    /// Encodes a integer value's header.
     pub fn encode_int_header(&mut self, header: &IntHeader) -> Result<()> {
         let mut byte = IntHeader::TYPE_BITS;
 
@@ -111,6 +123,7 @@ where
         self.push_byte(byte)
     }
 
+    /// Creates a header for a signed integer value.
     pub fn header_for_signed_int<T>(&self, value: T) -> IntHeader
     where
         T: Signed + WithPackedBeBytes,
@@ -118,6 +131,7 @@ where
         IntHeader::for_signed(value, self.config.ints.packing)
     }
 
+    /// Creates a header for an unsigned integer value.
     pub fn header_for_unsigned_int<T>(&self, value: T) -> IntHeader
     where
         T: Unsigned + WithPackedBeBytes,

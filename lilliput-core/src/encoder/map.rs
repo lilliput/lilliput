@@ -14,6 +14,7 @@ where
 {
     // MARK: - Value
 
+    /// Encodes a map value.
     pub fn encode_map(&mut self, value: &Map) -> Result<()> {
         self.encode_map_header(&self.header_for_map_len(value.len()))?;
 
@@ -25,12 +26,14 @@ where
         Ok(())
     }
 
+    /// Encodes a map value, from a `MapValue`.
     pub fn encode_map_value(&mut self, value: &MapValue) -> Result<()> {
         self.encode_map(&value.0)
     }
 
     // MARK: - Header
 
+    /// Encodes a map value's header.
     pub fn encode_map_header(&mut self, header: &MapHeader) -> Result<()> {
         let mut byte = MapHeader::TYPE_BITS;
 
@@ -65,6 +68,7 @@ where
         }
     }
 
+    /// Creates a header for a map value, from its length.
     pub fn header_for_map_len(&self, len: usize) -> MapHeader {
         MapHeader::for_len(len, self.config.lengths.packing)
     }

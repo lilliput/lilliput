@@ -3,7 +3,7 @@ use proptest::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 
-/// Represents a boolean.
+/// Header representing a boolean.
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct BoolHeader {
@@ -11,11 +11,13 @@ pub struct BoolHeader {
 }
 
 impl BoolHeader {
+    /// Creates a header from its `value`.
     #[inline]
     pub fn new(value: bool) -> Self {
         Self { value }
     }
 
+    /// Returns the associated value.
     #[inline]
     pub fn value(&self) -> bool {
         self.value

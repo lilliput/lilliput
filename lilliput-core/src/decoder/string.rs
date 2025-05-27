@@ -16,6 +16,7 @@ where
 {
     // MARK: - Value
 
+    /// Decodes a string value, as a reference.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_str<'s>(
         &'s mut self,
@@ -25,6 +26,7 @@ where
         self.decode_str_of(header, scratch)
     }
 
+    /// Decodes a string value's raw-bytes, as a reference.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_str_bytes<'s>(
         &'s mut self,
@@ -34,18 +36,21 @@ where
         self.decode_str_bytes_of(header, scratch)
     }
 
+    /// Decodes a string value, as an owned string.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_string(&mut self) -> Result<String> {
         let header = self.decode_string_header()?;
         self.decode_string_of(header)
     }
 
+    /// Decodes a string value's raw-bytes, as an owned buffer.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_string_bytes_buf(&mut self) -> Result<Vec<u8>> {
         let header = self.decode_string_header()?;
         self.decode_string_bytes_buf_of(header)
     }
 
+    /// Decodes a string value, as a `StringValue`.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_string_value(&mut self) -> Result<StringValue> {
         let header = self.decode_string_header()?;
@@ -54,6 +59,7 @@ where
 
     // MARK: - Header
 
+    /// Decodes a string value's header.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_string_header(&mut self) -> Result<StringHeader> {
         let byte = self.pull_byte_expecting(Marker::String)?;
@@ -88,6 +94,7 @@ where
 
     // MARK: - Skip
 
+    /// Skips the map value for a given `header`.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn skip_string_value_of(&mut self, header: StringHeader) -> Result<()> {
         let len: usize = match header {
@@ -100,6 +107,7 @@ where
 
     // MARK: - Body
 
+    /// Decodes map value for a given `header`, as a `MapValue`.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_string_value_of(&mut self, header: StringHeader) -> Result<StringValue> {
         self.decode_string_of(header).map(From::from)

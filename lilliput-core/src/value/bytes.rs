@@ -11,18 +11,22 @@ use crate::binary::BytesSlice;
 pub struct BytesValue(pub Vec<u8>);
 
 impl BytesValue {
+    /// Returns a slice, referencing the inner vec.
     pub fn as_slice(&self) -> &[u8] {
         &self.0
     }
 
+    /// Returns the internal vec, consuming `self`.
     pub fn into_vec(self) -> Vec<u8> {
         self.0
     }
 
+    /// Returns the length of the internal vec.
     pub fn len(&self) -> usize {
         self.0.len()
     }
 
+    /// Returns `true`, if the internal vec is empty, otherwise `false`.
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }

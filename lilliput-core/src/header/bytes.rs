@@ -3,7 +3,7 @@ use proptest::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 
-/// Represents a byte sequence.
+/// Header representing a byte sequence.
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct BytesHeader {
@@ -15,16 +15,19 @@ pub struct BytesHeader {
 }
 
 impl BytesHeader {
+    /// Creates a header from a byte array's length.
     #[inline]
     pub fn for_len(len: usize) -> Self {
         Self { len }
     }
 
+    /// Returns `true` if the associated value has a length of zero bytes, otherwise `false`.
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
+    /// Returns the associated value's length.
     #[inline]
     pub fn len(&self) -> usize {
         self.len

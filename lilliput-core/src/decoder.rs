@@ -1,3 +1,5 @@
+//! Decoders for decoding lilliput-encoded values.
+
 use crate::{
     error::{Error, Result},
     header::Header,
@@ -16,6 +18,7 @@ mod seq;
 mod string;
 mod unit;
 
+/// A decoder for decoding lilliput-encoded values.
 #[derive(Debug)]
 pub struct Decoder<R> {
     reader: R,
@@ -23,14 +26,17 @@ pub struct Decoder<R> {
 }
 
 impl<R> Decoder<R> {
+    /// Creates a decoder from `reader`.
     pub fn new(reader: R) -> Self {
         Decoder { reader, pos: 0 }
     }
 
+    /// Returns the decoder's internal `reader`, consuming `self`.
     pub fn into_reader(self) -> R {
         self.reader
     }
 
+    /// Returns the decoder's current read position.
     pub fn pos(&self) -> usize {
         self.pos
     }
@@ -42,6 +48,7 @@ where
 {
     // MARK: - Value
 
+    /// Decodes a `Value`.
     pub fn decode_value(&mut self) -> Result<Value> {
         let header = self.decode_header()?;
         self.decode_value_of(header)
@@ -49,12 +56,14 @@ where
 
     // MARK: - Marker
 
+    /// Decodes a value's type `Marker`.
     pub fn peek_marker(&mut self) -> Result<Marker> {
         self.peek_byte().map(Marker::detect)
     }
 
     // MARK: - Header
 
+    /// Decodes a value's `Header`.
     pub fn decode_header(&mut self) -> Result<Header> {
         match self.peek_marker()? {
             Marker::Int => self.decode_int_header().map(From::from),
@@ -71,12 +80,14 @@ where
 
     // MARK: - Skip
 
+    /// Skips the next to-be-decoded value.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn skip_value(&mut self) -> Result<()> {
         let header = self.decode_header()?;
         self.skip_value_of(header)
     }
 
+    /// Skips the value for a given `header`.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn skip_value_of(&mut self, header: Header) -> Result<()> {
         match header {
@@ -94,6 +105,7 @@ where
 
     // MARK: - Body
 
+    /// Decodes value for a given `header`.
     pub fn decode_value_of(&mut self, header: Header) -> Result<Value> {
         match header {
             Header::Int(header) => self.decode_int_value_of(header).map(From::from),

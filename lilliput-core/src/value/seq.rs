@@ -5,6 +5,7 @@ use proptest_derive::Arbitrary;
 
 use super::Value;
 
+/// A sequence.
 pub type Seq = Vec<Value>;
 
 #[cfg(any(test, feature = "testing"))]
@@ -28,18 +29,22 @@ pub struct SeqValue(
 );
 
 impl SeqValue {
+    /// Returns a slice of the entire internal vec.
     pub fn as_slice(&self) -> &[Value] {
         &self.0
     }
 
+    /// Returns the internal vec, consuming `self`.
     pub fn into_vec(self) -> Seq {
         self.0
     }
 
+    /// Returns the length of the internal vec.
     pub fn len(&self) -> usize {
         self.0.len()
     }
 
+    /// Returns `true`, if the internal vec is empty, otherwise `false`.
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }

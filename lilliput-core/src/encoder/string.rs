@@ -14,6 +14,7 @@ where
 {
     // MARK: - Value
 
+    /// Encodes a string value, from a reference.
     pub fn encode_str(&mut self, value: &str) -> Result<()> {
         self.encode_string_header(&self.header_for_str_len(value.len()))?;
 
@@ -23,6 +24,7 @@ where
         Ok(())
     }
 
+    /// Encodes a string value, from a `StringValue`.
     pub fn encode_string_value(&mut self, value: &StringValue) -> Result<()> {
         self.encode_str(&value.0)?;
 
@@ -31,6 +33,7 @@ where
 
     // MARK: - Header
 
+    /// Enodes a string value's header.
     pub fn encode_string_header(&mut self, header: &StringHeader) -> Result<()> {
         let mut byte = StringHeader::TYPE_BITS;
 
@@ -65,6 +68,7 @@ where
         }
     }
 
+    /// Creates a header for a string value, from its length.
     pub fn header_for_str_len(&self, len: usize) -> StringHeader {
         StringHeader::for_len(len, self.config.lengths.packing)
     }
