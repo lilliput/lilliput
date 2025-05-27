@@ -1,10 +1,9 @@
 use std::collections::BTreeMap;
 
 use proptest::prelude::*;
-
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use crate::{from_slice, to_vec, value::*, Error, Value};
+use crate::{de::from_slice, error::Error, ser::to_vec, value::*};
 
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 #[derive(Default, Copy, Clone, Eq, PartialEq, Debug, Serialize, Deserialize)]
@@ -76,8 +75,6 @@ where
 }
 
 mod value {
-    use lilliput_core::value::UnitValue;
-
     use super::*;
 
     proptest! {
