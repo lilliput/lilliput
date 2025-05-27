@@ -10,7 +10,7 @@ use lilliput_core::{
     value::{FloatValue, IntValue, SignedIntValue, UnsignedIntValue},
 };
 
-use crate::{Error, Result};
+use crate::error::{Error, Result};
 
 pub struct Deserializer<R> {
     decoder: Decoder<R>,
