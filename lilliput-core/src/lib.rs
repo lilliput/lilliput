@@ -27,13 +27,6 @@ pub mod plumbing {
     pub use super::num::*;
 }
 
-#[derive(Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
-pub enum Profile {
-    None = 0,
-    #[default]
-    Weak = 1,
-}
-
 pub mod prelude {
     pub use crate::{
         config::*, decoder::*, encoder::*, error::Error, header::*, io::*, marker::*, value::*,
