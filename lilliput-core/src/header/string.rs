@@ -169,7 +169,7 @@ mod tests {
             prop_assert!(encoded.len() <= 1 + 8);
 
             let reader = SliceReader::new(&encoded);
-            let mut decoder = Decoder::new(reader);
+            let mut decoder = Decoder::from_reader(reader);
             let decoded = decoder.decode_string_header().unwrap();
             prop_assert_eq!(&decoded, &header);
         }

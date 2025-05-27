@@ -185,7 +185,7 @@ mod tests {
             encoder.encode_header(&header).unwrap();
 
             let reader = SliceReader::new(&encoded);
-            let mut decoder = Decoder::new(reader);
+            let mut decoder = Decoder::from_reader(reader);
             let decoded = decoder.decode_header().unwrap();
             prop_assert_eq!(&decoded, &header);
         }

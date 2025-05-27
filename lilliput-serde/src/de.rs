@@ -23,7 +23,7 @@ pub struct Deserializer<R> {
 impl<R> Deserializer<R> {
     pub fn from_reader(reader: R) -> Self {
         Deserializer {
-            decoder: Decoder::new(reader),
+            decoder: Decoder::from_reader(reader),
             scratch: Vec::new(),
             remaining_depth: 128,
             #[cfg(feature = "unbounded_depth")]
