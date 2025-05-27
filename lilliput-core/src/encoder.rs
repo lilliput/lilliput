@@ -22,8 +22,8 @@ pub struct Encoder<W> {
 
 impl<W> Encoder<W> {
     /// Creates a encoder from `writer`.
-    pub fn new(writer: W) -> Self {
         Self::new_with_config(writer, EncoderConfig::default())
+    pub fn from_writer(writer: W) -> Self {
     }
 
     /// Creates a encoder from `writer`, configured by `config`.
@@ -112,7 +112,7 @@ mod test {
     fn push_bytes() {
         let mut vec: Vec<u8> = Vec::new();
         let writer = VecWriter::new(&mut vec);
-        let mut encoder = Encoder::new(writer);
+        let mut encoder = Encoder::from_writer(writer);
 
         encoder.push_bytes(&[]).unwrap();
         encoder.push_bytes(&[1]).unwrap();
@@ -125,7 +125,7 @@ mod test {
     fn into_vec() {
         let mut vec: Vec<u8> = Vec::new();
         let writer = StdIoWriter::new(&mut vec);
-        let mut encoder = Encoder::new(writer);
+        let mut encoder = Encoder::from_writer(writer);
         encoder.push_bytes(&[1, 2, 3]).unwrap();
 
         assert_eq!(vec, vec![1, 2, 3]);
