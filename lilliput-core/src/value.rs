@@ -1,3 +1,5 @@
+//! Values.
+
 #[cfg(any(test, feature = "testing"))]
 use proptest::{prelude::*, sample::SizeRange};
 
@@ -23,6 +25,7 @@ pub use self::{
     unit::UnitValue,
 };
 
+/// Represents a value.
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum Value {
     /// Represents a integer number.

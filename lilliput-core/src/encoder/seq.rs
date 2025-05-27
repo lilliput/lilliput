@@ -14,6 +14,7 @@ where
 {
     // MARK: - Value
 
+    /// Encodes a sequence value.
     pub fn encode_seq(&mut self, value: &[Value]) -> Result<()> {
         self.encode_seq_header(&self.header_for_seq_len(value.len()))?;
 
@@ -24,12 +25,14 @@ where
         Ok(())
     }
 
+    /// Encodes a sequence value, from a `SeqValue`.
     pub fn encode_seq_value(&mut self, value: &SeqValue) -> Result<()> {
         self.encode_seq(&value.0)
     }
 
     // MARK: - Header
 
+    /// Encodes a sequence value's header.
     pub fn encode_seq_header(&mut self, header: &SeqHeader) -> Result<()> {
         let mut byte = SeqHeader::TYPE_BITS;
 
@@ -64,6 +67,7 @@ where
         }
     }
 
+    /// Creates a header for a sequence value, from its length.
     pub fn header_for_seq_len(&self, len: usize) -> SeqHeader {
         SeqHeader::for_len(len, self.config.lengths.packing)
     }

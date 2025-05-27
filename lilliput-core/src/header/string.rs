@@ -5,15 +5,18 @@ use proptest_derive::Arbitrary;
 
 use crate::config::PackingMode;
 
-/// Represents a string.
+/// Header representing a string.
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum StringHeader {
+    /// Compact header.
     Compact(CompactStringHeader),
+    /// Extended header.
     Extended(ExtendedStringHeader),
 }
 
 impl StringHeader {
+    /// Creates a compact header.
     #[inline]
     pub fn compact(len: u8) -> Self {
         assert!(len <= Self::COMPACT_LEN_BITS);
@@ -21,16 +24,19 @@ impl StringHeader {
         Self::compact_unchecked(len)
     }
 
+    /// Creates a compact header, without checking invariants.
     #[inline]
     pub fn compact_unchecked(len: u8) -> Self {
         Self::Compact(CompactStringHeader { len })
     }
 
+    /// Creates an extended header.
     #[inline]
     pub fn extended(len: usize) -> Self {
         Self::Extended(ExtendedStringHeader { len })
     }
 
+    /// Creates a header for a given map's length, for a given `packing_mode`.
     #[inline]
     pub fn for_len(len: usize, packing_mode: PackingMode) -> Self {
         if let Some(len) = Self::as_compact_len(len, packing_mode) {
@@ -40,10 +46,12 @@ impl StringHeader {
         }
     }
 
+    /// Returns `true` if the associated value has a length of zero, otherwise `false`.
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
+    /// Returns the associated value's length.
     pub fn len(&self) -> usize {
         match self {
             Self::Compact(compact) => compact.len().into(),
@@ -61,6 +69,7 @@ impl StringHeader {
     }
 }
 
+/// Compact header representing a string.
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 #[repr(transparent)]
@@ -73,15 +82,18 @@ pub struct CompactStringHeader {
 }
 
 impl CompactStringHeader {
+    /// Returns `true` if the associated value has a length of zero, otherwise `false`.
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
+    /// Returns the associated value's length.
     pub fn len(&self) -> u8 {
         self.len
     }
 }
 
+/// Extended header representing a string.
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 #[repr(transparent)]
@@ -94,10 +106,12 @@ pub struct ExtendedStringHeader {
 }
 
 impl ExtendedStringHeader {
+    /// Returns `true` if the associated value has a length of zero, otherwise `false`.
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
+    /// Returns the associated value's length.
     pub fn len(&self) -> usize {
         self.len
     }

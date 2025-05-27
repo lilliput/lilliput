@@ -1,13 +1,18 @@
+//! I/O related stuff.
+
 use std::ops::Deref;
 
 use crate::error::{Error, Result};
 
+/// A reference to a decoded byte sequence's value.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum Reference<'b, 'c, T>
 where
     T: ?Sized + 'static,
 {
+    /// A reference to a borrowed value.
     Borrowed(&'b T),
+    /// A reference to a copied value.
     Copied(&'c T),
 }
 
@@ -27,9 +32,14 @@ where
 
 // MARK: - Read
 
+/// A trait for objects which are byte-oriented sources.
+///
+/// Implementors of the Read trait are called ‘readers’.
 pub trait Read<'r> {
+    /// Returns the next byte without advancing the position.
     fn peek_one(&mut self) -> Result<u8>;
 
+    /// Skips the next byte, advancing the position.
     fn skip_one(&mut self) -> Result<()> {
         match self.read_one() {
             Ok(_) => Ok(()),
@@ -37,6 +47,7 @@ pub trait Read<'r> {
         }
     }
 
+    /// Skips the next `len` bytes, advancing the position.
     fn skip(&mut self, len: usize) -> Result<()> {
         let mut to_read = len;
 
@@ -67,29 +78,34 @@ pub trait Read<'r> {
         Ok(())
     }
 
+    /// Reads the next byte, advancing the position.
     fn read_one(&mut self) -> Result<u8> {
         let mut bytes: [u8; 1] = [0b0];
         self.read_into(&mut bytes)?;
         Ok(bytes[0])
     }
 
+    /// Reads the next `len` bytes into `scratch` (if necessary), advancing the position, returning a reference.
     fn read<'s>(
         &'s mut self,
         len: usize,
         scratch: &'s mut Vec<u8>,
     ) -> Result<Reference<'r, 's, [u8]>>;
 
+    /// Reads the next `len` bytes into `buf`, advancing the position.
     fn read_into(&mut self, buf: &mut [u8]) -> Result<()>;
 }
 
 // MARK: - StdIoReader
 
+/// A wrapper around instances of `std::io::Read`.
 pub struct StdIoReader<R> {
     reader: R,
     peeked: Option<u8>,
 }
 
 impl<R> StdIoReader<R> {
+    /// Creates an instance from a `reader`.
     pub fn new(reader: R) -> Self {
         Self {
             reader,
@@ -190,16 +206,19 @@ where
 
 // MARK: - SliceReader
 
+/// A wrapper around instances of `&[u8]`.
 pub struct SliceReader<'r> {
     slice: &'r [u8],
     pos: usize,
 }
 
 impl<'r> SliceReader<'r> {
+    /// Creates an instance from a `slice`.
     pub fn new(slice: &'r [u8]) -> Self {
         Self { slice, pos: 0 }
     }
 
+    /// Returns the current position in the slice.
     pub fn pos(&self) -> usize {
         self.pos
     }
@@ -247,19 +266,28 @@ impl<'r> Read<'r> for SliceReader<'r> {
 
 // MARK: - Write
 
+/// A trait for objects which are byte-oriented sinks.
+///
+/// Implementors of the Write trait are sometimes called ‘writers’.
 pub trait Write {
+    /// Writes a buffer into this writer, returning how many bytes were written.
     fn write(&mut self, buf: &[u8]) -> Result<usize>;
+
+    /// Flushes this output stream, ensuring that all intermediately
+    /// buffered contents reach their destination.
     fn flush(&mut self) -> Result<()>;
 }
 
 // MARK: - MutSliceWriter
 
+/// A wrapper around instances of `&mut [u8]`.
 pub struct MutSliceWriter<'w> {
     slice: &'w mut [u8],
     pos: usize,
 }
 
 impl<'w> MutSliceWriter<'w> {
+    /// Creates a writer from a mutable `slice`.
     pub fn new(slice: &'w mut Vec<u8>) -> Self {
         Self { slice, pos: 0 }
     }
@@ -288,15 +316,18 @@ impl Write for MutSliceWriter<'_> {
 
 // MARK: - VecWriter
 
+/// A wrapper around instances of `Vec<u8>`.
 pub struct VecWriter<'w> {
     vec: &'w mut Vec<u8>,
 }
 
 impl<'w> VecWriter<'w> {
+    /// Creates a writer from a `vec`.
     pub fn new(vec: &'w mut Vec<u8>) -> Self {
         Self { vec }
     }
 
+    /// Returns a slice into the inner `vec`.
     pub fn vec(&self) -> &[u8] {
         self.vec
     }
@@ -315,15 +346,18 @@ impl Write for VecWriter<'_> {
 
 // MARK: - StdIoBufWriter
 
+/// A wrapper around instances of `std::io::Write`.
 pub struct StdIoWriter<W> {
     writer: W,
 }
 
 impl<W> StdIoWriter<W> {
+    /// Creates an instance from a `reader`.
     pub fn new(writer: W) -> Self {
         Self { writer }
     }
 
+    /// Returns the internal `writer`, consuming `self`.
     pub fn into_writer(self) -> W {
         self.writer
     }

@@ -1,4 +1,6 @@
+#[doc(hidden)]
 pub mod float;
+#[doc(hidden)]
 pub mod int;
 
 mod be_bytes;

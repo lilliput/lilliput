@@ -11,6 +11,7 @@ where
 {
     // MARK: - Value
 
+    /// Encodes a byte array value, from a slice reference.
     pub fn encode_bytes(&mut self, value: &[u8]) -> Result<()> {
         self.encode_bytes_header(&BytesHeader::for_len(value.len()))?;
 
@@ -20,12 +21,14 @@ where
         Ok(())
     }
 
+    /// Encodes a byte array value, from a `BytesValue`.
     pub fn encode_bytes_value(&mut self, value: &BytesValue) -> Result<()> {
         self.encode_bytes(&value.0)
     }
 
     // MARK: - Header
 
+    /// Encodes a byte array value's header.
     pub fn encode_bytes_header(&mut self, header: &BytesHeader) -> Result<()> {
         let len = header.len();
 
@@ -59,6 +62,7 @@ where
         })
     }
 
+    /// Creates a header for a byte array value, from its length.
     pub fn header_for_bytes_len(&self, len: usize) -> BytesHeader {
         BytesHeader::for_len(len)
     }

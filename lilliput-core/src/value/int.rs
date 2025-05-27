@@ -17,11 +17,14 @@ pub use self::{signed::SignedIntValue, unsigned::UnsignedIntValue};
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone)]
 pub enum IntValue {
+    /// Signed value.
     Signed(SignedIntValue),
+    /// Unsigned value.
     Unsigned(UnsignedIntValue),
 }
 
 impl IntValue {
+    /// Returns `true`, if `self` is signed, otherwise `false`.
     pub fn is_signed(&self) -> bool {
         match self {
             Self::Signed(_) => true,
@@ -250,6 +253,7 @@ impl<'de> serde::Deserialize<'de> for IntValue {
 }
 
 impl IntValue {
+    /// Attempts to convert the value into a signed value.
     pub fn to_signed(self) -> Result<SignedIntValue, TryFromIntError> {
         match self {
             IntValue::Signed(signed) => Ok(signed),
@@ -257,6 +261,7 @@ impl IntValue {
         }
     }
 
+    /// Attempts to convert the value into an unsigned value.
     pub fn to_unsigned(self) -> Result<UnsignedIntValue, TryFromIntError> {
         match self {
             IntValue::Signed(signed) => signed.to_unsigned(),

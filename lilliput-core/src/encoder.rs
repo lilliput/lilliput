@@ -1,3 +1,5 @@
+//! Encoders for encoding lilliput values.
+
 use crate::{config::EncoderConfig, error::Result, header::Header, io::Write, value::Value};
 
 mod bool;
@@ -10,6 +12,7 @@ mod seq;
 mod string;
 mod unit;
 
+/// An encoder for encoding lilliput values.
 #[derive(Debug)]
 pub struct Encoder<W> {
     writer: W,
@@ -18,10 +21,12 @@ pub struct Encoder<W> {
 }
 
 impl<W> Encoder<W> {
+    /// Creates a encoder from `writer`.
     pub fn new(writer: W) -> Self {
         Self::new_with_config(writer, EncoderConfig::default())
     }
 
+    /// Creates a encoder from `writer`, configured by `config`.
     pub fn new_with_config(writer: W, config: EncoderConfig) -> Self {
         Encoder {
             writer,
@@ -30,10 +35,12 @@ impl<W> Encoder<W> {
         }
     }
 
+    /// Returns the encoder's internal `writer`, consuming `self`.
     pub fn into_writer(self) -> W {
         self.writer
     }
 
+    /// Returns the encoder's current write position.
     pub fn pos(&self) -> usize {
         self.pos
     }
@@ -43,6 +50,7 @@ impl<W> Encoder<W>
 where
     W: Write,
 {
+    /// Encodes a value's `Header`.
     pub fn encode_header(&mut self, header: &Header) -> Result<()> {
         match header {
             Header::Int(value) => self.encode_int_header(value),
@@ -57,6 +65,7 @@ where
         }
     }
 
+    /// Encodes a `Value`.
     pub fn encode_value(&mut self, value: &Value) -> Result<()> {
         match value {
             Value::Int(value) => self.encode_int_value(value),

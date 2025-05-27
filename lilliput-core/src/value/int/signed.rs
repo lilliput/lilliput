@@ -16,9 +16,13 @@ use super::UnsignedIntValue;
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[derive(Copy, Clone)]
 pub enum SignedIntValue {
+    /// 8-bit value.
     I8(i8),
+    /// 16-bit value.
     I16(i16),
+    /// 32-bit value.
     I32(i32),
+    /// 64-bit value.
     I64(i64),
 }
 
@@ -191,6 +195,7 @@ impl<'de> serde::Deserialize<'de> for SignedIntValue {
 }
 
 impl SignedIntValue {
+    /// Attempts to convert the value into an unsigned value.
     pub fn to_unsigned(self) -> Result<UnsignedIntValue, TryFromIntError> {
         match self {
             Self::I8(signed) => u8::try_from_int(signed).map(UnsignedIntValue::U8),

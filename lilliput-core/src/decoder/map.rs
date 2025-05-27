@@ -13,12 +13,14 @@ where
 {
     // MARK: - Value
 
+    /// Decodes a map value.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_map(&mut self) -> Result<Map> {
         let header = self.decode_map_header()?;
         self.decode_map_of(header)
     }
 
+    /// Decodes a map value, as a `MapValue`.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_map_value(&mut self) -> Result<MapValue> {
         self.decode_map().map(From::from)
@@ -26,6 +28,7 @@ where
 
     // MARK: - Header
 
+    /// Decodes a map value's header.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_map_header(&mut self) -> Result<MapHeader> {
         let byte = self.pull_byte_expecting(Marker::Map)?;
@@ -60,6 +63,7 @@ where
 
     // MARK: - Skip
 
+    /// Skips the map value for a given `header`.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn skip_map_value_of(&mut self, header: MapHeader) -> Result<()> {
         let len: usize = match header {
@@ -77,6 +81,7 @@ where
 
     // MARK: - Body
 
+    /// Decodes map value for a given `header`, as a `MapValue`.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn decode_map_value_of(&mut self, header: MapHeader) -> Result<MapValue> {
         self.decode_map_of(header).map(From::from)
@@ -84,6 +89,7 @@ where
 
     // MARK: - Private
 
+    /// Decodes map value for a given `header`.
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     fn decode_map_of(&mut self, header: MapHeader) -> Result<Map> {
         let mut map = Map::default();

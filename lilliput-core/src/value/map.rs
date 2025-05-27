@@ -5,9 +5,11 @@ use proptest_derive::Arbitrary;
 
 use super::Value;
 
+/// An ordered map.
 #[cfg(feature = "preserve_order")]
 pub type Map = ordermap::OrderMap<Value, Value>;
 
+/// An unordered map.
 #[cfg(not(feature = "preserve_order"))]
 pub type Map = std::collections::BTreeMap<Value, Value>;
 
@@ -33,18 +35,22 @@ pub struct MapValue(
 );
 
 impl MapValue {
+    /// Returns a reference to the internal map.
     pub fn as_map_ref(&self) -> &Map {
         &self.0
     }
 
+    /// Returns the internal map, consuming `self`.
     pub fn into_map(self) -> Map {
         self.0
     }
 
+    /// Returns the length of the internal map.
     pub fn len(&self) -> usize {
         self.0.len()
     }
 
+    /// Returns `true`, if the internal map is empty, otherwise `false`.
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }

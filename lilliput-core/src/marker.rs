@@ -1,3 +1,5 @@
+//! Value type markers.
+
 use crate::{
     error::Expectation,
     header::{
@@ -6,17 +8,27 @@ use crate::{
     },
 };
 
+/// A value's type marker.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 #[repr(u8)]
 pub enum Marker {
+    /// Integer values.
     Int = 0b10000000,
+    /// String values.
     String = 0b01000000,
+    /// Sequence values.
     Seq = 0b00100000,
+    /// Map values.
     Map = 0b00010000,
+    /// Floating-point values.
     Float = 0b00001000,
+    /// Byte array values.
     Bytes = 0b00000100,
+    /// Bool values.
     Bool = 0b00000010,
+    /// Unit values.
     Unit = 0b00000001,
+    /// Null values.
     Null = 0b00000000,
 }
 
@@ -44,6 +56,7 @@ impl serde::de::Expected for Marker {
 }
 
 impl Marker {
+    /// Detects a value's type from its header byte.
     #[inline]
     pub fn detect(byte: u8) -> Self {
         // Safety: The following is safe because:
@@ -64,8 +77,10 @@ impl Marker {
         unsafe { std::mem::transmute_copy(&Self::repr_for(byte)) }
     }
 
+    /// Returns a given mask's bit-mask.
+    #[allow(dead_code)]
     #[inline]
-    pub fn header_mask(&self) -> u8 {
+    pub(crate) fn header_mask(&self) -> u8 {
         match self {
             Self::Int => IntHeader::MASK,
             Self::String => StringHeader::MASK,
@@ -85,6 +100,7 @@ impl Marker {
         0b10000000_u8.checked_shr(leading_zeros).unwrap_or_default()
     }
 
+    /// Validates a given header `byte`.
     #[inline]
     pub fn validate(self, byte: u8) -> Result<(), Expectation<Self>> {
         let detected = Marker::detect(byte);

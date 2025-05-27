@@ -8,12 +8,16 @@ use core::result;
 /// Alias for a `Result` with the error type `Error`.
 pub type Result<T> = result::Result<T, Error>;
 
+/// An expectation.
 #[derive(Debug)]
 pub struct Expectation<U, E = U> {
+    /// The unexpected value.
     pub unexpected: U,
+    /// The expected value.
     pub expected: E,
 }
 
+/// A minimal representation of all possible errors that can occur.
 pub struct Error {
     kind: Box<ErrorKind>,
     pos: Option<usize>,
@@ -92,19 +96,23 @@ impl Error {
         Self::new(Box::new(ErrorKind::reserved_type()), None)
     }
 
+    /// A `std::io::Error`.
     #[cfg(feature = "std")]
     pub fn io(err: std::io::Error) -> Self {
         Self::new(Box::new(ErrorKind::io(err)), None)
     }
 
+    /// Returns the error's kind.
     pub fn kind(&self) -> &ErrorKind {
         &self.kind
     }
 
+    /// Returns the error's position.
     pub fn pos(&self) -> Option<usize> {
         self.pos
     }
 
+    /// Returns the error's code.
     pub fn code(&self) -> ErrorCode {
         self.kind.as_code()
     }
@@ -213,6 +221,7 @@ pub enum ErrorCode {
     Utf8 = 81,
     /// Reserved type
     ReservedType = 91,
+    /// `std::io::Error`.
     #[cfg(feature = "std")]
     StdIo = 255,
 }
@@ -240,8 +249,9 @@ pub enum ErrorKind {
     DepthLimitExceeded,
     /// An encoded string could not be parsed as UTF-8.
     Utf8(core::str::Utf8Error),
-    /// ReservedType,
+    /// ReservedType.
     ReservedType,
+    /// `std::io::Error`.
     #[cfg(feature = "std")]
     StdIo(std::io::Error),
 }
@@ -317,6 +327,7 @@ impl ErrorKind {
         Self::StdIo(err)
     }
 
+    /// Returns the error's code.
     pub fn as_code(&self) -> ErrorCode {
         match self {
             ErrorKind::UnexpectedEndOfFile => ErrorCode::UnexpectedEndOfFile,
