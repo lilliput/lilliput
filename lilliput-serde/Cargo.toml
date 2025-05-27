@@ -10,7 +10,7 @@ version = "0.1.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-lilliput-core = { path = "../lilliput-core", features = ["serde", "testing"] }
+lilliput-core = { version = "0.1.0", path = "../lilliput-core", features = ["serde", "testing"] }
 indexmap = { version = "2.2.3", optional = true }
 num-traits = "0.2.19"
 serde = { workspace = true }
