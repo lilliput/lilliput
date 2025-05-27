@@ -55,7 +55,7 @@ mod tests {
         fn encode_decode_roundtrip(header in FloatHeader::arbitrary(), config in EncoderConfig::arbitrary()) {
             let mut encoded: Vec<u8> = Vec::new();
             let writer = VecWriter::new(&mut encoded);
-            let mut encoder = Encoder::new(writer, config);
+            let mut encoder = Encoder::new_with_config(writer, config);
             encoder.encode_float_header(&header).unwrap();
 
             prop_assert!(encoded.len() == 1);
