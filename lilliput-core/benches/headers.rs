@@ -115,7 +115,7 @@ fn bench_roundtrip_with_samples(
 
             for _ in 0..iters {
                 let reader = SliceReader::new(&encoded);
-                let mut decoder = Decoder::new(reader);
+                let mut decoder = Decoder::from_reader(reader);
 
                 let start = Instant::now();
 

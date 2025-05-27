@@ -162,12 +162,12 @@ mod tests {
             // contained within, so we're not checking it here.
 
             let reader = SliceReader::new(&encoded);
-            let mut decoder = Decoder::new(reader);
+            let mut decoder = Decoder::from_reader(reader);
             let decoded = decoder.decode_map().unwrap();
             prop_assert_eq!(&decoded, &value.0);
 
             let reader = SliceReader::new(&encoded);
-            let mut decoder = Decoder::new(reader);
+            let mut decoder = Decoder::from_reader(reader);
             let decoded = decoder.decode_value().unwrap();
             let Value::Map(decoded) = decoded else {
                 panic!("expected map value");

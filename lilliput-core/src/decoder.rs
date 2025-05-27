@@ -26,8 +26,8 @@ pub struct Decoder<R> {
 }
 
 impl<R> Decoder<R> {
-    /// Creates a decoder from `reader`.
-    pub fn new(reader: R) -> Self {
+    /// Creates a decoder from a `reader`.
+    pub fn from_reader(reader: R) -> Self {
         Decoder { reader, pos: 0 }
     }
 
@@ -213,14 +213,14 @@ mod test {
     #[test]
     fn new() {
         let bytes = SliceReader::new(&[1, 2, 3]);
-        let decoder = Decoder::new(&bytes);
+        let decoder = Decoder::from_reader(&bytes);
         assert_eq!(decoder.pos, 0);
     }
 
     #[test]
     fn pull_byte() {
         let bytes = SliceReader::new(&[1, 2, 3]);
-        let mut decoder = Decoder::new(bytes);
+        let mut decoder = Decoder::from_reader(bytes);
         assert_eq!(decoder.pos, 0);
 
         let byte = decoder.pull_byte().unwrap();
@@ -242,7 +242,7 @@ mod test {
     #[test]
     fn pull_bytes_into() {
         let bytes = SliceReader::new(&[1, 2, 3]);
-        let mut decoder = Decoder::new(bytes);
+        let mut decoder = Decoder::from_reader(bytes);
         assert_eq!(decoder.pos, 0);
 
         let mut buf = vec![];
@@ -269,7 +269,7 @@ mod test {
     #[test]
     fn pull_bytes() {
         let bytes = SliceReader::new(&[1, 2, 3]);
-        let mut decoder = Decoder::new(bytes);
+        let mut decoder = Decoder::from_reader(bytes);
         let mut scratch = vec![];
         assert_eq!(decoder.pos, 0);
 
