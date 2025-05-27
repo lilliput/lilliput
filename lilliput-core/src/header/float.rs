@@ -28,8 +28,8 @@ impl FloatHeader {
 }
 
 impl FloatHeader {
-    pub const MASK: u8 = 0b00001111;
-    pub const MAX_VALUE_WIDTH: u8 = Self::VALUE_WIDTH_BITS + 1;
+    pub(crate) const MASK: u8 = 0b00001111;
+    pub(crate) const MAX_VALUE_WIDTH: u8 = Self::VALUE_WIDTH_BITS + 1;
 
     pub(crate) const TYPE_BITS: u8 = 0b00001000;
 

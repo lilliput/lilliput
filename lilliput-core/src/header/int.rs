@@ -125,9 +125,9 @@ impl ExtendedIntHeader {
 }
 
 impl IntHeader {
-    pub const MASK: u8 = 0b11111111;
-    pub const MAX_COMPACT_VALUE: u8 = Self::COMPACT_VALUE_BITS;
-    pub const MAX_EXTENDED_WIDTH: u8 = Self::EXTENDED_WIDTH_BITS + 1;
+    pub(crate) const MASK: u8 = 0b11111111;
+    pub(crate) const MAX_COMPACT_VALUE: u8 = Self::COMPACT_VALUE_BITS;
+    pub(crate) const MAX_EXTENDED_WIDTH: u8 = Self::EXTENDED_WIDTH_BITS + 1;
 
     pub(crate) const TYPE_BITS: u8 = 0b10000000;
 

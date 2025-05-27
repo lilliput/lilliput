@@ -2,10 +2,6 @@ use std::ops::Deref;
 
 use crate::error::{Error, Result};
 
-pub struct Position {
-    pub byte: usize,
-}
-
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum Reference<'b, 'c, T>
 where
@@ -99,6 +95,11 @@ impl<R> StdIoReader<R> {
             reader,
             peeked: None,
         }
+    }
+
+    /// Returns the internal `reader`, consuming `self`.
+    pub fn into_reader(self) -> R {
+        self.reader
     }
 }
 
@@ -247,8 +248,6 @@ impl<'r> Read<'r> for SliceReader<'r> {
 // MARK: - Write
 
 pub trait Write {
-    type Error: std::error::Error;
-
     fn write(&mut self, buf: &[u8]) -> Result<usize>;
     fn flush(&mut self) -> Result<()>;
 }
@@ -267,8 +266,6 @@ impl<'w> MutSliceWriter<'w> {
 }
 
 impl Write for MutSliceWriter<'_> {
-    type Error = Error;
-
     fn write(&mut self, buf: &[u8]) -> Result<usize> {
         let len = buf.len();
 
@@ -306,8 +303,6 @@ impl<'w> VecWriter<'w> {
 }
 
 impl Write for VecWriter<'_> {
-    type Error = Error;
-
     fn write(&mut self, buf: &[u8]) -> Result<usize> {
         self.vec.extend_from_slice(buf);
         Ok(buf.len())
@@ -338,8 +333,6 @@ impl<W> Write for StdIoWriter<W>
 where
     W: std::io::Write,
 {
-    type Error = Error;
-
     fn write(&mut self, buf: &[u8]) -> Result<usize> {
         self.writer.write(buf).map_err(Error::io)
     }

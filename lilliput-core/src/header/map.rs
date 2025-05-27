@@ -40,15 +40,6 @@ impl MapHeader {
         }
     }
 
-    #[inline]
-    pub fn as_compact_len(len: usize, packing_mode: PackingMode) -> Option<u8> {
-        if packing_mode.is_optimal() && len <= (Self::COMPACT_MAX_LEN as usize) {
-            Some(len as u8)
-        } else {
-            None
-        }
-    }
-
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
@@ -57,6 +48,15 @@ impl MapHeader {
         match self {
             Self::Compact(compact) => compact.len().into(),
             Self::Extended(extended) => extended.len(),
+        }
+    }
+
+    #[inline]
+    fn as_compact_len(len: usize, packing_mode: PackingMode) -> Option<u8> {
+        if packing_mode.is_optimal() && len <= (Self::COMPACT_MAX_LEN as usize) {
+            Some(len as u8)
+        } else {
+            None
         }
     }
 }
@@ -104,7 +104,7 @@ impl ExtendedMapHeader {
 }
 
 impl MapHeader {
-    pub const MASK: u8 = 0b00011111;
+    pub(crate) const MASK: u8 = 0b00011111;
     pub(crate) const TYPE_BITS: u8 = 0b00010000;
 
     pub(crate) const COMPACT_VARIANT_BIT: u8 = 0b00001000;
