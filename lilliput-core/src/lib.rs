@@ -33,3 +33,9 @@ pub enum Profile {
     #[default]
     Weak = 1,
 }
+
+pub mod prelude {
+    pub use crate::{
+        config::*, decoder::*, encoder::*, error::Error, header::*, io::*, marker::*, value::*,
+    };
+}
