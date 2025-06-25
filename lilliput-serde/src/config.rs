@@ -23,7 +23,7 @@ pub enum EnumVariantRepr {
 }
 
 /// Configuration used for serializing values.
-#[derive(Default, Clone, PartialEq, Debug)]
+#[derive(Default, Clone, Debug)]
 pub struct SerializerConfig {
     /// The representation to serialize structs to.
     pub struct_repr: StructRepr,
