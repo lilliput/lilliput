@@ -1,6 +1,6 @@
 use std::num::FpCategory;
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, Debug)]
 pub enum PackedFloatValidator<T> {
     Relative(T),
     Absolute(T),

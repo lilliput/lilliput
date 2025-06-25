@@ -3,7 +3,7 @@ pub use lilliput_float::PackedFloatValidator;
 use super::PackingMode;
 
 /// Validation for float-packing.
-#[derive(Default, Clone, PartialEq, Debug)]
+#[derive(Default, Clone, Debug)]
 pub struct PackedFloatValidation {
     /// Validation for float-packing of `f32` values.
     pub f32: PackedFloatValidator<f32>,
@@ -39,7 +39,7 @@ impl PackedFloatValidation {
 
 /// Configuration used for encoding integer values.
 #[cfg_attr(any(test, feature = "testing"), derive(proptest_derive::Arbitrary))]
-#[derive(Default, Clone, PartialEq, Debug)]
+#[derive(Default, Clone, Debug)]
 pub struct FloatEncoderConfig {
     /// Packing mode for encoding.
     pub packing: PackingMode,

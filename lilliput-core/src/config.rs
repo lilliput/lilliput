@@ -30,7 +30,7 @@ impl PackingMode {
 
 /// Configuration used for encoding values.
 #[cfg_attr(any(test, feature = "testing"), derive(proptest_derive::Arbitrary))]
-#[derive(Default, Clone, PartialEq, Debug)]
+#[derive(Default, Clone, Debug)]
 pub struct EncoderConfig {
     /// Configuration used for encoding value lengths (in header extensions).
     pub lengths: LengthEncoderConfig,
