@@ -36,11 +36,13 @@ Please make sure to add your changes to the appropriate categories:
 
 ### Fixed
 
-- n/a
+- Fixed compact length mask in sequence header to support 4-bit lengths (0-15).
+- Fixed signedness flag in unsigned integer header encoding.
+- Fixed mixed-up error messages.
 
 ### Performance
 
-- n/a
+- Optimized I/O skip implementation for improved performance.
 
 ### Security
 
