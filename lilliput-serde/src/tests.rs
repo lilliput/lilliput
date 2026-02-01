@@ -384,7 +384,7 @@ proptest! {
     }
 
     #[test]
-    fn tuple_struct_roundtrip(value in (u8::arbitrary(), i8::arbitrary())) {
+    fn tuple_struct_roundtrip(value in TupleStruct::<bool>::arbitrary()) {
         let decoded = roundtrip(&value)?;
         prop_assert_eq!(&decoded, &value);
     }
