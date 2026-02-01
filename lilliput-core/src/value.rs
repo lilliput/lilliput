@@ -1,7 +1,7 @@
 //! Values.
 
 #[cfg(any(test, feature = "testing"))]
-use proptest::{prelude::*, sample::SizeRange};
+use proptest::sample::SizeRange;
 
 mod bool;
 mod bytes;
