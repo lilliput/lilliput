@@ -40,7 +40,7 @@ where
         let is_compact = (byte & SeqHeader::COMPACT_VARIANT_BIT) != 0b0;
 
         if is_compact {
-            let len = byte & SeqHeader::COMPACT_LEN_BITS;
+            let len = byte & SeqHeader::COMPACT_LEN_MASK;
 
             #[cfg(feature = "tracing")]
             tracing::debug!(

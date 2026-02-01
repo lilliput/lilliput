@@ -67,7 +67,7 @@ where
         let is_compact = (byte & StringHeader::COMPACT_VARIANT_BIT) != 0b0;
 
         if is_compact {
-            let len = byte & StringHeader::COMPACT_LEN_BITS;
+            let len = byte & StringHeader::COMPACT_LEN_MASK;
 
             #[cfg(feature = "tracing")]
             tracing::debug!(

@@ -40,7 +40,7 @@ where
         match *header {
             MapHeader::Compact(CompactMapHeader { len }) => {
                 byte |= MapHeader::COMPACT_VARIANT_BIT;
-                byte |= len & MapHeader::COMPACT_LEN_BITS;
+                byte |= len & MapHeader::COMPACT_LEN_MASK;
 
                 // Push the value's header:
                 self.push_byte(byte)
