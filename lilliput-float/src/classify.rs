@@ -37,6 +37,12 @@ macro_rules! impl_float_classify {
                 let exponent_bits = bits & Self::EXPONENT_MASK;
                 let significand_bits = bits & Self::SIGNIFICAND_MASK;
 
+                // IEEE 754 classification based on exponent and significand patterns:
+                // - Infinity: exp = all 1s, sig = 0
+                // - NaN: exp = all 1s, sig ≠ 0
+                // - Zero: exp = 0, sig = 0 (sign bit can be either 0 or 1)
+                // - Subnormal: exp = 0, sig ≠ 0 (no implicit leading 1)
+                // - Normal: exp ≠ 0 and exp ≠ all 1s (implicit leading 1)
                 match (exponent_bits, significand_bits) {
                     (Self::EXPONENT_MASK, 0) => FpCategory::Infinite,
                     (Self::EXPONENT_MASK, _) => FpCategory::Nan,

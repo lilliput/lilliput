@@ -79,57 +79,72 @@ macro_rules! impl_float_truncate {
                 let exp_bias_delta: SrcBits = src_exp_bias.wrapping_sub(dst_exp_bias as SrcBits);
                 let shifted_exp_bias_delta: SrcBits = exp_bias_delta << Src::SIGNIFICAND_BITS;
 
+                // Classify the source value by checking if it's in the normal range that
+                // the destination format can represent. This efficiently partitions all
+                // possible values into four categories: normal, NaN, overflow, and underflow.
+                // The comparison checks: underflow <= src_abs < overflow
                 if src_abs.wrapping_sub(underflow) < src_abs.wrapping_sub(overflow) {
-                    // The value remains normal.
+                    // Normal number that fits in destination's normal range.
+                    // Truncation requires rounding because we're discarding precision bits.
 
-                    // The exponent is within the range of normal numbers in the
-                    // destination format.  We can convert by simply right-shifting with
-                    // rounding and adjusting the exponent.
-
+                    // Adjust exponent bias to account for the difference between formats,
+                    // then shift right to remove the extra significand bits.
                     dst_exponent = (src_exponent.wrapping_sub(shifted_exp_bias_delta) >> significand_bits_delta) as DstBits;
                     dst_significand = (src_significand >> significand_bits_delta) as DstBits;
 
+                    // Apply round-to-nearest-even (banker's rounding) to the discarded bits.
+                    // This minimizes cumulative rounding errors in repeated operations.
                     let round_bits = src_significand & round_mask;
 
                     if round_bits > halfway {
-                        // Round significand to nearest.
+                        // More than half: round up
                         dst_significand += 1;
                     } else if round_bits == halfway {
-                        // Tie significand to even.
+                        // Exactly half: round to even (LSB = 0) to avoid systematic bias
                         dst_significand += dst_significand & 1;
                     }
 
+                    // Reconstruct the source value from the rounded destination to detect
+                    // if rounding changed the value (for validation purposes).
                     src_significand = ((dst_significand as SrcBits) << significand_bits_delta) & Src::SIGNIFICAND_MASK;
                 } else if src_abs > src_infinity {
-                    // The value is NaN.
+                    // NaN: must preserve NaN semantics while truncating the payload.
+                    // We keep the quiet/signaling bit and as much payload as fits.
 
-                    // Conjure the result by beginning with infinity, setting the qNaN
-                    // bit and inserting the (truncated) trailing NaN field.
-
+                    // Set exponent to all 1s (NaN/infinity marker)
                     dst_exponent = dst_inf_exp << Dst::SIGNIFICAND_BITS;
 
+                    // Preserve qNaN bit and truncate the payload to fit destination format.
+                    // The bitwise OR with dst_qnan ensures we always produce a quiet NaN
+                    // (some platforms require this for safety).
                     dst_significand = dst_qnan | dst_nan_code & ((src_significand & src_nan_code) >> significand_bits_delta) as DstBits;
                 } else if src_abs >= overflow {
-                    // Value overflows to infinity.
+                    // Overflow: value is too large for destination format.
+                    // IEEE 754 requires rounding to infinity in this case.
 
                     dst_exponent = dst_inf_exp << Dst::SIGNIFICAND_BITS;
                     src_exponent = src_inf_exp << Src::SIGNIFICAND_BITS;
 
+                    // Infinity has zero significand
                     dst_significand = 0;
                     src_significand = 0;
                 } else {
-                    // Value underflows on conversion to the destination type
-                    // or is an exact zero. The result may be a denormal or zero.
+                    // Underflow: value is too small to represent as a normal number in
+                    // destination format, or is zero. May produce a denormal or flush to zero.
 
-                    // Extract the exponent to get the shift amount for the denormalization.
-
+                    // Calculate how many bits to shift right to denormalize the value.
+                    // This formula accounts for the bias difference and the source exponent
+                    // to determine the effective magnitude difference.
                     let src_exp = src_abs >> Src::SIGNIFICAND_BITS;
                     let shift: u32 = (src_exp_bias - dst_exp_bias as SrcBits + 1 - src_exp) as u32;
 
+                    // Make the implicit leading 1 bit explicit since we're denormalizing
+                    // (subnormals don't have an implicit bit).
                     let significand: SrcBits = (bits & Src::SIGNIFICAND_MASK) | Src::IMPLICIT_BIT;
 
                     if shift >= Src::SIGNIFICAND_BITS {
-                        // Value underflows to zero.
+                        // Shift amount is so large that all significant bits are lost.
+                        // Flush to zero per IEEE 754 gradual underflow.
 
                         dst_exponent = 0;
                         src_exponent = 0;
@@ -137,40 +152,57 @@ macro_rules! impl_float_truncate {
                         dst_significand = 0;
                         src_significand = 0;
                     } else {
-                        // Value underflows to denormal.
+                        // Produce a denormal (subnormal) number in the destination format.
 
+                        // Denormals have zero exponent by definition
                         dst_exponent = 0;
 
+                        // Compute sticky bit: OR of all bits that would be shifted off.
+                        // This is needed for correct rounding when we have bits beyond
+                        // the rounding position (prevents double-rounding errors).
                         let sticky: SrcBits = if (significand << (src_bits - shift)) != 0 {
                             1
                         } else {
                             0
                         };
 
-                        // Right shift by the denormalization amount with sticky.
+                        // Shift right by denormalization amount and append sticky bit.
+                        // The sticky bit becomes the new LSB, ensuring we don't lose
+                        // information about discarded bits during rounding.
                         let denormalized: SrcBits = (significand >> shift) | sticky;
                         dst_significand = (denormalized >> significand_bits_delta) as DstBits;
 
+                        // Apply round-to-nearest-even on the denormalized value
                         let round_bits = denormalized & round_mask;
                         let round_bit: DstBits = 1;
 
                         if round_bits > halfway {
-                            // Round to nearest
+                            // Round up
                             dst_significand += round_bit;
                         } else if round_bits == halfway {
-                            // Ties to even
+                            // Tie to even
                             dst_significand += dst_significand & round_bit;
                         };
 
                         dst_significand &= Dst::SIGNIFICAND_MASK;
 
                         if dst_significand == 0 {
+                            // Rounding caused total underflow to zero
                             src_exponent = 0;
                             src_significand = 0;
                         } else {
+                            // Rounding produced a non-zero denormal. Reconstruct the source
+                            // value for validation by normalizing the denormal result.
+
+                            // Find how far the leading 1 bit is from the implicit bit position
                             let scale = dst_significand.leading_zeros() - Dst::IMPLICIT_BIT.leading_zeros();
 
+                            // Calculate source exponent from the denormal exponent (which is 1)
+                            // adjusted by the bias difference and normalization shift.
                             src_exponent = (exp_bias_delta - (scale as SrcBits) + 1) << Src::SIGNIFICAND_BITS;
+
+                            // Shift the destination significand back to source format and normalize it.
+                            // The scale shift accounts for the leading zeros we counted above.
                             src_significand = (dst_significand as SrcBits).wrapping_shl(significand_bits_delta + scale);
 
                             src_exponent &= Src::EXPONENT_MASK;

@@ -34,15 +34,26 @@ macro_rules! impl_float_repr {
             type Bits = $bits;
 
             const ZERO: Self = Self(0);
+
+            // Construct 1.0 by setting the exponent to the bias value (unbiased exponent = 0)
+            // and leaving the significand as zero (representing the implicit 1.0).
             const ONE: Self = Self((Self::EXPONENT_MASK >> 1) & Self::EXPONENT_MASK);
 
+            // Most negative finite value: sign bit set, exponent at max-1 (just below infinity),
+            // and all significand bits set. The left shift and mask operation produces
+            // the second-largest exponent value (one less than the infinity/NaN exponent).
             const MIN: Self = Self(
                 Self::SIGN_MASK
                     | ((Self::EXPONENT_MASK << 1) & Self::EXPONENT_MASK)
                     | Self::SIGNIFICAND_MASK,
             );
+
+            // Most positive finite value: like MIN but without the sign bit.
             const MAX: Self =
                 Self(((Self::EXPONENT_MASK << 1) & Self::EXPONENT_MASK) | Self::SIGNIFICAND_MASK);
+
+            // Smallest positive normal number: has the smallest non-zero exponent (1) with
+            // zero significand. This is the boundary between normal and subnormal numbers.
             const MIN_POSITIVE: Self = Self(1 << Self::SIGNIFICAND_BITS);
 
             const INFINITY: Self = Self(Self::EXPONENT_MASK);
@@ -54,11 +65,21 @@ macro_rules! impl_float_repr {
             const SIGNIFICAND_BITS: u32 = $significand;
 
             const EXPONENT_MAX: Self::Bits = (1 << Self::EXPONENT_BITS) - 1;
+
+            // IEEE 754 uses a biased exponent representation to avoid storing a sign bit
+            // for the exponent. The bias is chosen as 2^(k-1) - 1 where k is the number
+            // of exponent bits, which equals EXPONENT_MAX / 2 (equivalent to >> 1).
+            // This makes the biased exponent range [0, 2^k - 1] map to the unbiased
+            // range [-(2^(k-1) - 1), 2^(k-1)], with 0 and all-1s reserved for special values.
             const EXPONENT_BIAS: Self::Bits = (Self::EXPONENT_MAX >> 1) as Self::Bits;
 
             const SIGN_MASK: Self::Bits = 1 << (Self::BITS - 1);
             const EXPONENT_MASK: Self::Bits = (Self::SIGN_MASK - 1) & !Self::SIGNIFICAND_MASK;
             const SIGNIFICAND_MASK: Self::Bits = (1 << Self::SIGNIFICAND_BITS) - 1;
+
+            // Position of the implicit leading bit in normal numbers (the "1" in "1.xxx").
+            // This bit is not stored in the significand field but is implied for all normal
+            // numbers. It's one position to the left of the most significant stored bit.
             const IMPLICIT_BIT: Self::Bits = 1 << Self::SIGNIFICAND_BITS;
         }
     };
