@@ -145,6 +145,50 @@ mod tests {
 
     use super::*;
 
+    #[test]
+    fn compact_len_bits_is_correct_mask() {
+        assert_eq!(StringHeader::COMPACT_LEN_BITS, 0b00011111);
+        assert_eq!(StringHeader::COMPACT_MAX_LEN, 31);
+    }
+
+    #[test]
+    fn compact_header_at_boundary_values() {
+        assert_eq!(StringHeader::compact(0).len(), 0);
+        assert_eq!(StringHeader::compact(1).len(), 1);
+        assert_eq!(StringHeader::compact(30).len(), 30);
+        assert_eq!(StringHeader::compact(31).len(), 31);
+    }
+
+    #[test]
+    #[should_panic]
+    fn compact_header_rejects_value_above_max() {
+        StringHeader::compact(32);
+    }
+
+    #[test]
+    fn compact_unchecked_allows_boundary_values() {
+        assert_eq!(StringHeader::compact_unchecked(0).len(), 0);
+        assert_eq!(StringHeader::compact_unchecked(31).len(), 31);
+    }
+
+    #[test]
+    fn for_len_uses_compact_up_to_max() {
+        for len in 0..=31 {
+            let header = StringHeader::for_len(len, PackingMode::Optimal);
+            assert!(matches!(header, StringHeader::Compact(_)));
+            assert_eq!(header.len(), len);
+        }
+    }
+
+    #[test]
+    fn for_len_uses_extended_above_max() {
+        for len in 32..=40 {
+            let header = StringHeader::for_len(len, PackingMode::Optimal);
+            assert!(matches!(header, StringHeader::Extended(_)));
+            assert_eq!(header.len(), len);
+        }
+    }
+
     proptest! {
         #[test]
         fn as_compact_len(len in usize::arbitrary(), packing_mode in PackingMode::arbitrary()) {
@@ -172,6 +216,23 @@ mod tests {
             let mut decoder = Decoder::from_reader(reader);
             let decoded = decoder.decode_string_header().unwrap();
             prop_assert_eq!(&decoded, &header);
+        }
+
+        #[test]
+        fn encode_decode_compact_boundary_values(len in 0u8..=StringHeader::COMPACT_MAX_LEN, config in EncoderConfig::arbitrary()) {
+            let header = StringHeader::compact_unchecked(len);
+
+            let mut encoded: Vec<u8> = Vec::new();
+            let writer = VecWriter::new(&mut encoded);
+            let mut encoder = Encoder::new(writer, config);
+            encoder.encode_string_header(&header).unwrap();
+
+            let reader = SliceReader::new(&encoded);
+            let mut decoder = Decoder::from_reader(reader);
+            let decoded = decoder.decode_string_header().unwrap();
+
+            prop_assert_eq!(decoded.len(), len as usize);
+            prop_assert!(matches!(decoded, StringHeader::Compact(_)));
         }
     }
 }

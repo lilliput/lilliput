@@ -141,6 +141,50 @@ mod tests {
 
     use super::*;
 
+    #[test]
+    fn compact_len_bits_is_correct_mask() {
+        assert_eq!(SeqHeader::COMPACT_LEN_BITS, 0b00001111);
+        assert_eq!(SeqHeader::COMPACT_MAX_LEN, 15);
+    }
+
+    #[test]
+    fn compact_header_at_boundary_values() {
+        assert_eq!(SeqHeader::compact(0).len(), 0);
+        assert_eq!(SeqHeader::compact(1).len(), 1);
+        assert_eq!(SeqHeader::compact(14).len(), 14);
+        assert_eq!(SeqHeader::compact(15).len(), 15);
+    }
+
+    #[test]
+    #[should_panic]
+    fn compact_header_rejects_value_above_max() {
+        SeqHeader::compact(16);
+    }
+
+    #[test]
+    fn compact_unchecked_allows_boundary_values() {
+        assert_eq!(SeqHeader::compact_unchecked(0).len(), 0);
+        assert_eq!(SeqHeader::compact_unchecked(15).len(), 15);
+    }
+
+    #[test]
+    fn for_len_uses_compact_up_to_max() {
+        for len in 0..=15 {
+            let header = SeqHeader::for_len(len, PackingMode::Optimal);
+            assert!(matches!(header, SeqHeader::Compact(_)));
+            assert_eq!(header.len(), len);
+        }
+    }
+
+    #[test]
+    fn for_len_uses_extended_above_max() {
+        for len in 16..=20 {
+            let header = SeqHeader::for_len(len, PackingMode::Optimal);
+            assert!(matches!(header, SeqHeader::Extended(_)));
+            assert_eq!(header.len(), len);
+        }
+    }
+
     proptest! {
         #[test]
         fn as_compact_len(len in usize::arbitrary(), packing_mode in PackingMode::arbitrary()) {
@@ -190,6 +234,23 @@ mod tests {
             let mut decoder = Decoder::from_reader(reader);
             let decoded = decoder.decode_seq_header().unwrap();
             prop_assert_eq!(&decoded, &header);
+        }
+
+        #[test]
+        fn encode_decode_compact_boundary_values(len in 0u8..=SeqHeader::COMPACT_MAX_LEN, config in EncoderConfig::arbitrary()) {
+            let header = SeqHeader::compact_unchecked(len);
+
+            let mut encoded: Vec<u8> = Vec::new();
+            let writer = VecWriter::new(&mut encoded);
+            let mut encoder = Encoder::new(writer, config);
+            encoder.encode_seq_header(&header).unwrap();
+
+            let reader = SliceReader::new(&encoded);
+            let mut decoder = Decoder::from_reader(reader);
+            let decoded = decoder.decode_seq_header().unwrap();
+
+            prop_assert_eq!(decoded.len(), len as usize);
+            prop_assert!(matches!(decoded, SeqHeader::Compact(_)));
         }
     }
 }
