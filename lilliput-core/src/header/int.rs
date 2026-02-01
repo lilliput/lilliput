@@ -167,6 +167,143 @@ mod tests {
 
     use super::*;
 
+    #[test]
+    fn signedness_bit_is_correct_mask() {
+        assert_eq!(IntHeader::SIGNEDNESS_BIT, 0b00100000);
+    }
+
+    #[test]
+    fn compact_signed_header_has_signedness_flag() {
+        let header = IntHeader::compact(true, 15);
+        match header {
+            IntHeader::Compact(compact) => {
+                assert!(compact.is_signed());
+            }
+            _ => panic!("Expected compact header"),
+        }
+    }
+
+    #[test]
+    fn compact_unsigned_header_lacks_signedness_flag() {
+        let header = IntHeader::compact(false, 15);
+        match header {
+            IntHeader::Compact(compact) => {
+                assert!(!compact.is_signed());
+            }
+            _ => panic!("Expected compact header"),
+        }
+    }
+
+    #[test]
+    fn extended_signed_header_has_signedness_flag() {
+        let header = IntHeader::extended(true, 4);
+        match header {
+            IntHeader::Extended(extended) => {
+                assert!(extended.is_signed());
+            }
+            _ => panic!("Expected extended header"),
+        }
+    }
+
+    #[test]
+    fn extended_unsigned_header_lacks_signedness_flag() {
+        let header = IntHeader::extended(false, 4);
+        match header {
+            IntHeader::Extended(extended) => {
+                assert!(!extended.is_signed());
+            }
+            _ => panic!("Expected extended header"),
+        }
+    }
+
+    #[test]
+    fn for_signed_u8_values_have_signed_flag() {
+        for value in [0i8, 1, -1, 127, -128] {
+            let header = IntHeader::for_signed(value, PackingMode::Optimal);
+            match header {
+                IntHeader::Compact(compact) => assert!(compact.is_signed()),
+                IntHeader::Extended(extended) => assert!(extended.is_signed()),
+            }
+        }
+    }
+
+    #[test]
+    fn for_unsigned_u8_values_lack_signed_flag() {
+        for value in [0u8, 1, 31, 32, 127, 255] {
+            let header = IntHeader::for_unsigned(value, PackingMode::Optimal);
+            match header {
+                IntHeader::Compact(compact) => assert!(!compact.is_signed()),
+                IntHeader::Extended(extended) => assert!(!extended.is_signed()),
+            }
+        }
+    }
+
+    #[test]
+    fn for_signed_i16_values_have_signed_flag() {
+        for value in [0i16, 1, -1, 1000, -1000, i16::MAX, i16::MIN] {
+            let header = IntHeader::for_signed(value, PackingMode::Optimal);
+            match header {
+                IntHeader::Compact(compact) => assert!(compact.is_signed()),
+                IntHeader::Extended(extended) => assert!(extended.is_signed()),
+            }
+        }
+    }
+
+    #[test]
+    fn for_unsigned_u16_values_lack_signed_flag() {
+        for value in [0u16, 1, 31, 32, 1000, u16::MAX] {
+            let header = IntHeader::for_unsigned(value, PackingMode::Optimal);
+            match header {
+                IntHeader::Compact(compact) => assert!(!compact.is_signed()),
+                IntHeader::Extended(extended) => assert!(!extended.is_signed()),
+            }
+        }
+    }
+
+    #[test]
+    fn for_signed_i32_values_have_signed_flag() {
+        for value in [0i32, 1, -1, 100000, -100000, i32::MAX, i32::MIN] {
+            let header = IntHeader::for_signed(value, PackingMode::Optimal);
+            match header {
+                IntHeader::Compact(compact) => assert!(compact.is_signed()),
+                IntHeader::Extended(extended) => assert!(extended.is_signed()),
+            }
+        }
+    }
+
+    #[test]
+    fn for_unsigned_u32_values_lack_signed_flag() {
+        for value in [0u32, 1, 31, 32, 100000, u32::MAX] {
+            let header = IntHeader::for_unsigned(value, PackingMode::Optimal);
+            match header {
+                IntHeader::Compact(compact) => assert!(!compact.is_signed()),
+                IntHeader::Extended(extended) => assert!(!extended.is_signed()),
+            }
+        }
+    }
+
+    #[test]
+    fn for_signed_i64_values_have_signed_flag() {
+        for value in [0i64, 1, -1, 10000000000, -10000000000, i64::MAX, i64::MIN] {
+            let header = IntHeader::for_signed(value, PackingMode::Optimal);
+            match header {
+                IntHeader::Compact(compact) => assert!(compact.is_signed()),
+                IntHeader::Extended(extended) => assert!(extended.is_signed()),
+            }
+        }
+    }
+
+    #[test]
+    fn for_unsigned_u64_values_lack_signed_flag() {
+        for value in [0u64, 1, 31, 32, 10000000000, u64::MAX] {
+            let header = IntHeader::for_unsigned(value, PackingMode::Optimal);
+            match header {
+                IntHeader::Compact(compact) => assert!(!compact.is_signed()),
+                IntHeader::Extended(extended) => assert!(!extended.is_signed()),
+            }
+        }
+    }
+
     proptest! {
         #[test]
         fn for_u8(unsigned in u8::arbitrary(), packing_mode in PackingMode::arbitrary()) {
@@ -321,6 +458,101 @@ mod tests {
                         prop_assert!(extended_width <= 8)
                     }
                 },
+            }
+        }
+
+        #[test]
+        fn for_signed_i8_has_signed_flag(value in i8::arbitrary(), packing_mode in PackingMode::arbitrary()) {
+            let header = IntHeader::for_signed(value, packing_mode);
+            match header {
+                IntHeader::Compact(compact) => prop_assert!(compact.is_signed()),
+                IntHeader::Extended(extended) => prop_assert!(extended.is_signed()),
+            }
+        }
+
+        #[test]
+        fn for_unsigned_u8_lacks_signed_flag(value in u8::arbitrary(), packing_mode in PackingMode::arbitrary()) {
+            let header = IntHeader::for_unsigned(value, packing_mode);
+            match header {
+                IntHeader::Compact(compact) => prop_assert!(!compact.is_signed()),
+                IntHeader::Extended(extended) => prop_assert!(!extended.is_signed()),
+            }
+        }
+
+        #[test]
+        fn for_signed_i16_has_signed_flag(value in i16::arbitrary(), packing_mode in PackingMode::arbitrary()) {
+            let header = IntHeader::for_signed(value, packing_mode);
+            match header {
+                IntHeader::Compact(compact) => prop_assert!(compact.is_signed()),
+                IntHeader::Extended(extended) => prop_assert!(extended.is_signed()),
+            }
+        }
+
+        #[test]
+        fn for_unsigned_u16_lacks_signed_flag(value in u16::arbitrary(), packing_mode in PackingMode::arbitrary()) {
+            let header = IntHeader::for_unsigned(value, packing_mode);
+            match header {
+                IntHeader::Compact(compact) => prop_assert!(!compact.is_signed()),
+                IntHeader::Extended(extended) => prop_assert!(!extended.is_signed()),
+            }
+        }
+
+        #[test]
+        fn for_signed_i32_has_signed_flag(value in i32::arbitrary(), packing_mode in PackingMode::arbitrary()) {
+            let header = IntHeader::for_signed(value, packing_mode);
+            match header {
+                IntHeader::Compact(compact) => prop_assert!(compact.is_signed()),
+                IntHeader::Extended(extended) => prop_assert!(extended.is_signed()),
+            }
+        }
+
+        #[test]
+        fn for_unsigned_u32_lacks_signed_flag(value in u32::arbitrary(), packing_mode in PackingMode::arbitrary()) {
+            let header = IntHeader::for_unsigned(value, packing_mode);
+            match header {
+                IntHeader::Compact(compact) => prop_assert!(!compact.is_signed()),
+                IntHeader::Extended(extended) => prop_assert!(!extended.is_signed()),
+            }
+        }
+
+        #[test]
+        fn for_signed_i64_has_signed_flag(value in i64::arbitrary(), packing_mode in PackingMode::arbitrary()) {
+            let header = IntHeader::for_signed(value, packing_mode);
+            match header {
+                IntHeader::Compact(compact) => prop_assert!(compact.is_signed()),
+                IntHeader::Extended(extended) => prop_assert!(extended.is_signed()),
+            }
+        }
+
+        #[test]
+        fn for_unsigned_u64_lacks_signed_flag(value in u64::arbitrary(), packing_mode in PackingMode::arbitrary()) {
+            let header = IntHeader::for_unsigned(value, packing_mode);
+            match header {
+                IntHeader::Compact(compact) => prop_assert!(!compact.is_signed()),
+                IntHeader::Extended(extended) => prop_assert!(!extended.is_signed()),
+            }
+        }
+
+        #[test]
+        fn encode_decode_preserves_signedness(is_signed in bool::arbitrary(), header_variant in bool::arbitrary(), config in EncoderConfig::arbitrary()) {
+            let header = if header_variant {
+                IntHeader::compact(is_signed, 15)
+            } else {
+                IntHeader::extended(is_signed, 4)
+            };
+
+            let mut encoded: Vec<u8> = Vec::new();
+            let writer = VecWriter::new(&mut encoded);
+            let mut encoder = Encoder::new(writer, config);
+            encoder.encode_int_header(&header).unwrap();
+
+            let reader = SliceReader::new(&encoded);
+            let mut decoder = Decoder::from_reader(reader);
+            let decoded = decoder.decode_int_header().unwrap();
+
+            match decoded {
+                IntHeader::Compact(compact) => prop_assert_eq!(compact.is_signed(), is_signed),
+                IntHeader::Extended(extended) => prop_assert_eq!(extended.is_signed(), is_signed),
             }
         }
 
