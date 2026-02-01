@@ -19,7 +19,7 @@ impl StringHeader {
     /// Creates a compact header.
     #[inline]
     pub fn compact(len: u8) -> Self {
-        assert!(len <= Self::COMPACT_LEN_BITS);
+        assert!(len <= Self::COMPACT_LEN_MASK);
 
         Self::compact_unchecked(len)
     }
@@ -122,11 +122,11 @@ impl StringHeader {
     pub(crate) const TYPE_BITS: u8 = 0b01000000;
 
     pub(crate) const COMPACT_VARIANT_BIT: u8 = 0b00100000;
-    pub(crate) const COMPACT_LEN_BITS: u8 = 0b00011111;
+    pub(crate) const COMPACT_LEN_MASK: u8 = 0b00011111;
     pub(crate) const EXTENDED_LEN_WIDTH_BITS: u8 = 0b00000111;
 
     #[allow(dead_code)]
-    pub(crate) const COMPACT_MAX_LEN: u8 = Self::COMPACT_LEN_BITS;
+    pub(crate) const COMPACT_MAX_LEN: u8 = Self::COMPACT_LEN_MASK;
     #[allow(dead_code)]
     pub(crate) const EXTENDED_MAX_LEN_WIDTH: u8 = 1 + Self::EXTENDED_LEN_WIDTH_BITS;
 }
@@ -146,8 +146,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn compact_len_bits_is_correct_mask() {
-        assert_eq!(StringHeader::COMPACT_LEN_BITS, 0b00011111);
+    fn compact_len_mask_is_correct_mask() {
+        assert_eq!(StringHeader::COMPACT_LEN_MASK, 0b00011111);
         assert_eq!(StringHeader::COMPACT_MAX_LEN, 31);
     }
 

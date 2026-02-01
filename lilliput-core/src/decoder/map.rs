@@ -36,7 +36,7 @@ where
         let is_compact = (byte & MapHeader::COMPACT_VARIANT_BIT) != 0b0;
 
         if is_compact {
-            let len = byte & MapHeader::COMPACT_LEN_BITS;
+            let len = byte & MapHeader::COMPACT_LEN_MASK;
 
             #[cfg(feature = "tracing")]
             tracing::debug!(

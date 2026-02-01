@@ -39,7 +39,7 @@ where
         match *header {
             SeqHeader::Compact(CompactSeqHeader { len }) => {
                 byte |= SeqHeader::COMPACT_VARIANT_BIT;
-                byte |= len & SeqHeader::COMPACT_LEN_BITS;
+                byte |= len & SeqHeader::COMPACT_LEN_MASK;
 
                 // Push the value's header:
                 self.push_byte(byte)

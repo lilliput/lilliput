@@ -19,7 +19,7 @@ impl SeqHeader {
     /// Creates a compact header.
     #[inline]
     pub fn compact(len: u8) -> Self {
-        assert!(len <= Self::COMPACT_LEN_BITS);
+        assert!(len <= Self::COMPACT_LEN_MASK);
 
         Self::compact_unchecked(len)
     }
@@ -122,10 +122,10 @@ impl SeqHeader {
     pub(crate) const TYPE_BITS: u8 = 0b00100000;
 
     pub(crate) const COMPACT_VARIANT_BIT: u8 = 0b00010000;
-    pub(crate) const COMPACT_LEN_BITS: u8 = 0b00001111;
+    pub(crate) const COMPACT_LEN_MASK: u8 = 0b00001111;
     pub(crate) const EXTENDED_LEN_WIDTH_BITS: u8 = 0b00000111;
 
-    pub(crate) const COMPACT_MAX_LEN: u8 = Self::COMPACT_LEN_BITS;
+    pub(crate) const COMPACT_MAX_LEN: u8 = Self::COMPACT_LEN_MASK;
 }
 #[cfg(test)]
 mod tests {
@@ -142,8 +142,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn compact_len_bits_is_correct_mask() {
-        assert_eq!(SeqHeader::COMPACT_LEN_BITS, 0b00001111);
+    fn compact_len_mask_is_correct_mask() {
+        assert_eq!(SeqHeader::COMPACT_LEN_MASK, 0b00001111);
         assert_eq!(SeqHeader::COMPACT_MAX_LEN, 15);
     }
 
