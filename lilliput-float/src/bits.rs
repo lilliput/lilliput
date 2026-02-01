@@ -12,6 +12,9 @@ macro_rules! impl_float_from_bits {
             type Bits = $bits;
 
             fn from_bits(bits: Self::Bits) -> Self {
+                // For float types smaller than their storage type (e.g., F24 stored in u32),
+                // we need to mask off the unused high-order bits to ensure they're always zero.
+                // This prevents undefined behavior and makes equality checks work correctly.
                 const PADDED_BYTES: usize = (<$bits>::BITS / u8::BITS) as usize;
                 const PADDING: usize = (PADDED_BYTES - $bytes) as usize;
                 const MASK: $bits = (!0b0) >> PADDING;

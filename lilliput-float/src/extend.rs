@@ -52,22 +52,31 @@ macro_rules! impl_float_extend {
                 let src_abs: SrcBits = bits & src_abs_mask;
                 let mut abs_result: DstBits = 0;
 
+                // Determine the classification of the source value by checking if it falls
+                // within the normal number range. This avoids expensive classification calls
+                // and handles all cases (normal, subnormal, infinity, NaN) in one comparison.
+                // The expression checks: min_normal <= src_abs < infinity
                 if src_abs.wrapping_sub(src_min_normal) < src_infinity.wrapping_sub(src_min_normal)
                 {
-                    // `src` is a normal number.
-                    //
-                    // Extend to the destination type by shifting the significand and
-                    // exponent into the proper position and re-biasing the exponent.
+                    // Normal number: has an implicit leading 1 bit in the significand.
+                    // Extension is straightforward since the destination format has more
+                    // precision, so no rounding or overflow is possible.
+
+                    // Shift significand and exponent left to align with destination format's
+                    // larger bit fields, then adjust exponent bias to account for the
+                    // difference in bias between source and destination formats.
                     let abs_dst: DstBits = src_abs as DstBits;
                     let bias_dst: DstBits = exp_bias_delta;
                     abs_result = abs_dst.wrapping_shl(sign_bits_delta);
                     abs_result += bias_dst.wrapping_shl(dst_sign_bits);
                 } else if src_abs >= src_infinity {
-                    // `src` is NaN or infinity.
-                    //
-                    // Conjure the result by beginning with infinity, then setting the qNaN
-                    // bit (if needed) and right-aligning the rest of the trailing NaN
-                    // payload field.
+                    // NaN or infinity: preserve the special value semantics.
+                    // For NaN values, we must preserve the quiet/signaling bit and as much
+                    // of the payload as possible (though the payload is implementation-defined).
+
+                    // Start with infinity exponent (all 1s), then overlay NaN payload bits.
+                    // The qNaN bit and remaining payload are left-shifted to align with the
+                    // destination format's larger significand field.
                     let qnan_dst: DstBits = (src_abs & src_qnan) as DstBits;
                     let nan_code_dst: DstBits = (src_abs & src_nan_code) as DstBits;
                     let inf_exp_dst: DstBits = dst_inf_exp;
@@ -76,20 +85,32 @@ macro_rules! impl_float_extend {
                     abs_result |= qnan_dst.wrapping_shl(sign_bits_delta);
                     abs_result |= nan_code_dst.wrapping_shl(sign_bits_delta);
                 } else if src_abs != 0 {
-                    // `src` is subnormal.
-                    //
-                    // Renormalize the significand and clear the leading bit, then insert
-                    // the correct adjusted exponent in the destination type.
+                    // Subnormal (denormal) number: lacks the implicit leading 1 bit.
+                    // When extending to a larger format, we can often normalize it because
+                    // the destination has a wider exponent range that can represent smaller values.
+
+                    // Count leading zeros to find where the first 1 bit is located in the significand.
+                    // This tells us how much to shift left to normalize (put the leading 1 in the implicit bit position).
                     let scale: u32 = src_abs.leading_zeros() - src_min_normal.leading_zeros();
                     // Safety: The number of bits in a native int will fit in all native integer types:
                     let scale_dst: DstBits = scale as DstBits;
                     let abs_dst: DstBits = src_abs as DstBits;
+
+                    // Calculate the adjusted exponent for the normalized result.
+                    // We start from the bias difference, add 1 (because subnormal exponent is implicitly exp_bias + 1),
+                    // then subtract the scaling we applied (each left shift decreases the effective exponent by 1).
+                    // If there's no bias difference, keep the value subnormal in the destination format too.
                     let bias_dst: DstBits = if exp_bias_delta != 0 {
                         exp_bias_delta + 1 - scale_dst
                     } else {
                         0
                     };
+
+                    // Shift left by both the significand size difference AND the normalization amount.
                     abs_result = abs_dst.wrapping_shl((sign_bits_delta as u32) + (scale as u32));
+
+                    // Clear the implicit bit (XOR with dst_min_normal) since it's implicit in IEEE 754,
+                    // then combine with the adjusted exponent field.
                     abs_result =
                         (abs_result ^ dst_min_normal) | (bias_dst.wrapping_shl(dst_sign_bits));
                 }
