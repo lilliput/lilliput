@@ -122,7 +122,7 @@ impl SeqHeader {
     pub(crate) const TYPE_BITS: u8 = 0b00100000;
 
     pub(crate) const COMPACT_VARIANT_BIT: u8 = 0b00010000;
-    pub(crate) const COMPACT_LEN_BITS: u8 = 0b00000111;
+    pub(crate) const COMPACT_LEN_BITS: u8 = 0b00001111;
     pub(crate) const EXTENDED_LEN_WIDTH_BITS: u8 = 0b00000111;
 
     pub(crate) const COMPACT_MAX_LEN: u8 = Self::COMPACT_LEN_BITS;
