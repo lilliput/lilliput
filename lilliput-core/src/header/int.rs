@@ -53,7 +53,7 @@ impl IntHeader {
         T: Unsigned + WithPackedBeBytes,
     {
         value.with_packed_be_bytes(packing_mode, |be_bytes| {
-            Self::for_int_be_bytes(true, be_bytes, packing_mode)
+            Self::for_int_be_bytes(false, be_bytes, packing_mode)
         })
     }
 
