@@ -145,6 +145,33 @@ where
         Ok(bytes[0])
     }
 
+    fn skip(&mut self, mut len: usize) -> Result<()> {
+        if len == 0 {
+            return Ok(());
+        }
+
+        if let Some(_byte) = self.peeked.take() {
+            if len == 1 {
+                return Ok(());
+            }
+
+            len -= 1;
+        }
+
+        const BUFFER_SIZE: usize = 8192;
+        let mut buffer = [0u8; BUFFER_SIZE];
+
+        while len > 0 {
+            let to_read = len.min(BUFFER_SIZE);
+            self.reader
+                .read_exact(&mut buffer[..to_read])
+                .map_err(Error::io)?;
+            len -= to_read;
+        }
+
+        Ok(())
+    }
+
     fn read<'s>(
         &'s mut self,
         len: usize,
@@ -231,6 +258,16 @@ impl<'r> Read<'r> for SliceReader<'r> {
         }
 
         Ok(self.slice[self.pos])
+    }
+
+    fn skip(&mut self, len: usize) -> Result<()> {
+        if self.pos + len > self.slice.len() {
+            return Err(Error::end_of_file());
+        }
+
+        self.pos += len;
+
+        Ok(())
     }
 
     fn read<'s>(
@@ -521,6 +558,51 @@ mod test {
                 ErrorCode::UnexpectedEndOfFile
             );
         }
+
+        #[test]
+        fn skip() {
+            let slice: &[u8] = &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+            let mut reader = StdIoReader::new(slice);
+
+            reader.skip(2).unwrap();
+            assert_eq!(reader.read_one().unwrap(), 3);
+
+            reader.skip(3).unwrap();
+            assert_eq!(reader.read_one().unwrap(), 7);
+
+            reader.skip(1).unwrap();
+            assert_eq!(reader.read_one().unwrap(), 9);
+
+            assert_eq!(
+                reader.skip(2).unwrap_err().code(),
+                ErrorCode::UnexpectedEndOfFile
+            );
+        }
+
+        #[test]
+        fn skip_with_peeked_byte() {
+            let slice: &[u8] = &[1, 2, 3, 4, 5];
+            let mut reader = StdIoReader::new(slice);
+
+            assert_eq!(reader.peek_one().unwrap(), 1);
+
+            reader.skip(1).unwrap();
+            assert_eq!(reader.read_one().unwrap(), 2);
+
+            assert_eq!(reader.peek_one().unwrap(), 3);
+
+            reader.skip(2).unwrap();
+            assert_eq!(reader.read_one().unwrap(), 5);
+        }
+
+        #[test]
+        fn skip_zero_bytes() {
+            let slice: &[u8] = &[1, 2, 3];
+            let mut reader = StdIoReader::new(slice);
+
+            reader.skip(0).unwrap();
+            assert_eq!(reader.read_one().unwrap(), 1);
+        }
     }
 
     mod slice_reader {
@@ -644,6 +726,39 @@ mod test {
                 reader.read(3, &mut scratch).err().unwrap().code(),
                 ErrorCode::UnexpectedEndOfFile
             );
+        }
+
+        #[test]
+        fn skip() {
+            let slice: &[u8] = &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+            let mut reader = SliceReader::new(slice);
+
+            reader.skip(2).unwrap();
+            assert_eq!(reader.pos(), 2);
+            assert_eq!(reader.read_one().unwrap(), 3);
+
+            reader.skip(3).unwrap();
+            assert_eq!(reader.pos(), 6);
+            assert_eq!(reader.read_one().unwrap(), 7);
+
+            reader.skip(1).unwrap();
+            assert_eq!(reader.pos(), 8);
+            assert_eq!(reader.read_one().unwrap(), 9);
+
+            assert_eq!(
+                reader.skip(2).unwrap_err().code(),
+                ErrorCode::UnexpectedEndOfFile
+            );
+        }
+
+        #[test]
+        fn skip_zero_bytes() {
+            let slice: &[u8] = &[1, 2, 3];
+            let mut reader = SliceReader::new(slice);
+
+            reader.skip(0).unwrap();
+            assert_eq!(reader.pos(), 0);
+            assert_eq!(reader.read_one().unwrap(), 1);
         }
     }
 }
