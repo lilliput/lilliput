@@ -143,6 +143,50 @@ mod tests {
 
     use super::*;
 
+    #[test]
+    fn compact_len_bits_is_correct_mask() {
+        assert_eq!(MapHeader::COMPACT_LEN_BITS, 0b00000111);
+        assert_eq!(MapHeader::COMPACT_MAX_LEN, 7);
+    }
+
+    #[test]
+    fn compact_header_at_boundary_values() {
+        assert_eq!(MapHeader::compact(0).len(), 0);
+        assert_eq!(MapHeader::compact(1).len(), 1);
+        assert_eq!(MapHeader::compact(6).len(), 6);
+        assert_eq!(MapHeader::compact(7).len(), 7);
+    }
+
+    #[test]
+    #[should_panic]
+    fn compact_header_rejects_value_above_max() {
+        MapHeader::compact(8);
+    }
+
+    #[test]
+    fn compact_unchecked_allows_boundary_values() {
+        assert_eq!(MapHeader::compact_unchecked(0).len(), 0);
+        assert_eq!(MapHeader::compact_unchecked(7).len(), 7);
+    }
+
+    #[test]
+    fn for_len_uses_compact_up_to_max() {
+        for len in 0..=7 {
+            let header = MapHeader::for_len(len, PackingMode::Optimal);
+            assert!(matches!(header, MapHeader::Compact(_)));
+            assert_eq!(header.len(), len);
+        }
+    }
+
+    #[test]
+    fn for_len_uses_extended_above_max() {
+        for len in 8..=15 {
+            let header = MapHeader::for_len(len, PackingMode::Optimal);
+            assert!(matches!(header, MapHeader::Extended(_)));
+            assert_eq!(header.len(), len);
+        }
+    }
+
     proptest! {
         #[test]
         fn as_compact_len(len in usize::arbitrary(), packing_mode in PackingMode::arbitrary()) {
@@ -190,6 +234,23 @@ mod tests {
             let mut decoder = Decoder::from_reader(reader);
             let decoded = decoder.decode_map_header().unwrap();
             prop_assert_eq!(&decoded, &header);
+        }
+
+        #[test]
+        fn encode_decode_compact_boundary_values(len in 0u8..=MapHeader::COMPACT_MAX_LEN, config in EncoderConfig::arbitrary()) {
+            let header = MapHeader::compact_unchecked(len);
+
+            let mut encoded: Vec<u8> = Vec::new();
+            let writer = VecWriter::new(&mut encoded);
+            let mut encoder = Encoder::new(writer, config);
+            encoder.encode_map_header(&header).unwrap();
+
+            let reader = SliceReader::new(&encoded);
+            let mut decoder = Decoder::from_reader(reader);
+            let decoded = decoder.decode_map_header().unwrap();
+
+            prop_assert_eq!(decoded.len(), len as usize);
+            prop_assert!(matches!(decoded, MapHeader::Compact(_)));
         }
     }
 }
