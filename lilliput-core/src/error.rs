@@ -371,11 +371,11 @@ impl Display for ErrorKind {
                 )
             }
             Self::UnknownLength => f.write_str("unknown length"),
-            Self::NumberOutOfRange => f.write_str("unexpected EOF while parsing"),
-            Self::Uncategorized(msg) => f.write_str(msg),
-            Self::DepthLimitExceeded => {
+            Self::NumberOutOfRange => {
                 f.write_str("a numeric cast failed due to an out-of-range error")
             }
+            Self::Uncategorized(msg) => f.write_str(msg),
+            Self::DepthLimitExceeded => f.write_str("depth limit exceeded"),
             Self::Utf8(err) => Display::fmt(err, f),
             Self::ReservedType => f.write_str("reserved type"),
             #[cfg(feature = "std")]
