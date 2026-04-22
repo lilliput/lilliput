@@ -24,7 +24,7 @@ Please make sure to add your changes to the appropriate categories:
 
 ### Changed
 
-- n/a
+- Bumped MSRV of `lilliput-serde` from "1.71.0" to "1.85.0"
 
 ### Deprecated
 

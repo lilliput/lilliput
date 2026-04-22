@@ -4,7 +4,7 @@ description = "A serializer and deserializer of the lilliput data format, for se
 repository = { workspace = true }
 license = { workspace = true }
 edition = "2021"
-rust-version = "1.71.0"
+rust-version = "1.85.0"
 version = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
