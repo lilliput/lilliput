@@ -22,7 +22,7 @@ where
 ### Compact representation
 
 ```plain
-0b010XXXXX <BYTE>*
+0b011XXXXX <BYTE>*
   ├┘│├───┘ ├─────┘
   │ ││     └─ Characters
   │ │└─ Length
@@ -38,17 +38,17 @@ where
 ### Extended representation
 
 ```plain
-0b01100XXX <LENGTH> <BYTE>*
+0b01000XXX <LENGTH> <BYTE>*
   ├┘│├┘├─┘ ├──────┘ ├─────┘
   │ ││ │   └─ Length └─ Characters
-  │ ││ └─ Number of bytes in <Length> - 1
-  │ │└─ Empty padding bits
-  │ └─ Extended variant
+  │ ││ └─ Number of bytes in <LENGTH> - 1
+  │ │└─ Reserved bits (must be zero)
+  │ └─ Extended variant (not set)
   └─ String type
 ```
 
 where
 
-- `XXX` is a 3-bit unsigned integer which represents the network-endian, bit-packed number of bytes required to represent the value, subtracted by `1`.
-- `<INTEGER>` is a byte-packed unsigned integer, representing the string's length.
+- `XXX` is a 3-bit unsigned integer which represents the network-endian, bit-packed number of bytes required to represent the length, subtracted by `1`.
+- `<LENGTH>` is a byte-packed unsigned integer, representing the string's byte length.
 - `<BYTE>*` is a variable-length sequence of bytes, representing the string value.
