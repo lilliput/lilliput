@@ -1,6 +1,6 @@
 # Bytes
 
-Represents a sequence of lilliput-encoded values.
+Represents a byte array.
 
 ## Binary representation
 
@@ -15,6 +15,6 @@ Represents a sequence of lilliput-encoded values.
 
 where
 
-- `XXX` is a 3-bit unsigned integer which represents the network-endian, bit-packed number of bytes required to represent the value, subtracted by `1`.
-- `<INTEGER>` is the exponent of a power-of-two representation (`width = 2 ^ exponent`) of the byte array's length (i.e. number of bytes).
-- `<ENCODED>*` is a variable-length sequence of lilliput-encoded values, representing the items of the sequence value.
+- `XX` is a 2-bit unsigned integer (`e`) used as the exponent for the width of the `<INTEGER>` field: the field is `2^e` bytes wide (giving widths of 1, 2, 4, or 8 bytes).
+- `<INTEGER>` is a `2^e`-byte unsigned integer representing the byte array's length (i.e. number of bytes).
+- `<BYTE>*` is a variable-length sequence of bytes, representing the byte array's contents.
